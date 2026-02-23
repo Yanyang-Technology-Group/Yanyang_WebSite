@@ -1,135 +1,230 @@
-import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom'
 import About from './About.jsx'
 import Join from './Join.jsx'
+import Activity from './Activity.jsx'
 
-const colors = [
-  { r: 255, g: 255, b: 255 },
-  { r: 245, g: 245, b: 255 },
-  { r: 230, g: 248, b: 255 },
-  { r: 255, g: 250, b: 240 },
-]
+function NavLink({ to, children, onClick, external }) {
+  const location = useLocation()
+  const isActive = location.pathname === to
 
-function interpolateColor(color1, color2, factor) {
-  return {
-    r: Math.round(color1.r + (color2.r - color1.r) * factor),
-    g: Math.round(color1.g + (color2.g - color1.g) * factor),
-    b: Math.round(color1.b + (color2.b - color1.b) * factor),
+  if (external) {
+    return (
+      <a href={to} target="_blank" rel="noopener noreferrer" className="external" onClick={onClick}>
+        {children}
+      </a>
+    )
   }
-}
 
-function rgbToString(rgb) {
-  return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`
-}
-
-function useBackgroundColor() {
-  const [backgroundColor, setBackgroundColor] = useState('rgb(255, 255, 255)')
-
-  useEffect(() => {
-    let startTime = null
-    let animationId
-    const duration = 10000
-
-    function animate(currentTime) {
-      if (!startTime) startTime = currentTime
-      const elapsed = currentTime - startTime
-      const cycleIndex = Math.floor(elapsed / duration)
-      const progress = (elapsed % duration) / duration
-
-      const currentColor = colors[cycleIndex % colors.length]
-      const nextColor = colors[(cycleIndex + 1) % colors.length]
-      const interpolatedColor = interpolateColor(currentColor, nextColor, progress)
-
-      setBackgroundColor(rgbToString(interpolatedColor))
-
-      animationId = requestAnimationFrame(animate)
-    }
-
-    animationId = requestAnimationFrame(animate)
-
-    return () => cancelAnimationFrame(animationId)
-  }, [])
-
-  return backgroundColor
+  return (
+    <Link to={to} className={isActive ? 'active' : ''} onClick={onClick}>
+      {children}
+    </Link>
+  )
 }
 
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 10)
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const close = () => setIsOpen(false)
 
   return (
-    <nav className="navbar">
+    <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
       <div className="nav-container">
-        <img src="/logo.png" alt="晏阳城市建设 Logo" className="logo" />
-        <button className="hamburger" aria-label="切换导航菜单" onClick={() => setIsOpen(!isOpen)}>
+        <Link to="/" onClick={close}>
+          <img src="/logo.png" alt="晏阳城市建设" className="logo" />
+        </Link>
+        <button
+          className={`hamburger ${isOpen ? 'open' : ''}`}
+          aria-label="切换导航菜单"
+          onClick={() => setIsOpen(!isOpen)}
+        >
           <span></span>
           <span></span>
           <span></span>
         </button>
         <ul className={`nav-menu ${isOpen ? 'active' : ''}`}>
-          <li><Link to="/" onClick={() => setIsOpen(false)}>首页</Link></li>
-          <li><a href="/activity" onClick={() => setIsOpen(false)}>活动</a></li>
-          <li><Link to="/join" onClick={() => setIsOpen(false)}>加入</Link></li>
-          <li><Link to="/about" onClick={() => setIsOpen(false)}>关于</Link></li>
-          <li><a href="https://rail.yanyn.cn/" onClick={() => setIsOpen(false)}>轨交</a></li>
+          <li><NavLink to="/" onClick={close}>首页</NavLink></li>
+          <li><NavLink to="/activity" onClick={close}>活动</NavLink></li>
+          <li><NavLink to="/join" onClick={close}>加入</NavLink></li>
+          <li><NavLink to="/about" onClick={close}>关于</NavLink></li>
+          <li><NavLink to="https://rail.yanyn.cn/" onClick={close} external>轨交</NavLink></li>
         </ul>
       </div>
     </nav>
   )
 }
 
-function NotFound() {
+function PageTransition({ children }) {
+  const location = useLocation()
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.classList.remove('page-transition-active')
+    el.classList.add('page-transition-enter')
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.classList.remove('page-transition-enter')
+        el.classList.add('page-transition-active')
+      })
+    })
+  }, [location.pathname])
+
+  return <div ref={ref} className="page-transition-enter">{children}</div>
+}
+
+function HeroParticles() {
+  const particles = Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}%`,
+    size: Math.random() * 3 + 1,
+    duration: Math.random() * 8 + 6,
+    delay: Math.random() * 8,
+    opacity: Math.random() * 0.4 + 0.1,
+  }))
+
   return (
-    <main className="main-content not-found">
-      <h1>404</h1>
-      <p>抱歉，你访问的页面不存在。</p>
-      <div className="not-found-button-container">
-        <Link to="/" className="not-found-button">返回首页</Link>
-      </div>
-    </main>
+    <div className="hero-particles">
+      {particles.map(p => (
+        <div
+          key={p.id}
+          className="hero-particle"
+          style={{
+            left: p.left,
+            width: `${p.size}px`,
+            height: `${p.size}px`,
+            opacity: p.opacity,
+            animationDuration: `${p.duration}s`,
+            animationDelay: `${p.delay}s`,
+          }}
+        />
+      ))}
+    </div>
   )
 }
 
 function Home() {
   return (
-    <main className="main-content">
-      <h1>欢迎来到晏阳城市建设</h1>
-      <p>
-        &emsp;&emsp;「晏阳城市建设」服务器 —— 基于 Minecraft Fabric 1.20.1 版本，专为热爱城市规划与轨道交通的创造者打造的像素乌托邦！
-      </p>
-      <p>
-        &emsp;&emsp;零熊服、无外挂，严格维护公平创作环境，让每一份心血都能被珍视；轨道交通体系：铺设跨城高铁、地下地铁、观光轻轨，构建覆盖全城的立体交通网，实现 "一站直达" 的便捷通行，解锁 "轨道串联生活" 的经营乐趣。
-      </p>
-      <p>
-        &emsp;&emsp;我们的承诺: 稳定运维：每日自动备份，服务器崩溃 10 分钟内快速恢复，保障建筑安全；持续更新：倾听玩家建议，迭代轨道工具、城市设施等玩法内容，让晏阳始终充满新鲜感；平等尊重：无论你是建筑大佬还是造城新手，在这里都能找到属于自己的位置，用方块书写城市传奇。
-      </p>
-    </main>
+    <>
+      <section className="hero">
+        <HeroParticles />
+        <div className="hero-content">
+          <div className="hero-badge">
+            <span className="hero-badge-dot"></span>
+            Minecraft Fabric 1.20.1
+          </div>
+          <h1>
+            用方块构筑
+            <br />
+            <span className="gradient-text">城市与轨道的梦想</span>
+          </h1>
+          <p className="hero-desc">
+            晏阳城市建设 —— 专为热爱城市规划与轨道交通的创造者打造的创作服务器。
+            零熊服、无外挂，纯粹的创作环境，让每一份心血都被珍视。
+          </p>
+          <div className="hero-buttons">
+            <Link to="/join" className="btn btn-primary">立即加入</Link>
+            <Link to="/about" className="btn btn-outline">了解更多</Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="features-section">
+        <div className="features-grid">
+          <div className="feature-card">
+            <div className="feature-icon">🏙️</div>
+            <h3>城市规划建设</h3>
+            <p>从一砖一瓦到整座城市，自由规划道路、街区和地标建筑，打造你心中的理想城市。</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">🚇</div>
+            <h3>立体轨道交通</h3>
+            <p>高铁、地铁、轻轨全覆盖，构建跨城交通网络，实现一站直达的便捷通行体验。</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">🛡️</div>
+            <h3>稳定安全运维</h3>
+            <p>每日自动备份，崩溃快速恢复，严格维护公平创作环境，保障你的每一份建筑成果。</p>
+          </div>
+        </div>
+      </section>
+
+      <div className="stats-bar">
+        <div className="stat-item">
+          <div className="stat-number">52+</div>
+          <div className="stat-label">活跃成员</div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-number">19</div>
+          <div className="stat-label">地铁线路</div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-number">7</div>
+          <div className="stat-label">换乘枢纽</div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-number">4年</div>
+          <div className="stat-label">持续运营</div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function NotFound() {
+  return (
+    <div className="not-found">
+      <div className="not-found-code">404</div>
+      <p>抱歉，你访问的页面不存在。</p>
+      <Link to="/" className="btn btn-primary">返回首页</Link>
+    </div>
   )
 }
 
 function Footer() {
   return (
     <footer className="footer">
-      <p>&copy; 2025-2026 晏阳技术组 版权所有。</p>
-      <p>联系方式 <a href="https://qm.qq.com/q/aBSDTnmJhK" target="_blank" rel="noopener noreferrer">QQ群486029013</a> | 邮箱feedback@yanyn.cn</p>
+      <div className="footer-inner">
+        <div className="footer-brand">
+          <img src="/logo.png" alt="晏阳" />
+          <span>晏阳城市建设</span>
+        </div>
+        <div className="footer-links">
+          <a href="https://qm.qq.com/q/aBSDTnmJhK" target="_blank" rel="noopener noreferrer">QQ群 486029013</a>
+          <a href="mailto:feedback@yanyn.cn">feedback@yanyn.cn</a>
+          <a href="https://rail.yanyn.cn/" target="_blank" rel="noopener noreferrer">轨道交通系统</a>
+        </div>
+        <div className="footer-copy">
+          &copy; 2025-2026 晏阳技术组 版权所有
+        </div>
+      </div>
     </footer>
   )
 }
 
 function App() {
-  const backgroundColor = useBackgroundColor()
-
   return (
     <BrowserRouter>
-      <div style={{ backgroundColor, minHeight: '100vh', transition: 'background-color 0.5s ease' }}>
-        <Navbar />
+      <Navbar />
+      <PageTransition>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/join" element={<Join />} />
+          <Route path="/activity" element={<Activity />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
-        <Footer />
-      </div>
+      </PageTransition>
+      <Footer />
     </BrowserRouter>
   )
 }
