@@ -26,32 +26,26 @@ function useBackgroundColor() {
   const [backgroundColor, setBackgroundColor] = useState('rgb(255, 255, 255)')
 
   useEffect(() => {
-    let currentIndex = 0
-    let nextIndex = 1
     let startTime = null
+    let animationId
     const duration = 10000
 
     function animate(currentTime) {
       if (!startTime) startTime = currentTime
       const elapsed = currentTime - startTime
+      const cycleIndex = Math.floor(elapsed / duration)
       const progress = (elapsed % duration) / duration
 
-      const currentColor = colors[currentIndex]
-      const nextColor = colors[nextIndex]
+      const currentColor = colors[cycleIndex % colors.length]
+      const nextColor = colors[(cycleIndex + 1) % colors.length]
       const interpolatedColor = interpolateColor(currentColor, nextColor, progress)
 
       setBackgroundColor(rgbToString(interpolatedColor))
 
-      if (progress >= 1) {
-        currentIndex = nextIndex
-        nextIndex = (nextIndex + 1) % colors.length
-        startTime = currentTime
-      }
-
-      requestAnimationFrame(animate)
+      animationId = requestAnimationFrame(animate)
     }
 
-    const animationId = requestAnimationFrame(animate)
+    animationId = requestAnimationFrame(animate)
 
     return () => cancelAnimationFrame(animationId)
   }, [])
@@ -66,14 +60,14 @@ function Navbar() {
     <nav className="navbar">
       <div className="nav-container">
         <img src="/logo.png" alt="晏阳城市建设 Logo" className="logo" />
-        <button className="hamburger" onClick={() => setIsOpen(!isOpen)}>
+        <button className="hamburger" aria-label="切换导航菜单" onClick={() => setIsOpen(!isOpen)}>
           <span></span>
           <span></span>
           <span></span>
         </button>
         <ul className={`nav-menu ${isOpen ? 'active' : ''}`}>
           <li><Link to="/" onClick={() => setIsOpen(false)}>首页</Link></li>
-          <li><a href="activity" onClick={() => setIsOpen(false)}>活动</a></li>
+          <li><a href="/activity" onClick={() => setIsOpen(false)}>活动</a></li>
           <li><Link to="/join" onClick={() => setIsOpen(false)}>加入</Link></li>
           <li><Link to="/about" onClick={() => setIsOpen(false)}>关于</Link></li>
           <li><a href="https://rail.yanyn.cn/" onClick={() => setIsOpen(false)}>轨交</a></li>

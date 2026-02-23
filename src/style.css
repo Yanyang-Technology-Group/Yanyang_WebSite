@@ -7,7 +7,7 @@
 
 /* 设置body基本样式，应用渐变背景 */
 body {
-    font-family: 'Arial', sans-serif, 'Microsoft YaHei'; /* 使用常见的无衬线字体 */
+    font-family: 'Arial', 'Microsoft YaHei', sans-serif;
     background-color: white; /* 初始背景色为白色 */
     min-height: 100vh; /* 至少占满视口高度 */
     transition: background-color 0.5s ease; /* 添加背景色过渡效果 */
@@ -96,6 +96,7 @@ body {
         box-shadow: 0 10px 27px rgba(0, 0, 0, 0.05);
         padding: 2rem 0;
         gap: 0;
+        z-index: 999;
     }
 
     .nav-menu.active {
@@ -184,7 +185,7 @@ body {
     width: auto;
     object-fit: contain;
     border-radius: 8px;
-    /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .partners-grid img:hover {
@@ -206,6 +207,11 @@ body {
     border-radius: 8px;
     font-size: 1.1em;
     font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+.join-button:hover {
+    background-color: #357ABD;
 }
 
 /* 404页面样式 */
