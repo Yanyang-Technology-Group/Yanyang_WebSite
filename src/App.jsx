@@ -325,6 +325,17 @@ function NotFound() {
 
 /* ========== 页脚 ========== */
 function Footer() {
+  useEffect(() => {
+    if (__USER_DEBUG__) {
+      console.log('[UserDebug] 页脚组件已加载')
+      console.log('[UserDebug] 当前模式: userdebug')
+      console.log('[UserDebug] 版本:', __VERSION__)
+      console.log('[UserDebug] 构建者:', __BUILDER__)
+      console.log('[UserDebug] 构建环境:', __BUILD_ENV__)
+      console.log('[UserDebug] 构建时间:', __BUILD_TIME__)
+    }
+  }, [])
+
   return (
     <footer className="footer">
       <div className="footer-inner">
@@ -357,6 +368,19 @@ function Footer() {
         <div className="footer-copy">
           &copy; 2025-2026 晏阳技术组 版权所有
         </div>
+        <div style={{ 
+          fontSize: '12px', 
+          marginTop: '8px', 
+          color: '#999',
+          textAlign: 'center'
+        }}>
+          版本 {__VERSION__} · 构建于 {__BUILD_TIME__} (UTC+8) · {__BUILD_ENV__} 环境
+        </div>
+        {__USER_DEBUG__ && (
+          <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+            【测试版本】USER DEBUG 模式 · 构建者: {__BUILDER__}
+          </div>
+        )}
       </div>
     </footer>
   )

@@ -6,10 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:user": "cross-env VERSION=1.0.0 BUILDER=Admin BUILD_ENV=production vite build",
+    "build:userdebug": "cross-env VERSION=1.0.0 BUILDER=Admin BUILD_ENV=userdebug vite build --mode userdebug",
     "preview": "vite preview"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.1.4",
+    "cross-env": "^10.1.0",
     "vite": "^7.2.4"
   },
   "dependencies": {
