@@ -27,7 +27,7 @@ function About() {
                 晏阳城市建设 × 晏阳轨道交通是一个以 Minecraft Java Edition 1.20.1 和 Minecraft Transit Railway 4 为核心，集城市建设和轨道交通为一体的 Minecraft 服务器。
               </p>
               <p className="card-text">
-                成立于 2022 年 7 月 16 日，至今已汇聚 52 名成员，涵盖城市规划、建筑设计、轨道交通、运营维护等多个领域的爱好者。
+                成立于 2022 年 7 月 16 日，至今建设组已汇聚 52 名成员，涵盖城市规划、建筑设计、轨道交通、运营维护等多个领域的爱好者。
               </p>
               <Row gutter={16} className="highlights-row">
                 <Col span={4}>
