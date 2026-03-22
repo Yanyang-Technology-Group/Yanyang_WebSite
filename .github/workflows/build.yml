@@ -24,3 +24,12 @@ jobs:
       
       - name: 构建 Vite + React 项目
         run: npm run build
+      
+      # 上传到 GitHub Actions Artifacts
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist  # 产物名称
+          path: dist/  # 要上传的文件夹
+          if-no-files-found: error  # 如果没找到文件就报错
+          retention-days: 90  # 保留天数（可选，默认90天）
