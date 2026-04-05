@@ -28,7 +28,7 @@ import {
 } from 'tdesign-icons-react'
 import About from './About.jsx'
 import Join from './Join.jsx'
-import Activity from './Activity.jsx'
+import Event from './Event.jsx'
 import Software from './Software.jsx'
 
 const { HeadMenu, MenuItem } = Menu
@@ -84,7 +84,7 @@ function Navbar() {
 
   const navItems = [
     { path: '/', label: '首页', icon: <HomeIcon /> },
-    { path: '/activity', label: '活动', icon: <CalendarIcon /> },
+    { path: '/event', label: '活动', icon: <CalendarIcon /> },
     { path: '/join', label: '加入', icon: <UserAddIcon /> },
     { path: '/about', label: '关于', icon: <InfoCircleIcon /> },
   ]
@@ -393,7 +393,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/join" element={<Join />} />
-          <Route path="/activity" element={<Activity />} />
+          <Route path="/event" element={<Event />} />
           <Route path="/software" element={<Software />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
