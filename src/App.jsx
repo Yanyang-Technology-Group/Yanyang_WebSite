@@ -201,19 +201,37 @@ function PageTransition({ children }) {
 
 /* ========== 首页 ========== */
 function Home() {
-  const [alertVisible, setAlertVisible] = useState(true)
+  const [adVisible, setAdVisible] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAdVisible(true)
+    }, 2000)
+    return () => clearTimeout(timer)
+  }, [])
 
   return (
     <>
-      {/* 公告栏 */}
-      {alertVisible && (
-        <div className="announcement-bar">
-          <Alert
-            theme="info"
-            message="西部新城计划已启动 —— 西部新城建设火热进行中，欢迎加入共建！"
-            close
-            onClose={() => setAlertVisible(false)}
-          />
+      {adVisible && (
+        <div className="popup-ad">
+          <div className="popup-ad-content">
+            <button
+              className="popup-ad-close"
+              onClick={() => setAdVisible(false)}
+              aria-label="关闭广告"
+            >
+              ×
+            </button>
+            <div className="popup-ad-body">
+              <h3>广告位招租</h3>
+              <p>这里是一个广告位，可以进入Q群了解更多内容</p>
+              <Link to="/join">
+                <Button theme="primary" size="small" shape="round">
+                  立即加入
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
       )}
 

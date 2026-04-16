@@ -1226,3 +1226,106 @@ a {
   }
 }
 
+/* ==================== Popup Ad ==================== */
+.popup-ad {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    z-index: 998;
+    animation: slideInLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.popup-ad-content {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    box-shadow: 0 8px 40px rgba(102, 126, 234, 0.3);
+    max-width: 320px;
+    position: relative;
+    color: white;
+    animation: floatAd 3s ease-in-out infinite;
+}
+
+@keyframes floatAd {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+.popup-ad-close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.popup-ad-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+.popup-ad-body h3 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: white;
+}
+
+.popup-ad-body p {
+    font-size: 0.95rem;
+    opacity: 0.9;
+    margin-bottom: 1.2rem;
+    line-height: 1.6;
+}
+
+.popup-ad-body .t-button--theme-primary {
+    background: white;
+    color: #667eea;
+    font-weight: 600;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.popup-ad-body .t-button--theme-primary:hover {
+    background: rgba(255, 255, 255, 0.95);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+    .popup-ad {
+        bottom: 16px;
+        left: 16px;
+        right: 16px;
+    }
+
+    .popup-ad-content {
+        max-width: 100%;
+    }
+}
