@@ -30,6 +30,8 @@ import About from './About.jsx'
 import Join from './Join.jsx'
 import Event from './Event.jsx'
 import Software from './Software.jsx'
+import logoUrl from './images/logo.png'
+import logo2Url from './images/logo2.png'
 
 const { HeadMenu, MenuItem } = Menu
 
@@ -99,7 +101,7 @@ function Navbar() {
     <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
       <div className="nav-container">
         <Link to="/" className="nav-brand" onClick={() => window.scrollTo(0, 0)}>
-          <img src="/images/logo.png" alt="晏阳城市建设" className="logo" />
+          <img src={logoUrl} alt="晏阳城市建设" className="logo" />
         </Link>
 
         <div className="nav-desktop">
@@ -337,7 +339,7 @@ function Footer() {
     <footer className="footer">
       <div className="footer-inner">
         <div className="footer-brand">
-          <img src="/images/logo2.png" alt="晏阳" />
+          <img src="logo2Url" alt="晏阳" />
           <span>晏阳城市建设</span>
         </div>
         <Space size="large" className="footer-links">
