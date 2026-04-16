@@ -18,15 +18,8 @@ export default defineConfig(({ mode }) => {
     hour12: false
   })
   
-  // GitHub Pages 项目站点需要设置 base 为仓库名
-  // 仓库名是：Yanyang_WebSite
-  const base = process.env.DEPLOY_TARGET === 'github-pages' 
-    ? '/Yanyang_WebSite/'  // 注意大小写要和仓库名一致
-    : '/'
-  
   return {
     plugins: [react()],
-    base: base,  // 关键配置！
     define: {
       __USER_DEBUG__: isUserDebug,
       __VERSION__: JSON.stringify(version),
