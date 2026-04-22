@@ -7,11 +7,7 @@
 
 
 ## 技术栈
-<img align="center" src="https://img.shields.io/badge/React-19-green"/>
-<img align="center" src="https://img.shields.io/badge/React Router DOM-7-red"/>
-<img align="center" src="https://img.shields.io/badge/Vite-7-blue"/>
-<img align="center" src="https://img.shields.io/badge/UI-TDesign React-blue"/>
-<img align="center" src="https://img.shields.io/badge/Icons-TDesign Icons React-blue"/>
+<img align="center" src="https://img.shields.io/badge/React-19-green"/> <img align="center" src="https://img.shields.io/badge/React Router DOM-7-red"/> <img align="center" src="https://img.shields.io/badge/Vite-7-blue"/> <img align="center" src="https://img.shields.io/badge/UI-TDesign React-gold"/> <img align="center" src="https://img.shields.io/badge/Icons-TDesign Icons React-pink"/>
 
 
 ## TDesign 组件使用
