@@ -30,8 +30,8 @@ import About from './About.jsx'
 import Join from './Join.jsx'
 import Event from './Event.jsx'
 import Software from './Software.jsx'
-import logoUrl from './images/logo.png'
-import logo2Url from './images/logo2.png'
+import logoUrl from '/images/logo.png'
+import logo2Url from '/images/logo2.png'
 
 const { HeadMenu, MenuItem } = Menu
 
