@@ -1,80 +1,43 @@
-name: 构建并部署到 GitHub Pages
+name: Build and Deploy
 
 on:
   push:
-    branches: [ "main", "master" ]
-  workflow_dispatch:
-
-# 设置 GITHUB_TOKEN 的权限
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# 允许一个并发部署
-concurrency:
-  group: "pages"
-  cancel-in-progress: true
+    branches:
+      - main  # 当推送到 main 分支时触发，你可以根据需要修改分支名称
+  workflow_dispatch:  # 支持手动触发
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: 拉取代码
+      # 1. 检出代码
+      - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: 安装 Node.js
+
+      # 2. 设置 Node.js 环境
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: 安装依赖
-        run: npm ci
-      
-      - name: 构建 Vite + React 项目
+          node-version: '20'  # 可以根据你的项目需要修改版本
+          cache: 'npm'        # 缓存 npm 依赖
+
+      # 3. 安装依赖
+      - name: Install dependencies
+        run: npm ci  # 使用 npm ci 更快更可靠，如果不用可以用 npm install
+
+      # 4. 构建项目
+      - name: Build project
         run: npm run build
+
+      # 5. 部署到服务器
+      - name: Deploy to server
+        uses: easingthemes/ssh-deploy@main
         env:
-          NODE_ENV: production
-          DEPLOY_TARGET: github-pages
-          VERSION: ${{ github.run_number }}
-          BUILDER: GitHub Actions
-          BUILD_ENV: github-pages
-      
-      # 验证 dist 目录是否存在
-      - name: 验证构建产物
-        run: |
-          if [ -d "dist" ]; then
-            echo "✅ dist 目录存在"
-            ls -la dist/
-          else
-            echo "❌ dist 目录不存在"
-            exit 1
-          fi
-      
-      # 上传构建产物到 GitHub Pages
-      - name: 上传构建产物
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: 'dist'  # 注意：不要加斜杠，使用 'dist' 而不是 'dist/'
-      
-      # 可选：同时上传到 Actions Artifacts 作为备份
-      - name: 备份构建产物到 Actions Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist-backup
-          path: dist/
-          retention-days: 7
-  
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    
-    steps:
-      - name: 部署到 GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          SSH_PRIVATE_KEY: ${{ secrets.SERVER_PASSWORD }}
+          ARGS: '-avz --delete'  # 可选：--delete 会删除远程多余文件
+          SOURCE: 'dist/'         # 根据你的构建输出目录修改，常见的有 dist/、build/、.next/ 等
+          REMOTE_HOST: ${{ secrets.SERVER_HOST }}
+          REMOTE_USER: ${{ secrets.SERVER_USER }}
+          TARGET: '/www/wwwroot/www.yanyn.cn/'
+          EXCLUDE: '/node_modules/, /.git, /.github'
