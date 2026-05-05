@@ -1065,6 +1065,22 @@ a {
   padding: 0 24px;
 }
 
+.map-container {
+  width: 100%;
+  height: calc(100vh - 300px);
+  min-height: 600px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: white;
+}
+
+.map-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
 .software-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

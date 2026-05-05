@@ -29,7 +29,7 @@ import {
 import About from './About.jsx'
 import Join from './Join.jsx'
 import Event from './Event.jsx'
-import Software from './Software.jsx'
+import Software from './Map.jsx'
 import logoUrl from '/images/logo.png'
 import logo2Url from '/images/logo2.png'
 
@@ -115,12 +115,12 @@ function Navbar() {
                 {item.label}
               </MenuItem>
             ))}
-            <MenuItem value="/software">
+            <MenuItem value="/map">
               <span
-                onClick={() => handleNavClick('/software')}
+                onClick={() => handleNavClick('/map')}
                 style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
               >
-                工具 🔧
+                卫星地图
               </span>
             </MenuItem>
           </HeadMenu>
@@ -158,8 +158,7 @@ function Navbar() {
               onClick={() => handleNavClick('/software')}
               style={{ cursor: 'pointer' }}
             >
-              <span>🔧</span>
-              <span>工具</span>
+              <span>卫星地图</span>
               <span style={{ marginLeft: 'auto' }}>🔧</span>
             </div>
           </div>
@@ -414,7 +413,7 @@ function App() {
           <Route path="/about" element={<About />} />
           <Route path="/join" element={<Join />} />
           <Route path="/event" element={<Event />} />
-          <Route path="/software" element={<Software />} />
+          <Route path="/map" element={<Software />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </PageTransition>
