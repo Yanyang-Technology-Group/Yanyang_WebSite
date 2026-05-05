@@ -116,7 +116,7 @@ function About() {
                 <div key={`partner-${partner.id}-1`} className="carousel-item">
                   <a href={partner.url} target="_blank" rel="noopener noreferrer">
                     <img
-                      src={`/us/${partner.id}.png`}
+                      src={`/images/us/${partner.id}.png`}
                       alt={`合作伙伴 ${partner.id}`}
                       className="carousel-logo"
                     />
@@ -138,7 +138,7 @@ function About() {
                 <div key={`partner-${partner.id}-2`} className="carousel-item">
                   <a href={partner.url} target="_blank" rel="noopener noreferrer">
                     <img
-                      src={`/us/${partner.id}.png`}
+                      src={`/images/us/${partner.id}.png`}
                       alt={`合作伙伴 ${partner.id}`}
                       className="carousel-logo"
                     />
