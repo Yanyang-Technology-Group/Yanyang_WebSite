@@ -34,10 +34,10 @@ jobs:
       - name: Deploy to server
         uses: easingthemes/ssh-deploy@main
         env:
-          SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SSH_PRIVATE_KEY: ${{ secrets.SERVER_PASSWORD }}
           ARGS: '-avz --delete'  # 可选：--delete 会删除远程多余文件
           SOURCE: 'dist/'         # 根据你的构建输出目录修改，常见的有 dist/、build/、.next/ 等
-          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
-          REMOTE_USER: ${{ secrets.REMOTE_USER }}
+          REMOTE_HOST: ${{ secrets.SERVER_HOST }}
+          REMOTE_USER: ${{ secrets.SERVER_USER }}
           TARGET: '/www/wwwroot/www.yanyn.cn/'
           EXCLUDE: '/node_modules/, /.git, /.github'
