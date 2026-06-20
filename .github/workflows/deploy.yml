@@ -3,40 +3,42 @@ name: Build and Deploy
 on:
   push:
     branches:
-      - main  # 当推送到 main 分支时触发，你可以根据需要修改分支名称
-  workflow_dispatch:  # 支持手动触发
+      - main  
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. 检出代码
+
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. 设置 Node.js 环境
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'  # 可以根据你的项目需要修改版本
-          cache: 'npm'        # 缓存 npm 依赖
+          node-version: '20'  
+          cache: 'npm'      
 
-      # 3. 安装依赖
       - name: Install dependencies
-        run: npm ci  # 使用 npm ci 更快更可靠，如果不用可以用 npm install
+        run: npm ci 
 
-      # 4. 构建项目
       - name: Build project
         run: npm run build
 
-      # 5. 部署到服务器
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: dist/
+
       - name: Deploy with password
         uses: appleboy/scp-action@v0.1.7
         with:
-            host: ${{ secrets.SERVER_HOST }}
-            username: ${{ secrets.SERVER_USER }}
-            password: ${{ secrets.SERVER_PASSWORD }}
-            source: 'dist/*'
-            target: '/www/wwwroot/www.yanyn.cn/'
-            strip_components: 1
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          source: 'dist/*'
+          target: '/www/wwwroot/www.yanyn.cn/'
+          strip_components: 1
