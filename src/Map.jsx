@@ -40,7 +40,7 @@ function Software() {
       <section className="software-section">
         <div className="map-container">
           <iframe
-            src="http://103.40.14.14:28826"
+            src="https://map.yanyn.cn/"
             title="卫星地图"
             className="map-iframe"
             frameBorder="0"
