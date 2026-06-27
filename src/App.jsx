@@ -121,7 +121,7 @@ function Navbar() {
                 onClick={() => handleNavClick('/map')}
                 style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
               >
-                卫星地图
+                线路图
               </span>
             </MenuItem>
           </HeadMenu>

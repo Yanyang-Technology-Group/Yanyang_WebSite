@@ -17,14 +17,14 @@ function Software() {
       <section className="software-hero">
         <div className="software-hero-content">
           <Tag theme="primary" variant="light" shape="round" size="medium" className="software-tag">
-            卫星地图
+            线路图
           </Tag>
           <h1 className="software-title">
-            <span className="software-title-main">卫星地图</span>
-            <span className="software-title-sub">实时查看服务器世界</span>
+            <span className="software-title-main">线路图</span>
+            <span className="software-title-sub">实时查看服务器线路</span>
           </h1>
           <p className="software-desc">
-            通过卫星地图实时查看晏阳城市建设服务器的世界全貌，追踪建设进度。
+            通过线路图实时查看晏阳城市建设服务器的地铁线路，追踪建设进度。
           </p>
           <Space size="medium" className="software-actions">
             <Link to="/">
@@ -40,8 +40,8 @@ function Software() {
       <section className="software-section">
         <div className="map-container">
           <iframe
-            src="https://map.yanyn.cn/"
-            title="卫星地图"
+            src="https://umap.yanyn.cn/"
+            title="线路图"
             className="map-iframe"
             frameBorder="0"
             allowFullScreen
