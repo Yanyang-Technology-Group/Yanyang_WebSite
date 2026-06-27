@@ -378,7 +378,7 @@ function Footer() {
             theme="primary"
             underline
           >
-            晏阳轨道交通公司
+            晏阳轨道交通
           </TLink>
         </Space>
         <Divider className="footer-divider" />
