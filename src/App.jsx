@@ -30,6 +30,7 @@ import About from './About.jsx'
 import Join from './Join.jsx'
 import Event from './Event.jsx'
 import Software from './Map.jsx'
+import FourYearsEvent from './Events/4years.jsx'
 import logoUrl from '/images/logo.png'
 import logo2Url from '/images/logo2.png'
 
@@ -222,11 +223,11 @@ function Home() {
               ×
             </button>
             <div className="popup-ad-body">
-              <h3>广告位招租</h3>
-              <p>这里是一个广告位，可以进入Q群了解更多内容</p>
-              <Link to="/join">
+              <h3>4周年庆典活动</h3>
+              <p>晏阳城市建设  x  晏阳轨道交通 成立4周年特别活动。</p>
+              <Link to="/events/official/minecraft/4years">
                 <Button theme="primary" size="small" shape="round">
-                  立即加入
+                  查看详情
                 </Button>
               </Link>
             </div>
@@ -356,7 +357,7 @@ function Footer() {
     <footer className="footer">
       <div className="footer-inner">
         <div className="footer-brand">
-          <img src="logo2Url" alt="晏阳" />
+          <img src="/images/logo2.png" alt="晏阳" />
           <span>晏阳城市建设</span>
         </div>
         <Space size="large" className="footer-links">
@@ -414,6 +415,7 @@ function App() {
           <Route path="/join" element={<Join />} />
           <Route path="/event" element={<Event />} />
           <Route path="/map" element={<Software />} />
+          <Route path="/events/official/minecraft/4years" element={<FourYearsEvent />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </PageTransition>
