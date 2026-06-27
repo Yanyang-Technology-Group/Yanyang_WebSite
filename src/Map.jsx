@@ -41,10 +41,11 @@ function Software() {
         <div className="map-container">
           <iframe
             src="https://umap.yanyn.cn/"
-            title="线路图"
+            title="卫星地图"
             className="map-iframe"
             frameBorder="0"
             allowFullScreen
+            loading="lazy"
           />
         </div>
       </section>
