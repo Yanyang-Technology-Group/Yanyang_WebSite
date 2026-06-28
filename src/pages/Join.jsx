@@ -155,10 +155,6 @@ export default function Join() {
                 <img src="/images/join/frplogo.png" alt="FRP" className="h-8 w-auto" />
                 <span className="text-sm font-medium text-fg">FRP 内网穿透</span>
               </a>
-              <a href="https://www.rainyun.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-surface rounded-container hover:bg-gray-100 transition-colors">
-                <img src="/images/join/webserver.png" alt="云服务" className="h-8 w-auto" />
-                <span className="text-sm font-medium text-fg">网站云服务</span>
-              </a>
             </div>
           </ScrollReveal>
         </div>

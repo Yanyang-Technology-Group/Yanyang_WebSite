@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ mode }) => {
   const isUserDebug = mode === 'userdebug'
-  const version = process.env.VERSION || '1.0.0'
+  const version = process.env.VERSION || '2.0.0.1-rc.1'
   const builder = process.env.BUILDER || 'Unknown'
   const buildEnv = process.env.BUILD_ENV || 'production'
 
