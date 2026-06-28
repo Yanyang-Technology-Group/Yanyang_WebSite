@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { List, X } from '@phosphor-icons/react'
 
@@ -12,8 +12,10 @@ const NAV_ITEMS = [
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [visible, setVisible] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const location = useLocation()
+  const timerRef = useRef(null)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10)
@@ -24,6 +26,19 @@ export default function Navbar() {
   useEffect(() => {
     setMobileOpen(false)
   }, [location.pathname])
+
+  const openMenu = () => {
+    setVisible(true)
+    requestAnimationFrame(() => {
+      setMobileOpen(true)
+    })
+  }
+
+  const closeMenu = () => {
+    setMobileOpen(false)
+    clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => setVisible(false), 300)
+  }
 
   const linkClass = (path) =>
     `relative px-3 py-1.5 text-sm font-medium transition-colors after:absolute after:bottom-0 after:left-3 after:right-3 after:h-0.5 after:rounded-full after:bg-primary after:scale-x-0 after:transition-transform after:origin-center ${
@@ -41,7 +56,7 @@ export default function Navbar() {
       <div className="mx-auto max-w-6xl flex items-center justify-between h-14 px-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2 text-fg no-underline" onClick={() => window.scrollTo(0, 0)}>
           <img src="/images/logo.png" alt="晏阳" className="h-8 w-auto" />
-          <span className="hidden sm:inline font-bold text-sm">晏阳城建</span>
+          <span className="hidden sm:inline font-bold text-sm">晏阳城市建设</span>
         </Link>
 
         <div className="hidden md:flex items-center gap-1">
@@ -54,20 +69,29 @@ export default function Navbar() {
 
         <button
           className="md:hidden p-2 -mr-2 text-fg"
-          onClick={() => setMobileOpen(true)}
+          onClick={openMenu}
           aria-label="打开菜单"
         >
           <List size={24} weight="bold" />
         </button>
       </div>
 
-      {mobileOpen && (
+      {visible && (
         <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true">
-          <div className="fixed inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
-          <div className="fixed top-0 right-0 bottom-0 w-64 bg-white p-6 shadow-none">
+          <div
+            className={`fixed inset-0 bg-black/40 transition-opacity duration-300 ${
+              mobileOpen ? 'opacity-100' : 'opacity-0'
+            }`}
+            onClick={closeMenu}
+          />
+          <div
+            className={`fixed top-0 right-0 bottom-0 w-64 bg-white p-6 shadow-none transition-transform duration-300 ease-out ${
+              mobileOpen ? 'translate-x-0' : 'translate-x-full'
+            }`}
+          >
             <button
               className="absolute top-4 right-4 p-2 text-fg"
-              onClick={() => setMobileOpen(false)}
+              onClick={closeMenu}
               aria-label="关闭菜单"
             >
               <X size={24} weight="bold" />
