@@ -12,14 +12,7 @@ const NAV_ITEMS = [
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
   const location = useLocation()
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10)
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
 
   useEffect(() => {
     setMobileOpen(false)
@@ -34,11 +27,7 @@ export default function Navbar() {
 
   return (
     <>
-    <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-colors ${
-        scrolled ? 'bg-white/80 backdrop-blur-md border-b border-border' : 'bg-transparent'
-      }`}
-    >
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-border">
       <div className="mx-auto max-w-6xl flex items-center justify-between h-14 px-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2 text-fg no-underline" onClick={() => window.scrollTo(0, 0)}>
           <img src="/images/logo.png" alt="晏阳" className="h-8 w-auto" />
