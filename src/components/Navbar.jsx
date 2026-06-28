@@ -33,6 +33,7 @@ export default function Navbar() {
     }`
 
   return (
+    <>
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-colors ${
         scrolled ? 'bg-white/80 backdrop-blur-md border-b border-border' : 'bg-transparent'
@@ -60,24 +61,25 @@ export default function Navbar() {
           <List size={24} weight="bold" />
         </button>
       </div>
+    </nav>
 
+    <div
+      className={`fixed inset-0 z-[60] md:hidden ${mobileOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
+      role="dialog"
+      aria-modal="true"
+    >
       <div
-        className={`fixed inset-0 z-50 md:hidden ${mobileOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
-        role="dialog"
-        aria-modal="true"
+        className={`fixed inset-0 bg-black/40 transition-opacity duration-300 ${
+          mobileOpen ? 'opacity-100' : 'opacity-0'
+        }`}
+        onClick={() => setMobileOpen(false)}
+      />
+      <div
+        className={`fixed top-0 right-0 bottom-0 w-64 p-6 transition-transform duration-300 ease-out ${
+          mobileOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+        style={{ backgroundColor: '#fff' }}
       >
-        <div
-          className={`fixed inset-0 bg-black/40 transition-opacity duration-300 ${
-            mobileOpen ? 'opacity-100' : 'opacity-0'
-          }`}
-          onClick={() => setMobileOpen(false)}
-        />
-        <div
-          className={`fixed top-0 right-0 bottom-0 w-64 p-6 transition-transform duration-300 ease-out ${
-            mobileOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
-          style={{ backgroundColor: '#fff' }}
-        >
           <button
             className="absolute top-4 right-4 p-2 text-fg"
             onClick={() => setMobileOpen(false)}
@@ -102,6 +104,6 @@ export default function Navbar() {
           </nav>
         </div>
       </div>
-    </nav>
+    </>
   )
 }
