@@ -1,10 +1,28 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { MapPin, House } from '@phosphor-icons/react'
 import { SkeletonBlock } from '../components/Skeleton'
 
 export default function Map() {
   const [loading, setLoading] = useState(true)
+  const iframeRef = useRef(null)
+
+  useEffect(() => {
+    const el = iframeRef.current
+    if (!el) return
+
+    const onLoad = () => setLoading(false)
+    el.addEventListener('load', onLoad)
+
+    const timeout = setTimeout(() => {
+      setLoading(false)
+    }, 8000)
+
+    return () => {
+      el.removeEventListener('load', onLoad)
+      clearTimeout(timeout)
+    }
+  }, [])
 
   return (
     <>
@@ -34,14 +52,13 @@ export default function Map() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           {loading && <SkeletonBlock height="600px" className="rounded-container" />}
           <iframe
+            ref={iframeRef}
             src="https://umap.yanyn.cn/"
             title="线路图"
             className={`w-full h-[600px] sm:h-[700px] border-0 rounded-container bg-surface ${
               loading ? 'hidden' : 'block'
             }`}
             allowFullScreen
-            loading="lazy"
-            onLoad={() => setLoading(false)}
           />
         </div>
       </section>
