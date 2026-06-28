@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { Calendar } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
 
 const EVENTS = [
@@ -8,7 +9,6 @@ const EVENTS = [
     desc: '庆祝晏阳成立 4 周年，开展公开参观及游戏活动。',
     tag: '即将开始',
     link: '/events/official/minecraft/4years',
-    active: true,
   },
 ]
 
@@ -29,42 +29,30 @@ export default function Event() {
       <section className="bg-bg pb-section">
         <div className="mx-auto max-w-2xl px-4 sm:px-6">
           <ScrollReveal>
-            <div className="relative pl-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-border">
+            <div className="grid gap-6">
               {EVENTS.map((event, i) => (
                 <div
                   key={i}
-                  className={`relative pb-10 last:pb-0 ${event.link ? 'cursor-pointer' : ''}`}
+                  className="group bg-surface rounded-container border border-border hover:border-primary/40 transition-colors overflow-hidden cursor-pointer"
                   onClick={() => event.link && navigate(event.link)}
                 >
-                  <div
-                    className={`absolute left-[-30px] top-1.5 w-[22px] h-[22px] rounded-full border-2 ${
-                      event.active
-                        ? 'bg-primary border-primary'
-                        : 'bg-bg border-border'
-                    }`}
-                  />
-                  <div className="text-xs font-medium text-muted mb-1">{event.date}</div>
-                  <h3
-                    className={`text-lg font-bold mb-1 ${
-                      event.active ? 'text-fg' : 'text-muted'
-                    }`}
-                  >
-                    {event.title}
-                  </h3>
-                  <p className={`text-sm ${event.active ? 'text-muted' : 'text-muted/50'}`}>
-                    {event.desc}
-                  </p>
-                  {event.tag && (
-                    <span
-                      className={`inline-block mt-2 px-2 py-0.5 text-xs font-medium rounded-full ${
-                        event.active
-                          ? 'bg-amber-50 text-amber-700'
-                          : 'bg-surface text-muted'
-                      }`}
-                    >
-                      {event.tag}
-                    </span>
-                  )}
+                  <div className="bg-primary px-6 py-3 flex items-center gap-2 text-white text-sm font-medium">
+                    <Calendar size={16} weight="bold" />
+                    {event.date}
+                  </div>
+                  <div className="p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-lg font-bold text-fg group-hover:text-primary transition-colors">
+                          {event.title}
+                        </h3>
+                        <p className="mt-2 text-sm text-muted leading-relaxed">{event.desc}</p>
+                      </div>
+                      <span className="flex-shrink-0 px-2.5 py-1 text-xs font-medium bg-amber-50 text-amber-700 rounded-full">
+                        {event.tag}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
