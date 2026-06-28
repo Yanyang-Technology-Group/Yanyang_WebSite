@@ -16,9 +16,6 @@ function Software() {
       {/* 页面头部 */}
       <section className="software-hero">
         <div className="software-hero-content">
-          <Tag theme="primary" variant="light" shape="round" size="medium" className="software-tag">
-            线路图
-          </Tag>
           <h1 className="software-title">
             <span className="software-title-main">线路图</span>
             <span className="software-title-sub">实时查看服务器线路</span>

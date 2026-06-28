@@ -1030,19 +1030,20 @@ a {
 
 .software-title {
   margin: 20px 0;
-  font-size: 48px;
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
   font-weight: bold;
   line-height: 1.2;
+  text-align: center;
 }
 
 .software-title-main {
   display: block;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .software-title-sub {
   display: block;
-  font-size: 24px;
+  font-size: clamp(0.9rem, 2vw, 1.1rem);
   font-weight: normal;
   opacity: 0.9;
 }
@@ -1139,11 +1140,11 @@ a {
   }
 
   .software-title {
-    font-size: 36px;
+    font-size: clamp(1.5rem, 3.5vw, 2rem);
   }
 
   .software-title-sub {
-    font-size: 20px;
+    font-size: clamp(0.85rem, 1.8vw, 1rem);
   }
 
   .software-desc {
