@@ -11,7 +11,7 @@ export default function Footer() {
   }, [])
 
   return (
-    <footer className="bg-fg text-muted">
+    <footer className="relative z-10 bg-fg text-muted">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 flex flex-col items-center gap-6">
         <div className="flex items-center gap-2">
           <img src="/images/logo2.png" alt="晏阳" className="h-6 w-auto" />

@@ -96,7 +96,7 @@ export default function About() {
       </section>
 
       {/* Partners */}
-      <section className="bg-surface py-section">
+      <section className="bg-bg py-section">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
           <div className="text-center mb-10">
             <h2 className="text-2xl font-extrabold text-fg">合作伙伴</h2>
