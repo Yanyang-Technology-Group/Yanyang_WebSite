@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { List, X } from '@phosphor-icons/react'
 
@@ -12,10 +12,8 @@ const NAV_ITEMS = [
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [visible, setVisible] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const location = useLocation()
-  const timerRef = useRef(null)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10)
@@ -26,19 +24,6 @@ export default function Navbar() {
   useEffect(() => {
     setMobileOpen(false)
   }, [location.pathname])
-
-  const openMenu = () => {
-    setVisible(true)
-    requestAnimationFrame(() => {
-      setMobileOpen(true)
-    })
-  }
-
-  const closeMenu = () => {
-    setMobileOpen(false)
-    clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => setVisible(false), 300)
-  }
 
   const linkClass = (path) =>
     `relative px-3 py-1.5 text-sm font-medium transition-colors after:absolute after:bottom-0 after:left-3 after:right-3 after:h-0.5 after:rounded-full after:bg-primary after:scale-x-0 after:transition-transform after:origin-center ${
@@ -69,51 +54,50 @@ export default function Navbar() {
 
         <button
           className="md:hidden p-2 -mr-2 text-fg"
-          onClick={openMenu}
+          onClick={() => setMobileOpen(true)}
           aria-label="打开菜单"
         >
           <List size={24} weight="bold" />
         </button>
       </div>
 
-      {visible && (
-        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true">
-          <div
-            className={`fixed inset-0 bg-black/40 transition-opacity duration-300 ${
-              mobileOpen ? 'opacity-100' : 'opacity-0'
-            }`}
-            onClick={closeMenu}
-          />
-          <div
-            className={`fixed top-0 right-0 bottom-0 w-64 bg-white p-6 shadow-none transition-transform duration-300 ease-out ${
-              mobileOpen ? 'translate-x-0' : 'translate-x-full'
-            }`}
+      <div
+        className={`fixed inset-0 z-50 md:hidden transition-opacity duration-300 ${
+          mobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div className="fixed inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
+        <div
+          className={`fixed top-0 right-0 bottom-0 w-64 bg-white p-6 transition-transform duration-300 ease-out ${
+            mobileOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        >
+          <button
+            className="absolute top-4 right-4 p-2 text-fg"
+            onClick={() => setMobileOpen(false)}
+            aria-label="关闭菜单"
           >
-            <button
-              className="absolute top-4 right-4 p-2 text-fg"
-              onClick={closeMenu}
-              aria-label="关闭菜单"
-            >
-              <X size={24} weight="bold" />
-            </button>
-            <nav className="mt-12 flex flex-col gap-1">
-              {NAV_ITEMS.map(({ path, label }) => (
-                <Link
-                  key={path}
-                  to={path}
-                  className={`block px-4 py-3 rounded-md text-sm font-medium transition-colors ${
-                    location.pathname === path
-                      ? 'bg-primary-light text-primary'
-                      : 'text-fg hover:bg-surface'
-                  }`}
-                >
-                  {label}
-                </Link>
-              ))}
-            </nav>
-          </div>
+            <X size={24} weight="bold" />
+          </button>
+          <nav className="mt-12 flex flex-col gap-1">
+            {NAV_ITEMS.map(({ path, label }) => (
+              <Link
+                key={path}
+                to={path}
+                className={`block px-4 py-3 rounded-md text-sm font-medium transition-colors ${
+                  location.pathname === path
+                    ? 'bg-primary-light text-primary'
+                    : 'text-fg hover:bg-surface'
+                }`}
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
         </div>
-      )}
+      </div>
     </nav>
   )
 }
