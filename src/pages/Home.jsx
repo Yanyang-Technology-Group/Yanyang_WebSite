@@ -56,24 +56,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Ad Banner */}
-      <section className="bg-bg">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <Link to="/events/official/minecraft/4years" className="block relative overflow-hidden rounded-container bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 hover:from-amber-500 hover:via-orange-500 hover:to-amber-600 transition-all active:scale-[0.98]">
-            <div className="px-6 py-8 sm:px-10 sm:py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="text-white text-center sm:text-left">
-                <span className="inline-block px-2.5 py-0.5 mb-2 text-xs font-bold bg-white/20 rounded-full">即将开始</span>
-                <h3 className="text-xl sm:text-2xl font-extrabold">晏阳 4 周年庆典</h3>
-                <p className="mt-1 text-sm text-white/80">2026 年 7 月 16 日 · 诚邀参与</p>
-              </div>
-              <span className="flex-shrink-0 px-5 py-2.5 bg-white text-amber-600 font-bold rounded-btn text-sm hover:bg-white/90 transition-colors">
-                查看详情
-              </span>
-            </div>
-          </Link>
-        </div>
-      </section>
-
       {/* Highlights */}
       <section className="bg-surface py-section">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
