@@ -151,11 +151,11 @@ export default function Join() {
           <ScrollReveal delay={120}>
             <h2 className="text-xl font-bold text-fg mt-8 mb-6">技术服务</h2>
             <div className="flex flex-wrap items-center gap-8">
-              <a href="https://www.passnat.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-bg rounded-container border border-border hover:border-primary/30 transition-colors">
+              <a href="https://www.passnat.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-surface rounded-container hover:bg-gray-100 transition-colors">
                 <img src="/images/join/frplogo.png" alt="FRP" className="h-8 w-auto" />
                 <span className="text-sm font-medium text-fg">FRP 内网穿透</span>
               </a>
-              <a href="https://www.rainyun.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-bg rounded-container border border-border hover:border-primary/30 transition-colors">
+              <a href="https://www.rainyun.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-surface rounded-container hover:bg-gray-100 transition-colors">
                 <img src="/images/join/webserver.png" alt="云服务" className="h-8 w-auto" />
                 <span className="text-sm font-medium text-fg">网站云服务</span>
               </a>

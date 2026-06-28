@@ -61,6 +61,7 @@
   to { transform: translateX(-50%); }
 }
 
-@utility animate-scroll {
+.animate-scroll {
   animation: scroll 30s linear infinite;
+  min-width: max-content;
 }

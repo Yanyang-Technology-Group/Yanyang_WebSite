@@ -111,7 +111,7 @@ export default function About() {
                     href={p.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-shrink-0 w-24 h-12 bg-bg rounded-card border border-border flex items-center justify-center p-2 hover:border-primary/30 transition-colors"
+                    className="flex-shrink-0 w-24 h-12 bg-surface rounded-card flex items-center justify-center p-2 hover:opacity-80 transition-opacity"
                   >
                     <img
                       src={`/images/us/${p.id}.png`}
