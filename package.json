@@ -16,10 +16,11 @@
     "vite": "^7.2.4"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "@tailwindcss/vite": "^4.3.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.0",
-    "tdesign-icons-react": "^0.6.2",
-    "tdesign-react": "^1.16.6"
+    "tailwindcss": "^4.3.1"
   }
 }

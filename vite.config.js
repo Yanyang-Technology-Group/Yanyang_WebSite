@@ -1,12 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ mode }) => {
   const isUserDebug = mode === 'userdebug'
   const version = process.env.VERSION || '1.0.0'
   const builder = process.env.BUILDER || 'Unknown'
   const buildEnv = process.env.BUILD_ENV || 'production'
-  
+
   const buildTime = new Date().toLocaleString('zh-CN', {
     timeZone: 'Asia/Shanghai',
     year: 'numeric',
@@ -17,9 +18,9 @@ export default defineConfig(({ mode }) => {
     second: '2-digit',
     hour12: false
   })
-  
+
   return {
-    plugins: [react()],
+    plugins: [react(), tailwindcss()],
     define: {
       __USER_DEBUG__: isUserDebug,
       __VERSION__: JSON.stringify(version),
