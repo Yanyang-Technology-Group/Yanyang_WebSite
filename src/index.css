@@ -55,3 +55,12 @@
   transform: translateY(0);
   transition: opacity 0.5s ease, transform 0.5s ease;
 }
+
+@keyframes scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@utility animate-scroll {
+  animation: scroll 30s linear infinite;
+}
