@@ -156,11 +156,10 @@ function Navbar() {
             <Divider />
             <div
               className="drawer-nav-item"
-              onClick={() => handleNavClick('/software')}
+              onClick={() => handleNavClick('/map')}
               style={{ cursor: 'pointer' }}
             >
-              <span>卫星地图</span>
-              <span style={{ marginLeft: 'auto' }}>🔧</span>
+              <span>线路图</span>
             </div>
           </div>
         </Drawer>

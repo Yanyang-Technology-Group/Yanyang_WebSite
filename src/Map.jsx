@@ -41,7 +41,7 @@ function Software() {
         <div className="map-container">
           <iframe
             src="https://umap.yanyn.cn/"
-            title="卫星地图"
+            title="线路图"
             className="map-iframe"
             frameBorder="0"
             allowFullScreen
