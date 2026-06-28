@@ -1,6 +1,8 @@
 import { Card, Button, Tag } from 'tdesign-react'
 import { LocationIcon, UserIcon, ArrowLeftIcon, CalendarIcon } from 'tdesign-icons-react'
 import { useNavigate } from 'react-router-dom'
+import 'tdesign-react/es/style/index.css'
+import './4years.css'
 
 function FourYearsEvent() {
   const navigate = useNavigate()

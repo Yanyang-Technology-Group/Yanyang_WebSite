@@ -6,6 +6,7 @@ import About from './pages/About'
 import Join from './pages/Join'
 import Event from './pages/Event'
 import Map from './pages/Map'
+import FourYearsEvent from './Events/4years.jsx'
 
 function NotFound() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/about" element={<About />} />
             <Route path="/join" element={<Join />} />
             <Route path="/event" element={<Event />} />
+            <Route path="/events/official/minecraft/4years" element={<FourYearsEvent />} />
             <Route path="/map" element={<Map />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

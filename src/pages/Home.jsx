@@ -8,9 +8,6 @@ export default function Home() {
       {/* Hero */}
       <section className="bg-primary pt-20 pb-16 sm:pt-28 sm:pb-20">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
-          <span className="inline-block px-3 py-1 mb-6 text-xs font-medium text-primary bg-white/15 rounded-full">
-            Minecraft Fabric 1.20.1 · 在线运行中
-          </span>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight">
             晏阳城市建设
           </h1>
