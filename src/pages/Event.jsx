@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import ScrollReveal from '../components/ScrollReveal'
 
 const EVENTS = [
@@ -6,11 +7,14 @@ const EVENTS = [
     title: '晏阳 4 周年庆典',
     desc: '庆祝晏阳成立 4 周年，开展公开参观及游戏活动。',
     tag: '即将开始',
+    link: '/events/official/minecraft/4years',
     active: true,
   },
 ]
 
 export default function Event() {
+  const navigate = useNavigate()
+
   return (
     <>
       <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
@@ -27,7 +31,11 @@ export default function Event() {
           <ScrollReveal>
             <div className="relative pl-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-border">
               {EVENTS.map((event, i) => (
-                <div key={i} className="relative pb-10 last:pb-0">
+                <div
+                  key={i}
+                  className={`relative pb-10 last:pb-0 ${event.link ? 'cursor-pointer' : ''}`}
+                  onClick={() => event.link && navigate(event.link)}
+                >
                   <div
                     className={`absolute left-[-30px] top-1.5 w-[22px] h-[22px] rounded-full border-2 ${
                       event.active

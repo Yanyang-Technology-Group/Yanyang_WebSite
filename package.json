@@ -21,6 +21,8 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.0",
-    "tailwindcss": "^4.3.1"
+    "tailwindcss": "^4.3.1",
+    "tdesign-icons-react": "^0.6.4",
+    "tdesign-react": "^1.18.0"
   }
 }
