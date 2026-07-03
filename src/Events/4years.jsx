@@ -1,6 +1,7 @@
 import { Card, Button, Tag } from 'tdesign-react'
 import { LocationIcon, UserIcon, ArrowLeftIcon, CalendarIcon } from 'tdesign-icons-react'
 import { useNavigate } from 'react-router-dom'
+import ScrollReveal from '../components/ScrollReveal'
 import 'tdesign-react/es/style/index.css'
 import './4years.css'
 
@@ -24,6 +25,7 @@ function FourYearsEvent() {
       <div className="mc-content">
         {/* Hero Section */}
         <div className="mc-hero">
+          <ScrollReveal>
           <div className="mc-hero-card">
             <div className="mc-hero-header">
               <img 
@@ -51,6 +53,7 @@ function FourYearsEvent() {
               </div>
             </div>
           </div>
+          </ScrollReveal>
         </div>
 
         {/* Main Content Grid */}
@@ -58,6 +61,7 @@ function FourYearsEvent() {
           {/* Left Column */}
           <div className="mc-column mc-left">
             {/* Activity Intro */}
+            <ScrollReveal delay={100}>
             <Card className="mc-card mc-intro" hoverShadow>
               <div className="mc-card-header">
                 <div className="mc-icon-circle">
@@ -76,10 +80,12 @@ function FourYearsEvent() {
                   本次庆典将包含开放服务器参观、互动小游戏等丰富环节，让我们一起回顾过去四年的精彩瞬间，共同展望更加美好的未来!
                 </p>
               </div>
-            </Card>
+              </Card>
+            </ScrollReveal>
           </div>
 
             {/* How to Join */}
+            <ScrollReveal delay={200}>
             <Card className="mc-card mc-join" hoverShadow>
               <div className="mc-card-header">
                 <div className="mc-icon-circle mc-icon-green">
@@ -113,6 +119,7 @@ function FourYearsEvent() {
                 </div>
               </div>
             </Card>
+            </ScrollReveal>
         </div>
 
         {/* Back Button */}

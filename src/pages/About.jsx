@@ -96,8 +96,8 @@ export default function About() {
       </section>
 
       {/* Partners */}
-      <section className="bg-surface py-section">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6">
+      <section className="bg-bg py-section">
+        <div className="px-4 sm:px-6">
           <div className="text-center mb-10">
             <h2 className="text-2xl font-extrabold text-fg">合作伙伴</h2>
             <p className="mt-2 text-sm text-muted">感谢以下伙伴的支持与合作</p>
@@ -111,7 +111,7 @@ export default function About() {
                     href={p.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-shrink-0 w-40 h-20 sm:w-48 sm:h-24 bg-surface rounded-card flex items-center justify-center p-3 hover:opacity-80 transition-opacity"
+                    className="flex-shrink-0 w-40 h-20 sm:w-48 sm:h-24 bg-white flex items-center justify-center p-3 hover:opacity-80 transition-opacity"
                   >
                     <img
                       src={`/images/us/${p.id}.png`}
