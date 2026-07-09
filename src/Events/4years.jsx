@@ -10,9 +10,8 @@ function FourYearsEvent() {
 
   return (
     <div className="mc-event-page">
-      {/* Minecraft Background */}
       <div className="mc-background">
-        <div 
+        <div
           className="mc-background-image"
           style={{
             backgroundImage: 'url(/images/events/88c6ced5-23d5-4da5-8db6-c7828c11e7b4.png)',
@@ -21,16 +20,14 @@ function FourYearsEvent() {
         <div className="mc-overlay"></div>
       </div>
 
-      {/* Content Container */}
       <div className="mc-content">
-        {/* Hero Section */}
         <div className="mc-hero">
           <ScrollReveal>
           <div className="mc-hero-card">
             <div className="mc-hero-header">
-              <img 
-                src="/images/events/4yearslogo.png" 
-                alt="4周年庆典Logo" 
+              <img
+                src="/images/events/4yearslogo.png"
+                alt="4周年庆典Logo"
                 className="mc-hero-logo"
               />
               <div className="mc-hero-text">
@@ -56,11 +53,8 @@ function FourYearsEvent() {
           </ScrollReveal>
         </div>
 
-        {/* Main Content Grid */}
         <div className="mc-grid">
-          {/* Left Column */}
           <div className="mc-column mc-left">
-            {/* Activity Intro */}
             <ScrollReveal delay={100}>
             <Card className="mc-card mc-intro" hoverShadow>
               <div className="mc-card-header">
@@ -82,9 +76,43 @@ function FourYearsEvent() {
               </div>
               </Card>
             </ScrollReveal>
+
+            <ScrollReveal delay={150}>
+            <Card className="mc-card mc-live" hoverShadow>
+              <div className="mc-card-header">
+                <div className="mc-icon-circle mc-icon-red">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polygon points="10,8 16,12 10,16" fill="white" />
+                  </svg>
+                </div>
+                <h2>官方直播</h2>
+                <Tag theme="primary" variant="light" shape="round" size="small" className="mc-live-tag">
+                  ● 未开播
+                </Tag>
+              </div>
+              <div className="mc-card-body">
+                <div className="mc-live-container">
+                  <div className="mc-live-placeholder">
+                    {/* <div className="mc-live-preview">
+                      <iframe
+                        src=""
+                        allowFullScreen
+                        title="晏阳4周年庆典官方直播"
+                        className="mc-live-iframe"
+                        allow="autoplay; encrypted-media"
+                      ></iframe>
+                    </div> */}
+                    <div className="mc-live-info">
+                      <p className="mc-live-desc">晏阳4周年庆典 · 现场直播</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+            </ScrollReveal>
           </div>
 
-            {/* How to Join */}
             <ScrollReveal delay={200}>
             <Card className="mc-card mc-join" hoverShadow>
               <div className="mc-card-header">
@@ -122,12 +150,11 @@ function FourYearsEvent() {
             </ScrollReveal>
         </div>
 
-        {/* Back Button */}
         <div className="mc-back">
-          <Button 
-            theme="default" 
-            size="large" 
-            shape="round" 
+          <Button
+            theme="default"
+            size="large"
+            shape="round"
             icon={<ArrowLeftIcon />}
             onClick={() => navigate('/event')}
             className="mc-back-btn"
