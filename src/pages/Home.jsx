@@ -106,10 +106,10 @@ export default function Home() {
           <ScrollReveal>
             <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-6">
               {[
-                { value: '100+', label: '活跃玩家' },
+                { value: '50+', label: '活跃玩家' },
                 { value: '4', label: '年持续运营' },
                 { value: '7', label: '座换乘站' },
-                { value: '52', label: '社群成员' },
+                { value: '120+', label: '社群成员' },
               ].map(({ value, label }) => (
                 <div key={label}>
                   <div className="text-3xl sm:text-4xl font-extrabold text-fg">{value}</div>
