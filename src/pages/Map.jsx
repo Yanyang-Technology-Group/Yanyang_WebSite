@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { MapPin, House } from '@phosphor-icons/react'
+import { MapPin, House, ArrowsClockwise } from '@phosphor-icons/react'
 import { SkeletonBlock } from '../components/Skeleton'
 
 export default function Map() {
   const [loading, setLoading] = useState(true)
+  const [key, setKey] = useState(0)
   const iframeRef = useRef(null)
 
   useEffect(() => {
@@ -22,7 +23,12 @@ export default function Map() {
       el.removeEventListener('load', onLoad)
       clearTimeout(timeout)
     }
-  }, [])
+  }, [key])
+
+  const handleRefresh = () => {
+    setLoading(true)
+    setKey(prev => prev + 1)
+  }
 
   return (
     <>
@@ -36,7 +42,7 @@ export default function Map() {
           <p className="mt-3 text-muted">
             实时查看晏阳城市建设服务器的地铁线路，追踪建设进度。
           </p>
-          <div className="mt-6">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <Link
               to="/"
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-fg border border-border rounded-btn hover:bg-surface active:scale-[0.97] transition-all"
@@ -44,6 +50,13 @@ export default function Map() {
               <House size={16} weight="bold" />
               返回首页
             </Link>
+            <button
+              onClick={handleRefresh}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-fg border border-border rounded-btn hover:bg-surface active:scale-[0.97] transition-all"
+            >
+              <ArrowsClockwise size={16} weight="bold" className={loading ? 'animate-spin' : ''} />
+              刷新
+            </button>
           </div>
         </div>
       </section>
@@ -52,6 +65,7 @@ export default function Map() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           {loading && <SkeletonBlock height="600px" className="rounded-container" />}
           <iframe
+            key={key}
             ref={iframeRef}
             src="https://umap.yanyn.cn/"
             title="线路图"
