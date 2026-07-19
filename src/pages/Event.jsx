@@ -7,7 +7,7 @@ const EVENTS = [
     date: '2026 年 7 月 16 日',
     title: '晏阳 4 周年庆典',
     desc: '庆祝晏阳成立 4 周年，开展公开参观及游戏活动。',
-    tag: '即将开始',
+    tag: '已结束',
     link: '/events/official/minecraft/4years',
   },
 ]

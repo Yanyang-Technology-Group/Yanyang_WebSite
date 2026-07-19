@@ -31,8 +31,8 @@ function FourYearsEvent() {
                 className="mc-hero-logo"
               />
               <div className="mc-hero-text">
-                <Tag theme="warning" variant="light" shape="round" size="large" className="mc-badge">
-                  即将开始
+                <Tag theme="default" variant="light" shape="round" size="large" className="mc-badge">
+                  已结束
                 </Tag>
                 <h1 className="mc-title">晏阳城市建设 x 晏阳轨道交通 4周年庆典</h1>
                 <p className="mc-subtitle">四年风雨 · 感谢有你相伴</p>
