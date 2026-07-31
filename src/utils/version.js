@@ -1,20 +1,23 @@
-// 版本号已经在构建时注入，直接使用即可
 export function getVersion() {
-  // 直接使用构建时注入的版本号
   return __VERSION__ || '未知版本'
 }
 
-// 如果需要获取提交次数
 export function getCommitCount() {
   return __COMMIT_COUNT__ || '0'
 }
 
-// 异步版本（保持兼容）
-export async function getVersionAsync() {
-  return getVersion()
+export function getBuildDate() {
+  return __BUILD_DATE__ || ''
 }
 
-// 带缓存的版本
+export function getBuildTime() {
+  return __BUILD_TIME__ || ''
+}
+
+export function getBuilder() {
+  return __BUILDER__ || ''
+}
+
 let cachedVersion = null
 
 export function getVersionWithCache() {
@@ -25,4 +28,58 @@ export function getVersionWithCache() {
   const version = getVersion()
   cachedVersion = version
   return Promise.resolve(version)
+}
+
+async function getCommitCountFromGitHub() {
+  try {
+    const response = await fetch(
+      'https://api.github.com/repos/Yanyang-Technology-Group/Yanyang_WebSite/commits?per_page=1',
+      {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Yanyang-Website'
+        }
+      }
+    )
+
+    const linkHeader = response.headers.get('Link')
+    if (linkHeader) {
+      const match = linkHeader.match(/page=(\d+)>; rel="last"/)
+      if (match) {
+        return parseInt(match[1], 10)
+      }
+    }
+
+    return 0
+  } catch {
+    return 0
+  }
+}
+
+export async function getVersionFromGitHub() {
+  const buildDate = __BUILD_DATE__ || (() => {
+    const now = new Date()
+    return `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`
+  })()
+
+  const commitCount = await getCommitCountFromGitHub()
+  return `${buildDate}.${commitCount}`
+}
+
+let cachedVersionFromGitHub = null
+let cachedPromise = null
+
+export function getVersionFromGitHubWithCache() {
+  if (cachedVersionFromGitHub) {
+    return Promise.resolve(cachedVersionFromGitHub)
+  }
+
+  if (!cachedPromise) {
+    cachedPromise = getVersionFromGitHub().then(version => {
+      cachedVersionFromGitHub = version
+      return version
+    })
+  }
+
+  return cachedPromise
 }

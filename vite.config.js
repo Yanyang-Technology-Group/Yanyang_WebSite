@@ -1,41 +1,63 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { execSync } from 'child_process'  // 添加这行
 
-// 获取提交次数的函数
-function getCommitCount() {
+async function getCommitCountFromGitHub() {
   try {
-    // 检查是否在 Git 仓库中
-    execSync('git rev-parse --git-dir', { stdio: 'ignore' })
+    const response = await fetch(
+      'https://api.github.com/repos/Yanyang-Technology-Group/Yanyang_WebSite/commits?per_page=1',
+      {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Yanyang-Website'
+        }
+      }
+    )
 
-    // 获取提交总数
-    const count = execSync('git rev-list --count HEAD', {
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'ignore']
-    }).trim()
+    if (!response.ok) {
+      return '0'
+    }
 
-    return count || '0'
-  } catch (error) {
-    console.warn('⚠️ 无法获取 Git 提交次数，使用默认值 0')
+    const linkHeader = response.headers.get('Link')
+    if (linkHeader) {
+      const match = linkHeader.match(/page=(\d+)>; rel="last"/)
+      if (match) {
+        return match[1]
+      }
+    }
+
+    return '0'
+  } catch {
     return '0'
   }
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(async ({ mode, command }) => {
   const isUserDebug = mode === 'userdebug'
 
-  // 构建时锁死日期
   const now = new Date()
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const day = String(now.getDate()).padStart(2, '0')
   const buildDate = `${year}.${month}.${day}`
 
-  // 获取提交次数
-  const commitCount = getCommitCount()
+  let commitCount = '0'
 
-  // 生成完整版本号：日期 + 提交次数
+  if (command === 'build') {
+    commitCount = await getCommitCountFromGitHub()
+  } else {
+    try {
+      const { execSync } = await import('child_process')
+      const count = execSync('git rev-list --count HEAD', {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'ignore']
+      }).trim()
+      commitCount = count || '0'
+    } catch {
+      commitCount = '0'
+    }
+  }
+
   const version = process.env.VERSION || `${buildDate}.${commitCount}`
 
   const builder = process.env.BUILDER || 'Unknown'
@@ -52,13 +74,7 @@ export default defineConfig(({ mode }) => {
     hour12: false
   })
 
-  console.log('\n📦 构建配置:')
-  console.log(`  构建日期: ${buildDate}`)
-  console.log(`  提交次数: ${commitCount}`)
-  console.log(`  版本号: ${version}`)
-  console.log(`  构建时间: ${buildTime}`)
-  console.log(`  构建环境: ${buildEnv}`)
-  console.log(`  构建者: ${builder}\n`)
+  console.log(`\nVersion: ${version}\n`)
 
   return {
     plugins: [react(), tailwindcss()],
