@@ -56,37 +56,38 @@ export default defineConfig(async ({ mode, command }) => {
   let commitCount = '0'
   let versionSource = ''
 
-  console.log('[版本号] 优先从 GitHub API 获取...')
-  const githubCount = await getCommitCountFromGitHub(10)
+  if (command === 'build') {
+    console.log('[版本号] 生产构建，从 GitHub API 获取...')
+    const githubCount = await getCommitCountFromGitHub(10)
 
-  if (githubCount !== null) {
-    commitCount = githubCount
-    versionSource = 'GitHub API'
-    console.log(`[版本号] 从 ${versionSource} 获取成功: ${commitCount}`)
-  } else {
-    if (process.env.VITE_COMMIT_COUNT) {
+    if (githubCount !== null) {
+      commitCount = githubCount
+      versionSource = 'GitHub API'
+      console.log(`[版本号] 从 ${versionSource} 获取成功: ${commitCount}`)
+    } else if (process.env.VITE_COMMIT_COUNT) {
       commitCount = process.env.VITE_COMMIT_COUNT
       versionSource = '环境变量'
       console.log(`[版本号] GitHub 失败，使用 ${versionSource}: ${commitCount}`)
-    } else if (command !== 'build') {
-      try {
-        const { execSync } = await import('child_process')
-        const count = execSync('git rev-list --count HEAD', {
-          encoding: 'utf-8',
-          stdio: ['pipe', 'pipe', 'ignore']
-        }).trim()
-        commitCount = count || '0'
-        versionSource = 'Git 命令'
-        console.log(`[版本号] 使用 ${versionSource}: ${commitCount}`)
-      } catch {
-        commitCount = '0'
-        versionSource = '默认值'
-        console.warn(`[版本号] 所有方式失败，使用 ${versionSource}: ${commitCount}`)
-      }
     } else {
       commitCount = '0'
       versionSource = '默认值'
       console.warn(`[版本号] 所有方式失败，使用 ${versionSource}: ${commitCount}`)
+    }
+  } else {
+    console.log('[版本号] 开发模式，从本地 Git 获取...')
+    try {
+      const { execSync } = await import('child_process')
+      const count = execSync('git rev-list --count HEAD', {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'ignore']
+      }).trim()
+      commitCount = count || '0'
+      versionSource = '本地 Git'
+      console.log(`[版本号] 从 ${versionSource} 获取成功: ${commitCount}`)
+    } catch {
+      commitCount = '0'
+      versionSource = '默认值'
+      console.warn(`[版本号] Git 命令失败，使用 ${versionSource}: ${commitCount}`)
     }
   }
 
