@@ -14,6 +14,14 @@ export async function getData(env) {
   }
 
   const data = await res.json()
-  const content = atob(data.content)
-  return JSON.parse(content)
+
+  const binary = atob(data.content)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+  const decoder = new TextDecoder('utf-8')
+  const text = decoder.decode(bytes)
+
+  return JSON.parse(text)
 }
