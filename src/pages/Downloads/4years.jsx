@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Download, ArrowLeft, Copy } from '@phosphor-icons/react'
 import ScrollReveal from '../../components/ScrollReveal'
 import { useAuth } from '../../hooks/useAuth'
+import { API_ENDPOINTS } from '../../config'
 
 function getCookie(name) {
   const value = `; ${document.cookie}`
@@ -37,7 +38,7 @@ export default function FourYearsPack() {
 
   async function fetchDownloads(token) {
     try {
-      const res = await fetch('/api/downloads', {
+      const res = await fetch(API_ENDPOINTS.downloads, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
 
