@@ -4,6 +4,23 @@ import { simpleJWT, verifySimpleJWT } from './services/jwt.js'
 
 const TOKEN_EXPIRY = 3600000
 
+async function handleVerify(request, env) {
+  try {
+    console.log('=== 开始验证 ===')
+    console.log('GITHUB_TOKEN 是否存在:', !!env.GITHUB_TOKEN)
+    console.log('REPO_OWNER:', env.REPO_OWNER)
+    console.log('REPO_NAME:', env.REPO_NAME)
+
+    const { password } = await request.json()
+    console.log('收到密码:', password)
+    // ... 后续代码
+  } catch (error) {
+    console.error('错误:', error.message)
+    console.error('错误堆栈:', error.stack)
+    return errorResponse('服务器错误，请稍后重试', 500, request)
+  }
+}
+
 async function handleHealth(request) {
   return jsonResponse({
     status: 'ok',
