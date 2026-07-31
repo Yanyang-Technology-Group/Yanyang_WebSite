@@ -43,6 +43,33 @@ export default function Footer() {
           </a>
         </div>
 
+        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted/60">
+          <a
+            href="/docs/yanyangchengshijianshefaan.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-primary transition-colors"
+          >
+            城市建设法案
+          </a>
+          <a
+            href="/docs/yanyangruanjianxvkejifuwuxieyi.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-primary transition-colors"
+          >
+            软件许可及服务协议
+          </a>
+          <a
+            href="/docs/yanyangertonggerenxinxibaohuguizejijianhurenxvzhi.docx"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-primary transition-colors"
+          >
+            儿童个人信息保护规则
+          </a>
+        </div>
+
         <hr className="w-full max-w-xs border-border/20" />
 
         <div className="text-center text-xs space-y-2">
