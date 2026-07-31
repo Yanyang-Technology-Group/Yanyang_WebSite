@@ -152,8 +152,12 @@ export default function Join() {
             <h2 className="text-xl font-bold text-fg mt-8 mb-6">技术服务</h2>
             <div className="flex flex-wrap items-center gap-8">
               <a href="https://www.passnat.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-surface rounded-container hover:bg-gray-100 transition-colors">
-                <img src="/images/join/frplogo.png" alt="FRP" className="h-8 w-auto" />
-                <span className="text-sm font-medium text-fg">FRP 内网穿透</span>
+                <img src="/images/join/frp.svg" alt="FRP" className="h-8 w-auto" />
+                <span className="text-sm font-medium">
+                  <span className=" font-bold text-base">PassNAT</span>
+                  <span className="text-muted mx-2"> </span>
+                  <span className="text-fg">FRP 内网穿透</span>
+                </span>
               </a>
               <a href="https://www.cloudflare-cn.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-surface rounded-container hover:bg-gray-100 transition-colors">
                 <img src="/images/join/cf.png" alt="CDN" className="h-8 w-auto" />
