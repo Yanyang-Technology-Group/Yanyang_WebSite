@@ -13,8 +13,8 @@ function getCookie(name) {
 
 const VERSION_INFO = {
   id: '4years',
-  name: '4周年纪念版',
-  version: 'v4.0.0',
+  name: '4周年特别版',
+  version: 'v4.0.5',
   date: '2026-07-16'
 }
 
@@ -94,7 +94,7 @@ export default function FourYearsPack() {
         <div className="mx-auto max-w-2xl px-4 sm:px-6">
           <ScrollReveal>
             <div className="bg-surface rounded-container border border-border p-6 sm:p-8">
-              <h2 className="text-lg font-bold text-fg mb-4">下载方式</h2>
+              <h2 className="text-lg font-bold text-fg mb-4">下载</h2>
 
               {downloads.length === 0 ? (
                 <div className="text-center py-12">
