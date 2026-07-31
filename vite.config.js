@@ -122,7 +122,7 @@ export default defineConfig(async ({ mode, command }) => {
       __VERSION_SOURCE__: JSON.stringify(versionSource),
     },
     build: {
-      cssCodeSplit: true,
+      cssCodeSplit: false,
       sourcemap: false,
       minify: 'esbuild',
       rollupOptions: {
@@ -131,21 +131,21 @@ export default defineConfig(async ({ mode, command }) => {
             'react-vendor': ['react', 'react-dom', 'react-router-dom'],
             'phosphor-icons': ['@phosphor-icons/react'],
           },
-          chunkFileNames: 'assets/js/[name]-[hash].js',
-          entryFileNames: 'assets/js/[name]-[hash].js',
+          chunkFileNames: 'assets/[name]-[hash].js',
+          entryFileNames: 'assets/[name]-[hash].js',
           assetFileNames: (assetInfo) => {
             const info = assetInfo.name.split('.')
             const ext = info[info.length - 1]
             if (/\.(png|jpe?g|gif|svg|webp|ico|avif)$/.test(assetInfo.name)) {
-              return 'assets/images/[name]-[hash].[ext]'
+              return 'assets/[name]-[hash].[ext]'
             }
             if (/\.(css)$/.test(assetInfo.name)) {
-              return 'assets/css/[name]-[hash].[ext]'
+              return 'assets/[name]-[hash].[ext]'
             }
             if (/\.(woff2?|eot|ttf|otf)$/.test(assetInfo.name)) {
-              return 'assets/fonts/[name]-[hash].[ext]'
+              return 'assets/[name]-[hash].[ext]'
             }
-            return 'assets/[ext]/[name]-[hash].[ext]'
+            return 'assets/[name]-[hash].[ext]'
           },
           experimentalMinChunkSize: 20000,
         },
@@ -153,7 +153,7 @@ export default defineConfig(async ({ mode, command }) => {
       chunkSizeWarningLimit: 1000,
     },
     server: {
-      port: 3000,
+      port: 5173,
     },
   }
 })
