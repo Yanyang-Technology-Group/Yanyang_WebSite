@@ -2,34 +2,46 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-async function getCommitCountFromGitHub() {
-  try {
-    const response = await fetch(
-      'https://api.github.com/repos/Yanyang-Technology-Group/Yanyang_WebSite/commits?per_page=1',
-      {
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'Yanyang-Website'
+async function getCommitCountFromGitHub(retries = 10) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      console.log(`[GitHub API] 尝试 ${i + 1}/${retries}...`)
+
+      const response = await fetch(
+        'https://api.github.com/repos/Yanyang-Technology-Group/Yanyang_WebSite/commits?per_page=1',
+        {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Yanyang-Website'
+          }
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+
+      const linkHeader = response.headers.get('Link')
+      if (linkHeader) {
+        const match = linkHeader.match(/page=(\d+)>; rel="last"/)
+        if (match) {
+          const count = match[1]
+          console.log(`[GitHub API] 成功获取 commit 数量: ${count}`)
+          return count
         }
       }
-    )
 
-    if (!response.ok) {
       return '0'
-    }
-
-    const linkHeader = response.headers.get('Link')
-    if (linkHeader) {
-      const match = linkHeader.match(/page=(\d+)>; rel="last"/)
-      if (match) {
-        return match[1]
+    } catch (error) {
+      console.warn(`[GitHub API] 第 ${i + 1} 次失败:`, error.message)
+      if (i < retries - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)))
       }
     }
-
-    return '0'
-  } catch {
-    return '0'
   }
+
+  console.warn('[GitHub API] 所有重试失败')
+  return null
 }
 
 export default defineConfig(async ({ mode, command }) => {
@@ -42,19 +54,39 @@ export default defineConfig(async ({ mode, command }) => {
   const buildDate = `${year}.${month}.${day}`
 
   let commitCount = '0'
+  let versionSource = ''
 
-  if (command === 'build') {
-    commitCount = await getCommitCountFromGitHub()
+  console.log('[版本号] 优先从 GitHub API 获取...')
+  const githubCount = await getCommitCountFromGitHub(10)
+
+  if (githubCount !== null) {
+    commitCount = githubCount
+    versionSource = 'GitHub API'
+    console.log(`[版本号] 从 ${versionSource} 获取成功: ${commitCount}`)
   } else {
-    try {
-      const { execSync } = await import('child_process')
-      const count = execSync('git rev-list --count HEAD', {
-        encoding: 'utf-8',
-        stdio: ['pipe', 'pipe', 'ignore']
-      }).trim()
-      commitCount = count || '0'
-    } catch {
+    if (process.env.VITE_COMMIT_COUNT) {
+      commitCount = process.env.VITE_COMMIT_COUNT
+      versionSource = '环境变量'
+      console.log(`[版本号] GitHub 失败，使用 ${versionSource}: ${commitCount}`)
+    } else if (command !== 'build') {
+      try {
+        const { execSync } = await import('child_process')
+        const count = execSync('git rev-list --count HEAD', {
+          encoding: 'utf-8',
+          stdio: ['pipe', 'pipe', 'ignore']
+        }).trim()
+        commitCount = count || '0'
+        versionSource = 'Git 命令'
+        console.log(`[版本号] 使用 ${versionSource}: ${commitCount}`)
+      } catch {
+        commitCount = '0'
+        versionSource = '默认值'
+        console.warn(`[版本号] 所有方式失败，使用 ${versionSource}: ${commitCount}`)
+      }
+    } else {
       commitCount = '0'
+      versionSource = '默认值'
+      console.warn(`[版本号] 所有方式失败，使用 ${versionSource}: ${commitCount}`)
     }
   }
 
@@ -74,7 +106,7 @@ export default defineConfig(async ({ mode, command }) => {
     hour12: false
   })
 
-  console.log(`\nVersion: ${version}\n`)
+  console.log(`\n最终版本: ${version} (来源: ${versionSource})\n`)
 
   return {
     plugins: [react(), tailwindcss()],
@@ -86,6 +118,7 @@ export default defineConfig(async ({ mode, command }) => {
       __BUILD_ENV__: JSON.stringify(buildEnv),
       __BUILD_TIME__: JSON.stringify(buildTime),
       __COMMIT_COUNT__: JSON.stringify(commitCount),
+      __VERSION_SOURCE__: JSON.stringify(versionSource),
     },
   }
 })
