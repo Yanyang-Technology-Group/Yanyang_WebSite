@@ -4,6 +4,16 @@ import { simpleJWT, verifySimpleJWT } from './services/jwt.js'
 
 const TOKEN_EXPIRY = 3600000
 
+async function handleHealth(request) {
+  return jsonResponse({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    service: 'yanyang-backend',
+    domain: 'backend.www.yanyn.cn',
+    version: '1.0.0'
+  }, 200, request)
+}
+
 async function handleVerify(request, env) {
   try {
     console.log('=== 开始验证 ===')
@@ -47,42 +57,6 @@ async function handleVerify(request, env) {
   } catch (error) {
     console.error('验证错误:', error.message)
     console.error('错误堆栈:', error.stack)
-    return errorResponse('服务器错误，请稍后重试', 500, request)
-  }
-}
-
-async function handleVerify(request, env) {
-  try {
-    const { password } = await request.json()
-
-    if (!password || typeof password !== 'string') {
-      return errorResponse('请提供密码', 400, request)
-    }
-
-    if (password.length !== 6 || !/^\d{6}$/.test(password)) {
-      return errorResponse('密码必须为6位数字', 400, request)
-    }
-
-    const data = await getData(env)
-
-    if (password === data.password) {
-      const token = simpleJWT({
-        verified: true,
-        exp: Date.now() + TOKEN_EXPIRY,
-        iat: Date.now()
-      }, env.JWT_SECRET)
-
-      return jsonResponse({
-        success: true,
-        token: token,
-        downloads: data.downloads || []
-      }, 200, request)
-    }
-
-    return errorResponse('密码错误', 401, request)
-
-  } catch (error) {
-    console.error('验证错误:', error)
     return errorResponse('服务器错误，请稍后重试', 500, request)
   }
 }
