@@ -1,19 +1,42 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { execSync } from 'child_process'  // 添加这行
+
+// 获取提交次数的函数
+function getCommitCount() {
+  try {
+    // 检查是否在 Git 仓库中
+    execSync('git rev-parse --git-dir', { stdio: 'ignore' })
+
+    // 获取提交总数
+    const count = execSync('git rev-list --count HEAD', {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'ignore']
+    }).trim()
+
+    return count || '0'
+  } catch (error) {
+    console.warn('⚠️ 无法获取 Git 提交次数，使用默认值 0')
+    return '0'
+  }
+}
 
 export default defineConfig(({ mode }) => {
   const isUserDebug = mode === 'userdebug'
 
-  // 构建时锁死日期（不会改变）
+  // 构建时锁死日期
   const now = new Date()
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const day = String(now.getDate()).padStart(2, '0')
   const buildDate = `${year}.${month}.${day}`
 
-  // 构建时生成固定日期，提交次数由前端动态获取
-  const version = process.env.VERSION || `${buildDate}.{commitCount}`
+  // 获取提交次数
+  const commitCount = getCommitCount()
+
+  // 生成完整版本号：日期 + 提交次数
+  const version = process.env.VERSION || `${buildDate}.${commitCount}`
 
   const builder = process.env.BUILDER || 'Unknown'
   const buildEnv = process.env.BUILD_ENV || 'production'
@@ -31,6 +54,8 @@ export default defineConfig(({ mode }) => {
 
   console.log('\n📦 构建配置:')
   console.log(`  构建日期: ${buildDate}`)
+  console.log(`  提交次数: ${commitCount}`)
+  console.log(`  版本号: ${version}`)
   console.log(`  构建时间: ${buildTime}`)
   console.log(`  构建环境: ${buildEnv}`)
   console.log(`  构建者: ${builder}\n`)
@@ -39,13 +64,12 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     define: {
       __USER_DEBUG__: isUserDebug,
-      // 只传递日期部分，提交次数由前端动态获取
+      __VERSION__: JSON.stringify(version),
       __BUILD_DATE__: JSON.stringify(buildDate),
       __BUILDER__: JSON.stringify(builder),
       __BUILD_ENV__: JSON.stringify(buildEnv),
       __BUILD_TIME__: JSON.stringify(buildTime),
-      // 预留版本号占位，方便调试
-      __VERSION__: JSON.stringify(version),
+      __COMMIT_COUNT__: JSON.stringify(commitCount),
     },
   }
 })
