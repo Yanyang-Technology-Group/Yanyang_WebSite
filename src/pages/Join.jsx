@@ -155,6 +155,14 @@ export default function Join() {
                 <img src="/images/join/frplogo.png" alt="FRP" className="h-8 w-auto" />
                 <span className="text-sm font-medium text-fg">FRP 内网穿透</span>
               </a>
+              <a href="https://www.cloudflare-cn.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-surface rounded-container hover:bg-gray-100 transition-colors">
+                <img src="/images/join/cf.png" alt="CDN" className="h-8 w-auto" />
+                <span className="text-sm font-medium text-fg">CDN/DNS/网页部署</span>
+              </a>
+              <a href="https://github.com/Yanyang-Technology-Group/Yanyang_WebSite" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-surface rounded-container hover:bg-gray-100 transition-colors">
+                <img src="/images/join/github.svg" alt="CDN" className="h-8 w-auto" />
+                <span className="text-sm font-medium text-fg">网页源码 (遵循GPL-V3协议)</span>
+              </a>
             </div>
           </ScrollReveal>
         </div>
