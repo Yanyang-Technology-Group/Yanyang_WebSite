@@ -13,22 +13,42 @@ async function handleVerify(request, env) {
 
     const { password } = await request.json()
     console.log('收到密码:', password)
-    // ... 后续代码
+
+    if (!password || typeof password !== 'string') {
+      return errorResponse('请提供密码', 400, request)
+    }
+
+    if (password.length !== 6 || !/^\d{6}$/.test(password)) {
+      return errorResponse('密码必须为6位数字', 400, request)
+    }
+
+    console.log('开始获取 GitHub 数据')
+    const data = await getData(env)
+    console.log('GitHub 数据获取成功')
+
+    if (password === data.password) {
+      console.log('密码匹配，生成 token')
+      const token = simpleJWT({
+        verified: true,
+        exp: Date.now() + TOKEN_EXPIRY,
+        iat: Date.now()
+      }, env.JWT_SECRET)
+
+      return jsonResponse({
+        success: true,
+        token: token,
+        downloads: data.downloads || []
+      }, 200, request)
+    }
+
+    console.log('密码不匹配')
+    return errorResponse('密码错误', 401, request)
+
   } catch (error) {
-    console.error('错误:', error.message)
+    console.error('验证错误:', error.message)
     console.error('错误堆栈:', error.stack)
     return errorResponse('服务器错误，请稍后重试', 500, request)
   }
-}
-
-async function handleHealth(request) {
-  return jsonResponse({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    service: 'yanyang-backend',
-    domain: 'backend.www.yanyn.cn',
-    version: '1.0.0'
-  }, 200, request)
 }
 
 async function handleVerify(request, env) {
