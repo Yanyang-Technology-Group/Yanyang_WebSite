@@ -1,6 +1,6 @@
 {
   "name": "yanyang-backend",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "晏阳网页后端 API",
   "type": "module",
   "scripts": {
