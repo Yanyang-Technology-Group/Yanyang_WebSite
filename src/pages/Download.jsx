@@ -6,8 +6,8 @@ import { useAuth } from '../hooks/useAuth'
 const VERSIONS = [
   {
     id: '4years',
-    name: '4周年纪念版',
-    version: 'v4.0.0',
+    name: '4周年特别版',
+    version: 'v4.0.5',
     date: '2026-07-16',
     description: '晏阳城市建设4周年特别版本',
     tag: '最新',
