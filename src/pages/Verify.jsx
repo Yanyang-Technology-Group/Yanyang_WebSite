@@ -28,7 +28,7 @@ export default function Verify() {
       const data = await res.json()
 
       if (res.ok && data.success) {
-        document.cookie = `download_token=${data.token}; path=/; max-age=3600; SameSite=Lax`
+        document.cookie = `download_token=${data.token}; path=/; max-age=120; SameSite=Lax`
         navigate(from, { replace: true })
       } else {
         setError(data.message || '密码错误，请重试')
