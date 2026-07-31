@@ -31,7 +31,7 @@ export default function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-border">
       <div className="mx-auto max-w-6xl flex items-center justify-between h-14 px-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2 text-fg no-underline" onClick={() => window.scrollTo(0, 0)}>
-          <img src="/images/logo.png" alt="晏阳" className="h-8 w-auto" />
+          <img src="/images/icon.png" alt="晏阳" className="h-8 w-auto" />
           <span className="hidden sm:inline font-bold text-sm">晏阳城市建设</span>
         </Link>
 
