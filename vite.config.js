@@ -121,5 +121,45 @@ export default defineConfig(async ({ mode, command }) => {
       __COMMIT_COUNT__: JSON.stringify(commitCount),
       __VERSION_SOURCE__: JSON.stringify(versionSource),
     },
+    build: {
+      cssCodeSplit: true,
+      sourcemap: false,
+      minify: 'terser',
+      terserOptions: {
+        compress: {
+          drop_console: true,
+          drop_debugger: true,
+        },
+      },
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+            'phosphor-icons': ['@phosphor-icons/react'],
+          },
+          chunkFileNames: 'assets/js/[name]-[hash].js',
+          entryFileNames: 'assets/js/[name]-[hash].js',
+          assetFileNames: (assetInfo) => {
+            const info = assetInfo.name.split('.')
+            const ext = info[info.length - 1]
+            if (/\.(png|jpe?g|gif|svg|webp|ico|avif)$/.test(assetInfo.name)) {
+              return 'assets/images/[name]-[hash].[ext]'
+            }
+            if (/\.(css)$/.test(assetInfo.name)) {
+              return 'assets/css/[name]-[hash].[ext]'
+            }
+            if (/\.(woff2?|eot|ttf|otf)$/.test(assetInfo.name)) {
+              return 'assets/fonts/[name]-[hash].[ext]'
+            }
+            return 'assets/[ext]/[name]-[hash].[ext]'
+          },
+          experimentalMinChunkSize: 20000,
+        },
+      },
+      chunkSizeWarningLimit: 1000,
+    },
+    server: {
+      port: 3000,
+    },
   }
 })

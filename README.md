@@ -32,7 +32,6 @@
 - **Phosphor Icons** — 统一矢量图标系统，tree-shakable
 - **Tailwind CSS v4** — 原子化 CSS，按需构建，设计 Token 驱动
 - **滚动入场动画** — IntersectionObserver 驱动渐入效果
-- **骨架屏加载** — 线路图 iframe 加载态
 - **完全响应式** — 适配 375px ~ 1440px
 - **品牌主题 404** — 简洁克制的错误页面
 
