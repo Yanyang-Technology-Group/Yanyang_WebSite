@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Lock, XCircle } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
+import { API_ENDPOINTS } from '../config'
 
 export default function Verify() {
   const navigate = useNavigate()
@@ -18,7 +19,7 @@ export default function Verify() {
     setLoading(true)
 
     try {
-      const res = await fetch('/api/verify', {
+      const res = await fetch(API_ENDPOINTS.verify, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
