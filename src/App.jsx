@@ -6,6 +6,9 @@ import About from './pages/About'
 import Join from './pages/Join'
 import Event from './pages/Event'
 import Map from './pages/Map'
+import DownloadPage from './pages/Download'
+import Verify from './pages/Verify'
+import FourYearsPack from './pages/Download/4years'
 import FourYearsEvent from './Events/4years.jsx'
 
 function NotFound() {
@@ -37,6 +40,9 @@ export default function App() {
             <Route path="/event" element={<Event />} />
             <Route path="/events/official/minecraft/4years" element={<FourYearsEvent />} />
             <Route path="/map" element={<Map />} />
+            <Route path="/download" element={<DownloadPage />} />
+            <Route path="/downloads/minecraft/modpacks/4years" element={<FourYearsPack />} />
+            <Route path="/downloads/password/none/verify" element={<Verify />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>

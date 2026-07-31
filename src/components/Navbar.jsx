@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { path: '/join', label: '加入' },
   { path: '/event', label: '活动' },
   { path: '/map', label: '线路图' },
+  { path: '/download', label: '下载' },
 ]
 
 export default function Navbar() {
