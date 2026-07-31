@@ -90,9 +90,6 @@ npm run dev
 
 # 构建生产版本
 npm run build
-
-# 用户构建（含版本号注入）
-npm run build:user
 ```
 
 ## 许可证
