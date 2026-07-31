@@ -20,7 +20,6 @@
   --radius-container: 12px;
 }
 
-/* base layer — Inter as global default */
 @layer base {
   html {
     font-family: var(--font-sans);
@@ -44,7 +43,6 @@
   }
 }
 
-/* scroll reveal */
 .reveal-hidden {
   opacity: 0;
   transform: translateY(24px);
@@ -64,4 +62,48 @@
 .animate-scroll {
   animation: scroll 30s linear infinite;
   min-width: max-content;
+}
+
+@keyframes mapPan {
+  0% {
+    transform: scale(1.2) translateX(0);
+  }
+  25% {
+    transform: scale(1.2) translateX(-5%);
+  }
+  50% {
+    transform: scale(1.2) translateX(0);
+  }
+  75% {
+    transform: scale(1.2) translateX(5%);
+  }
+  100% {
+    transform: scale(1.2) translateX(0);
+  }
+}
+
+.map-pan {
+  animation: mapPan 12s ease-in-out infinite;
+}
+
+@keyframes shakeLeft {
+  0%, 100% { margin-left: 0; }
+  25% { margin-left: 20px; }
+  50% { margin-left: -12px; }
+  75% { margin-left: 8px; }
+}
+
+@keyframes shakeRight {
+  0%, 100% { margin-left: 0; }
+  25% { margin-left: -20px; }
+  50% { margin-left: 12px; }
+  75% { margin-left: -8px; }
+}
+
+.bump-left {
+  animation: shakeLeft 0.4s ease-in-out !important;
+}
+
+.bump-right {
+  animation: shakeRight 0.4s ease-in-out !important;
 }

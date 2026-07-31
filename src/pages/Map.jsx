@@ -1,81 +1,157 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MapPin, House, ArrowsClockwise } from '@phosphor-icons/react'
-import { SkeletonBlock } from '../components/Skeleton'
+import { House, ArrowLeft, ArrowRight, MapPin } from '@phosphor-icons/react'
+
+const MAPS = [
+  {
+    id: 1,
+    name: '卫星地图',
+    image: '/images/map/1.png',
+    url: 'http://103.40.14.23:28826'
+  },
+  {
+    id: 2,
+    name: '线路图',
+    image: '/images/map/2.png',
+    url: 'http://103.40.14.23:50854'
+  }
+]
 
 export default function Map() {
-  const [loading, setLoading] = useState(true)
-  const [key, setKey] = useState(0)
-  const iframeRef = useRef(null)
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const [bumpDirection, setBumpDirection] = useState(null)
 
-  useEffect(() => {
-    const el = iframeRef.current
-    if (!el) return
-
-    const onLoad = () => setLoading(false)
-    el.addEventListener('load', onLoad)
-
-    const timeout = setTimeout(() => {
-      setLoading(false)
-    }, 8000)
-
-    return () => {
-      el.removeEventListener('load', onLoad)
-      clearTimeout(timeout)
+  const handlePrev = () => {
+    if (isTransitioning) return
+    if (currentIndex === 0) {
+      setBumpDirection('left')
+      setIsTransitioning(true)
+      setTimeout(() => {
+        setIsTransitioning(false)
+        setBumpDirection(null)
+      }, 400)
+      return
     }
-  }, [key])
+    setIsTransitioning(true)
+    setCurrentIndex((prev) => prev - 1)
+    setTimeout(() => setIsTransitioning(false), 500)
+  }
 
-  const handleRefresh = () => {
-    setLoading(true)
-    setKey(prev => prev + 1)
+  const handleNext = () => {
+    if (isTransitioning) return
+    if (currentIndex === MAPS.length - 1) {
+      setBumpDirection('right')
+      setIsTransitioning(true)
+      setTimeout(() => {
+        setIsTransitioning(false)
+        setBumpDirection(null)
+      }, 400)
+      return
+    }
+    setIsTransitioning(true)
+    setCurrentIndex((prev) => prev + 1)
+    setTimeout(() => setIsTransitioning(false), 500)
+  }
+
+  const getBumpClass = () => {
+    if (!bumpDirection) return ''
+    return bumpDirection === 'left' ? 'bump-left' : 'bump-right'
   }
 
   return (
-    <>
-      <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 mb-4 text-xs font-medium text-primary bg-primary-light rounded-full">
+    <section className="min-h-screen bg-bg pt-16 pb-10 sm:pt-20 sm:pb-16">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="text-center mb-6">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 mb-3 text-xs font-medium text-primary bg-primary-light rounded-full">
             <MapPin size={12} weight="bold" />
-            线路图
+            地图
           </span>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">线路图</h1>
-          <p className="mt-3 text-muted">
-            实时查看晏阳城市建设服务器的地铁线路，追踪建设进度。
-          </p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-fg border border-border rounded-btn hover:bg-surface active:scale-[0.97] transition-all"
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">晏阳地图</h1>
+          <p className="mt-2 text-muted text-sm">实时查看晏阳城市建设服务器的地图</p>
+        </div>
+
+        <div className="flex justify-center mb-16">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted hover:text-fg border border-border rounded-btn hover:bg-surface transition-all"
+          >
+            <House size={16} weight="bold" />
+            返回首页
+          </Link>
+        </div>
+
+        <div className="relative rounded-container overflow-hidden bg-surface border border-border">
+          <div className="relative aspect-[16/7] overflow-hidden bg-black/5">
+            <div
+              className={`flex w-full h-full transition-transform duration-500 ease-in-out ${getBumpClass()}`}
+              style={{ transform: `translateX(-${currentIndex * 100}%)` }}
             >
-              <House size={16} weight="bold" />
-              返回首页
-            </Link>
+              {MAPS.map((map) => (
+                <div key={map.id} className="min-w-full h-full relative flex-shrink-0 overflow-hidden">
+                  <div
+                    className="w-[120%] h-[120%] bg-cover bg-center map-pan"
+                    style={{
+                      backgroundImage: `url(${map.image})`,
+                      filter: 'blur(4px) saturate(1.1)'
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                  <div className="absolute bottom-8 left-8 z-10 text-white">
+                    <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold" style={{ fontFamily: '"Source Han Sans SC", "Noto Sans SC", sans-serif' }}>
+                      {map.name}
+                    </h2>
+                  </div>
+                  <div className="absolute bottom-8 right-8 z-10">
+                    <a
+                      href={map.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-all shadow-lg"
+                    >
+                      <MapPin size={16} weight="bold" />
+                      立即前往
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <button
-              onClick={handleRefresh}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-fg border border-border rounded-btn hover:bg-surface active:scale-[0.97] transition-all"
+              onClick={handlePrev}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-black/40 text-white hover:bg-black/60 transition-all flex items-center justify-center backdrop-blur-sm"
+              disabled={isTransitioning}
             >
-              <ArrowsClockwise size={16} weight="bold" className={loading ? 'animate-spin' : ''} />
-              刷新
+              <ArrowLeft size={24} weight="bold" />
             </button>
+
+            <button
+              onClick={handleNext}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-black/40 text-white hover:bg-black/60 transition-all flex items-center justify-center backdrop-blur-sm"
+              disabled={isTransitioning}
+            >
+              <ArrowRight size={24} weight="bold" />
+            </button>
+
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2">
+              {MAPS.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    if (isTransitioning || index === currentIndex) return
+                    setIsTransitioning(true)
+                    setCurrentIndex(index)
+                    setTimeout(() => setIsTransitioning(false), 500)
+                  }}
+                  className={`w-2.5 h-2.5 rounded-full transition-all ${
+                    index === currentIndex ? 'w-8 bg-primary' : 'bg-white/50 hover:bg-white/80'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
         </div>
-      </section>
-
-      <section className="pb-section">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          {loading && <SkeletonBlock height="600px" className="rounded-container" />}
-          <iframe
-            key={key}
-            ref={iframeRef}
-            src="https://umap.yanyn.cn/"
-            title="线路图"
-            className={`w-full h-[600px] sm:h-[700px] border-0 rounded-container bg-surface ${
-              loading ? 'hidden' : 'block'
-            }`}
-            allowFullScreen
-          />
-        </div>
-      </section>
-    </>
+      </div>
+    </section>
   )
 }
