@@ -1,0 +1,12 @@
+name = "yanyang-backend"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+routes = [
+    { pattern = "backend.www.yanyn.cn/*", custom_domain = true }
+]
+
+[vars]
+REPO_OWNER = "Yanyang-Technology-Group"
+REPO_NAME = "Yanyang_WebSite_date"
+JWT_SECRET = "yanyang-backend-2026-secret"
