@@ -42,5 +42,7 @@ export async function getLaunchers(env) {
 
 export async function verifyPassword(password, env) {
   const data = await getDownkey(env)
-  return data.password === password
+  const passwords = data.passwords || []
+  const found = passwords.find(p => p.password === password)
+  return found || null
 }

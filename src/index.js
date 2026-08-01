@@ -14,6 +14,16 @@ async function handleHealth(request) {
   }, 200, request)
 }
 
+function filterByType(items, passwordType) {
+  if (passwordType === 'full') {
+    return items
+  }
+  if (passwordType === 'public') {
+    return items.filter(item => item.public === true)
+  }
+  return items
+}
+
 async function handleVerify(request, env) {
   try {
     console.log('=== 开始验证 ===')
@@ -33,25 +43,50 @@ async function handleVerify(request, env) {
     }
 
     console.log('开始获取 GitHub 数据')
-    const isValid = await verifyPassword(password, env)
-    console.log('密码验证结果:', isValid)
+    const passwordInfo = await verifyPassword(password, env)
+    console.log('密码验证结果:', passwordInfo)
 
-    if (isValid) {
-      console.log('密码匹配，生成 token')
-      const token = simpleJWT({
-        verified: true,
-        exp: Date.now() + TOKEN_EXPIRY,
-        iat: Date.now()
-      }, env.JWT_SECRET)
-
-      return jsonResponse({
-        success: true,
-        token: token
-      }, 200, request)
+    if (!passwordInfo) {
+      console.log('密码不匹配')
+      return errorResponse('密码错误', 401, request)
     }
 
-    console.log('密码不匹配')
-    return errorResponse('密码错误', 401, request)
+    console.log('密码匹配，生成 token')
+    const token = simpleJWT({
+      verified: true,
+      type: passwordInfo.type,
+      exp: Date.now() + TOKEN_EXPIRY,
+      iat: Date.now()
+    }, env.JWT_SECRET)
+
+    const modpacks = await getModpacks(env)
+    const java = await getJava(env)
+    const launchers = await getLaunchers(env)
+
+    const filteredModpacks = {
+      ...modpacks,
+      items: filterByType(modpacks.items || [], passwordInfo.type)
+    }
+
+    const filteredJava = {
+      ...java,
+      items: filterByType(java.items || [], passwordInfo.type)
+    }
+
+    const filteredLaunchers = {
+      ...launchers,
+      items: filterByType(launchers.items || [], passwordInfo.type)
+    }
+
+    return jsonResponse({
+      success: true,
+      token: token,
+      type: passwordInfo.type,
+      label: passwordInfo.label,
+      modpacks: filteredModpacks,
+      java: filteredJava,
+      launchers: filteredLaunchers
+    }, 200, request)
 
   } catch (error) {
     console.error('验证错误:', error.message)
@@ -72,7 +107,11 @@ async function handleModpacks(request, env) {
       return errorResponse('token无效或已过期', 401, request)
     }
     const data = await getModpacks(env)
-    return jsonResponse({ success: true, data: data }, 200, request)
+    const filtered = {
+      ...data,
+      items: filterByType(data.items || [], decoded.type || 'full')
+    }
+    return jsonResponse({ success: true, data: filtered }, 200, request)
   } catch (error) {
     console.error('获取整合包错误:', error)
     return errorResponse('服务器错误', 500, request)
@@ -91,7 +130,11 @@ async function handleJava(request, env) {
       return errorResponse('token无效或已过期', 401, request)
     }
     const data = await getJava(env)
-    return jsonResponse({ success: true, data: data }, 200, request)
+    const filtered = {
+      ...data,
+      items: filterByType(data.items || [], decoded.type || 'full')
+    }
+    return jsonResponse({ success: true, data: filtered }, 200, request)
   } catch (error) {
     console.error('获取JDK错误:', error)
     return errorResponse('服务器错误', 500, request)
@@ -110,11 +153,25 @@ async function handleLaunchers(request, env) {
       return errorResponse('token无效或已过期', 401, request)
     }
     const data = await getLaunchers(env)
-    return jsonResponse({ success: true, data: data }, 200, request)
+    const filtered = {
+      ...data,
+      items: filterByType(data.items || [], decoded.type || 'full')
+    }
+    return jsonResponse({ success: true, data: filtered }, 200, request)
   } catch (error) {
     console.error('获取启动器错误:', error)
     return errorResponse('服务器错误', 500, request)
   }
+}
+
+function filterByType(items, type) {
+  if (type === 'full') {
+    return items
+  }
+  if (type === 'public') {
+    return items.filter(item => item.public === true)
+  }
+  return items
 }
 
 async function handleWebsiteInfo(request) {
