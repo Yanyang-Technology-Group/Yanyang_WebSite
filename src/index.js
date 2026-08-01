@@ -1,5 +1,5 @@
 import { corsHeaders, jsonResponse, errorResponse } from './utils/response.js'
-import { getData } from './services/github.js'
+import { getDownkey, getModpacks, getJava, getLaunchers, verifyPassword } from './services/github.js'
 import { simpleJWT, verifySimpleJWT } from './services/jwt.js'
 
 const TOKEN_EXPIRY = 3600000
@@ -33,10 +33,10 @@ async function handleVerify(request, env) {
     }
 
     console.log('开始获取 GitHub 数据')
-    const data = await getData(env)
-    console.log('GitHub 数据获取成功')
+    const isValid = await verifyPassword(password, env)
+    console.log('密码验证结果:', isValid)
 
-    if (password === data.password) {
+    if (isValid) {
       console.log('密码匹配，生成 token')
       const token = simpleJWT({
         verified: true,
@@ -46,8 +46,7 @@ async function handleVerify(request, env) {
 
       return jsonResponse({
         success: true,
-        token: token,
-        downloads: data.downloads || []
+        token: token
       }, 200, request)
     }
 
@@ -61,29 +60,59 @@ async function handleVerify(request, env) {
   }
 }
 
-async function handleDownloads(request, env) {
+async function handleModpacks(request, env) {
   try {
     const auth = request.headers.get('Authorization')
     if (!auth || !auth.startsWith('Bearer ')) {
       return errorResponse('未授权', 401, request)
     }
-
     const token = auth.replace('Bearer ', '')
     const decoded = verifySimpleJWT(token, env.JWT_SECRET)
-
     if (!decoded) {
       return errorResponse('token无效或已过期', 401, request)
     }
-
-    const data = await getData(env)
-
-    return jsonResponse({
-      success: true,
-      downloads: data.downloads || []
-    }, 200, request)
-
+    const data = await getModpacks(env)
+    return jsonResponse({ success: true, data: data }, 200, request)
   } catch (error) {
-    console.error('获取下载列表错误:', error)
+    console.error('获取整合包错误:', error)
+    return errorResponse('服务器错误', 500, request)
+  }
+}
+
+async function handleJava(request, env) {
+  try {
+    const auth = request.headers.get('Authorization')
+    if (!auth || !auth.startsWith('Bearer ')) {
+      return errorResponse('未授权', 401, request)
+    }
+    const token = auth.replace('Bearer ', '')
+    const decoded = verifySimpleJWT(token, env.JWT_SECRET)
+    if (!decoded) {
+      return errorResponse('token无效或已过期', 401, request)
+    }
+    const data = await getJava(env)
+    return jsonResponse({ success: true, data: data }, 200, request)
+  } catch (error) {
+    console.error('获取JDK错误:', error)
+    return errorResponse('服务器错误', 500, request)
+  }
+}
+
+async function handleLaunchers(request, env) {
+  try {
+    const auth = request.headers.get('Authorization')
+    if (!auth || !auth.startsWith('Bearer ')) {
+      return errorResponse('未授权', 401, request)
+    }
+    const token = auth.replace('Bearer ', '')
+    const decoded = verifySimpleJWT(token, env.JWT_SECRET)
+    if (!decoded) {
+      return errorResponse('token无效或已过期', 401, request)
+    }
+    const data = await getLaunchers(env)
+    return jsonResponse({ success: true, data: data }, 200, request)
+  } catch (error) {
+    console.error('获取启动器错误:', error)
     return errorResponse('服务器错误', 500, request)
   }
 }
@@ -118,8 +147,16 @@ export default {
       return handleVerify(request, env)
     }
 
-    if (path === '/api/downloads') {
-      return handleDownloads(request, env)
+    if (path === '/api/modpacks') {
+      return handleModpacks(request, env)
+    }
+
+    if (path === '/api/java') {
+      return handleJava(request, env)
+    }
+
+    if (path === '/api/launchers') {
+      return handleLaunchers(request, env)
     }
 
     if (path === '/api/website/info') {
