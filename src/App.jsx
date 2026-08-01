@@ -6,10 +6,14 @@ import About from './pages/About'
 import Join from './pages/Join'
 import Event from './pages/Event'
 import Map from './pages/Map'
-import DownloadPage from './pages/Download'
 import Verify from './pages/Verify'
-import FourYearsPack from './pages/Downloads/4years'
-import FourYearsEvent from './Events/4years.jsx'
+import DownloadPage from './pages/Download'
+import ModpackList from './pages/Downloads/modpack'
+import JavaList from './pages/Downloads/java'
+import LauncherList from './pages/Downloads/launcher'
+import ModpackDetail from './pages/Downloads/modpacks/[id]'
+import JavaDetail from './pages/Downloads/javas/[id]'
+import LauncherDetail from './pages/Downloads/launchers/[id]'
 
 function NotFound() {
   return (
@@ -41,7 +45,12 @@ export default function App() {
             <Route path="/events/official/minecraft/4years" element={<FourYearsEvent />} />
             <Route path="/map" element={<Map />} />
             <Route path="/download" element={<DownloadPage />} />
-            <Route path="/downloads/minecraft/modpacks/4years" element={<FourYearsPack />} />
+            <Route path="/downloads/modpack" element={<ModpackList />} />
+            <Route path="/downloads/java" element={<JavaList />} />
+            <Route path="/downloads/launcher" element={<LauncherList />} />
+            <Route path="/downloads/modpacks/:id" element={<ModpackDetail />} />
+            <Route path="/downloads/javas/:id" element={<JavaDetail />} />
+            <Route path="/downloads/launchers/:id" element={<LauncherDetail />} />
             <Route path="/verify" element={<Verify />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
