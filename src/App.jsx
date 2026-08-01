@@ -14,6 +14,7 @@ import LauncherList from './pages/Downloads/launcher'
 import ModpackDetail from './pages/Downloads/modpacks/[id]'
 import JavaDetail from './pages/Downloads/javas/[id]'
 import LauncherDetail from './pages/Downloads/launchers/[id]'
+import FourYearsEvent from './Events/4years.jsx'
 
 function NotFound() {
   return (
