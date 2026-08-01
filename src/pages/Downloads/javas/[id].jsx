@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Rocket, ArrowLeft, Download, Copy } from '@phosphor-icons/react'
+import { Coffee, ArrowLeft, Download, Copy } from '@phosphor-icons/react'
 import ScrollReveal from '../../../components/ScrollReveal'
 import { API_ENDPOINTS } from '../../../config'
 
@@ -32,8 +32,10 @@ export default function JavaDetail() {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       const result = await res.json()
+      console.log('API 返回:', result)
       if (result.success) {
         const found = result.data?.items?.find(i => i.id === id)
+        console.log('找到的版本:', found)
         setItem(found || null)
       }
     } catch (err) {
@@ -74,6 +76,8 @@ export default function JavaDetail() {
     )
   }
 
+  const downloads = item.downloads || []
+
   return (
     <>
       <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
@@ -102,32 +106,43 @@ export default function JavaDetail() {
           <ScrollReveal>
             <div className="bg-surface rounded-container border border-border p-6 sm:p-8">
               <h2 className="text-lg font-bold text-fg mb-4">下载</h2>
-              <div className="bg-bg rounded-card p-4 border border-border hover:border-primary/30 transition-colors">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="text-base font-semibold text-fg">{item.name}</h3>
-                    {item.description && <p className="text-sm text-muted mt-1">{item.description}</p>}
-                    {item.size && <p className="text-xs text-muted mt-1">{item.size}</p>}
-                  </div>
-                  <div className="flex gap-2 flex-shrink-0">
-                    <a
-                      href={item.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-medium rounded-btn hover:bg-primary/90"
+
+              {downloads.length === 0 ? (
+                <p className="text-center text-muted py-8">暂无下载链接</p>
+              ) : (
+                <div className="space-y-3">
+                  {downloads.map((dl, index) => (
+                    <div
+                      key={index}
+                      className="bg-bg rounded-card p-4 border border-border hover:border-primary/30 transition-colors"
                     >
-                      <Download size={16} weight="bold" />
-                      下载
-                    </a>
-                    <button
-                      onClick={() => handleCopy(item.link)}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-muted border border-border rounded-btn hover:bg-surface transition-colors"
-                    >
-                      <Copy size={14} />
-                    </button>
-                  </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <h3 className="text-base font-semibold text-fg">{dl.name}</h3>
+                          {dl.size && <p className="text-xs text-muted mt-0.5">{dl.size}</p>}
+                        </div>
+                        <div className="flex gap-2 flex-shrink-0">
+                          <a
+                            href={dl.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-medium rounded-btn hover:bg-primary/90"
+                          >
+                            <Download size={16} weight="bold" />
+                            下载
+                          </a>
+                          <button
+                            onClick={() => handleCopy(dl.link)}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-muted border border-border rounded-btn hover:bg-surface transition-colors"
+                          >
+                            <Copy size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
             </div>
           </ScrollReveal>
         </div>
