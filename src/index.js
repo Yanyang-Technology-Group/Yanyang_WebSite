@@ -4,16 +4,6 @@ import { simpleJWT, verifySimpleJWT } from './services/jwt.js'
 
 const TOKEN_EXPIRY = 3600000
 
-async function handleHealth(request) {
-  return jsonResponse({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    service: 'yanyang-backend',
-    domain: 'backend.www.yanyn.cn',
-    version: '1.0.0'
-  }, 200, request)
-}
-
 function filterByType(items, passwordType) {
   if (passwordType === 'full') {
     return items
@@ -22,6 +12,16 @@ function filterByType(items, passwordType) {
     return items.filter(item => item.public === true)
   }
   return items
+}
+
+async function handleHealth(request) {
+  return jsonResponse({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    service: 'yanyang-backend',
+    domain: 'backend.www.yanyn.cn',
+    version: '1.0.0'
+  }, 200, request)
 }
 
 async function handleVerify(request, env) {
@@ -162,16 +162,6 @@ async function handleLaunchers(request, env) {
     console.error('获取启动器错误:', error)
     return errorResponse('服务器错误', 500, request)
   }
-}
-
-function filterByType(items, type) {
-  if (type === 'full') {
-    return items
-  }
-  if (type === 'public') {
-    return items.filter(item => item.public === true)
-  }
-  return items
 }
 
 async function handleWebsiteInfo(request) {
