@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Coffee, ArrowLeft, Download, Copy } from '@phosphor-icons/react'
-import ScrollReveal from '../../components/ScrollReveal'
-import { API_ENDPOINTS } from '../../config'
+import { Rocket, ArrowLeft, Download, Copy } from '@phosphor-icons/react'
+import ScrollReveal from '../../../components/ScrollReveal'
+import { API_ENDPOINTS } from '../../../config'
 
 function getCookie(name) {
   const value = `; ${document.cookie}`
