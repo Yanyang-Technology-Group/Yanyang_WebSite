@@ -183,6 +183,33 @@ async function handleOneTimeDownload(request, env) {
   }
 }
 
+async function handleRedirect(request, env) {
+  try {
+    const url = new URL(request.url)
+    const link = url.searchParams.get('link')
+    const token = url.searchParams.get('token')
+    const sig = url.searchParams.get('sig')
+
+    if (!link || !token || !sig) {
+      return new Response('链接参数不完整', { status: 400 })
+    }
+
+    const result = verifySignedLink(link, token, sig)
+
+    if (!result.valid) {
+      return new Response(result.reason, { status: 403 })
+    }
+
+    usedTokens.add(token)
+
+    return Response.redirect(link, 302)
+
+  } catch (error) {
+    console.error('重定向错误:', error)
+    return new Response('服务器错误', { status: 500 })
+  }
+}
+
 async function handleProxyDownload(request, env) {
   try {
     const url = new URL(request.url)
@@ -351,6 +378,10 @@ export default {
 
     if (path === '/api/download/one-time' && request.method === 'POST') {
       return handleOneTimeDownload(request, env)
+    }
+
+    if (path === '/api/download/redirect') {
+      return handleRedirect(request, env)
     }
 
     if (path === '/api/download/proxy') {
