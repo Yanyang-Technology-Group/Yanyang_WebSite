@@ -1,5 +1,5 @@
 import { corsHeaders, jsonResponse, errorResponse } from './utils/response.js'
-import { getDownkey, getModpacks, getJava, getLaunchers, verifyPassword } from './services/github.js'
+import { getDownkey, getModpacks, getJava, getLaunchers, getOneTimeTokens, saveOneTimeToken, verifyPassword } from './services/github.js'
 import { simpleJWT, verifySimpleJWT } from './services/jwt.js'
 
 const TOKEN_EXPIRY = 3600000
@@ -12,6 +12,15 @@ function filterByType(items, passwordType) {
     return items.filter(item => item.public === true)
   }
   return items
+}
+
+function generateOneTimeToken() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  let token = ''
+  for (let i = 0; i < 32; i++) {
+    token += chars[Math.floor(Math.random() * chars.length)]
+  }
+  return token
 }
 
 async function handleHealth(request) {
@@ -95,17 +104,6 @@ async function handleVerify(request, env) {
   }
 }
 
-const oneTimeTokens = new Map()
-
-function generateOneTimeToken() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  let token = ''
-  for (let i = 0; i < 32; i++) {
-    token += chars[Math.floor(Math.random() * chars.length)]
-  }
-  return token
-}
-
 async function handleOneTimeDownload(request, env) {
   try {
     const auth = request.headers.get('Authorization')
@@ -126,15 +124,15 @@ async function handleOneTimeDownload(request, env) {
     }
 
     const oneTimeToken = generateOneTimeToken()
-    oneTimeTokens.set(oneTimeToken, {
+    const expiresAt = Date.now() + 600000
+
+    await saveOneTimeToken(env, {
+      token: oneTimeToken,
       linkId: linkId,
       used: false,
+      expiresAt: expiresAt,
       createdAt: Date.now()
     })
-
-    setTimeout(() => {
-      oneTimeTokens.delete(oneTimeToken)
-    }, 600000)
 
     return jsonResponse({
       success: true,
@@ -156,14 +154,19 @@ async function handleGetDownloadLink(request, env) {
       return errorResponse('缺少token', 400, request)
     }
 
-    const data = oneTimeTokens.get(oneTimeToken)
-    if (!data) {
-      return errorResponse('链接无效或已过期', 404, request)
+    const tokensData = await getOneTimeTokens(env)
+    const tokenData = tokensData.tokens.find(t => t.token === oneTimeToken)
+
+    if (!tokenData) {
+      return errorResponse('链接无效', 404, request)
     }
 
-    if (data.used) {
-      oneTimeTokens.delete(oneTimeToken)
+    if (tokenData.used) {
       return errorResponse('链接已被使用', 410, request)
+    }
+
+    if (tokenData.expiresAt < Date.now()) {
+      return errorResponse('链接已过期', 404, request)
     }
 
     const modpacks = await getModpacks(env)
@@ -174,13 +177,13 @@ async function handleGetDownloadLink(request, env) {
     let targetLink = null
     for (const item of allItems) {
       if (item.downloads) {
-        const found = item.downloads.find(d => d.name === data.linkId)
+        const found = item.downloads.find(d => d.name === tokenData.linkId)
         if (found) {
           targetLink = found.link
           break
         }
       }
-      if (item.link && item.name === data.linkId) {
+      if (item.link && item.name === tokenData.linkId) {
         targetLink = item.link
         break
       }
@@ -190,8 +193,8 @@ async function handleGetDownloadLink(request, env) {
       return errorResponse('链接不存在', 404, request)
     }
 
-    data.used = true
-    oneTimeTokens.set(oneTimeToken, data)
+    tokenData.used = true
+    await saveOneTimeToken(env, tokenData)
 
     return jsonResponse({
       success: true,
