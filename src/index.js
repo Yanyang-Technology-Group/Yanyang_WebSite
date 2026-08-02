@@ -4,6 +4,7 @@ import { simpleJWT, verifySimpleJWT } from './services/jwt.js'
 
 const TOKEN_EXPIRY = 3600000
 const ONE_TIME_SECRET = 'yanyang-one-time-secret-2026'
+const usedTokens = new Set()
 
 function filterByType(items, passwordType) {
   if (passwordType === 'full') {
@@ -25,22 +26,20 @@ function generateOneTimeToken() {
 }
 
 function signLink(link, token) {
-  const timestamp = Date.now()
-  const signature = btoa(`${link}|${token}|${timestamp}|${ONE_TIME_SECRET}`)
+  const signature = btoa(`${link}|${token}|${ONE_TIME_SECRET}`)
   return {
     token: token,
-    timestamp: timestamp,
     signature: signature
   }
 }
 
-function verifySignedLink(link, token, timestamp, signature) {
-  const expected = btoa(`${link}|${token}|${timestamp}|${ONE_TIME_SECRET}`)
+function verifySignedLink(link, token, signature) {
+  const expected = btoa(`${link}|${token}|${ONE_TIME_SECRET}`)
   if (signature !== expected) {
     return { valid: false, reason: '签名无效' }
   }
-  if (Date.now() - parseInt(timestamp) > 600000) {
-    return { valid: false, reason: '链接已过期' }
+  if (usedTokens.has(token)) {
+    return { valid: false, reason: '链接已被使用' }
   }
   return { valid: true }
 }
@@ -175,9 +174,7 @@ async function handleOneTimeDownload(request, env) {
     return jsonResponse({
       success: true,
       token: oneTimeToken,
-      timestamp: signed.timestamp,
-      signature: signed.signature,
-      expiresIn: 600
+      signature: signed.signature
     }, 200, request)
 
   } catch (error) {
@@ -191,18 +188,19 @@ async function handleRedirect(request, env) {
     const url = new URL(request.url)
     const link = url.searchParams.get('link')
     const token = url.searchParams.get('token')
-    const timestamp = url.searchParams.get('ts')
     const signature = url.searchParams.get('sig')
 
-    if (!link || !token || !timestamp || !signature) {
+    if (!link || !token || !signature) {
       return new Response('链接参数不完整', { status: 400 })
     }
 
-    const result = verifySignedLink(link, token, timestamp, signature)
+    const result = verifySignedLink(link, token, signature)
 
     if (!result.valid) {
       return new Response(result.reason, { status: 403 })
     }
+
+    usedTokens.add(token)
 
     return Response.redirect(link, 302)
 
