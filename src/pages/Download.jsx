@@ -53,12 +53,12 @@ export default function DownloadPage() {
     <>
       <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
         <div className="mx-auto max-w-3xl px-4 sm:px-6">
-          <div className="flex justify-end mb-4">
+          <div className="flex justify-start mb-2">
             <button
               onClick={handleReVerify}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted hover:text-fg border border-border rounded-btn hover:bg-surface transition-colors"
+              className="text-sm text-muted hover:text-primary transition-colors flex items-center gap-1.5"
             >
-              <ArrowCounterClockwise size={14} weight="bold" />
+              <ArrowCounterClockwise size={16} weight="bold" />
               重新验证
             </button>
           </div>
