@@ -183,18 +183,18 @@ async function handleOneTimeDownload(request, env) {
   }
 }
 
-async function handleRedirect(request, env) {
+async function handleProxyDownload(request, env) {
   try {
     const url = new URL(request.url)
-    const link = url.searchParams.get('link')
     const token = url.searchParams.get('token')
-    const signature = url.searchParams.get('sig')
+    const sig = url.searchParams.get('sig')
+    const link = url.searchParams.get('link')
 
-    if (!link || !token || !signature) {
-      return new Response('链接参数不完整', { status: 400 })
+    if (!token || !sig || !link) {
+      return new Response('参数不完整', { status: 400 })
     }
 
-    const result = verifySignedLink(link, token, signature)
+    const result = verifySignedLink(link, token, sig)
 
     if (!result.valid) {
       return new Response(result.reason, { status: 403 })
@@ -202,10 +202,21 @@ async function handleRedirect(request, env) {
 
     usedTokens.add(token)
 
-    return Response.redirect(link, 302)
+    const response = await fetch(link)
+
+    const contentDisposition = response.headers.get('content-disposition') || 'attachment; filename="download"'
+
+    return new Response(response.body, {
+      status: response.status,
+      headers: {
+        'Content-Type': response.headers.get('content-type') || 'application/octet-stream',
+        'Content-Disposition': contentDisposition,
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      }
+    })
 
   } catch (error) {
-    console.error('重定向错误:', error)
+    console.error('代理下载错误:', error)
     return new Response('服务器错误', { status: 500 })
   }
 }
@@ -329,8 +340,8 @@ export default {
       return handleOneTimeDownload(request, env)
     }
 
-    if (path === '/api/download/redirect') {
-      return handleRedirect(request, env)
+    if (path === '/api/download/proxy') {
+      return handleProxyDownload(request, env)
     }
 
     return errorResponse('API Not Found', 404, request)
