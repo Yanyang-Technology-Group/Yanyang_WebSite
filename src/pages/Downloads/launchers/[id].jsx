@@ -66,7 +66,7 @@ export default function LauncherDetail() {
       const data = await res.json()
 
       if (data.success) {
-        const redirectUrl = `${API_BASE_URL}/api/download/redirect?link=${encodeURIComponent(dl.link)}&token=${data.token}&ts=${data.timestamp}&sig=${encodeURIComponent(data.signature)}`
+        const redirectUrl = `${API_BASE_URL}/api/download/redirect?link=${encodeURIComponent(dl.link)}&token=${data.token}&sig=${encodeURIComponent(data.signature)}`
         window.open(redirectUrl, '_blank')
       } else {
         alert(data.message || '生成下载链接失败')
@@ -79,8 +79,31 @@ export default function LauncherDetail() {
     }
   }
 
-  function handleCopy(text) {
-    navigator.clipboard.writeText(text)
+  async function handleCopyLink(dl) {
+    const token = getCookie('download_token')
+    if (!token) {
+      navigate('/verify', { state: { from: window.location.pathname } })
+      return
+    }
+
+    try {
+      const res = await fetch(`${API_ENDPOINTS.oneTime}?id=${encodeURIComponent(dl.name)}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        const redirectUrl = `${API_BASE_URL}/api/download/redirect?link=${encodeURIComponent(dl.link)}&token=${data.token}&sig=${encodeURIComponent(data.signature)}`
+        await navigator.clipboard.writeText(redirectUrl)
+        alert('已复制一次性下载链接')
+      } else {
+        alert(data.message || '生成链接失败')
+      }
+    } catch (err) {
+      console.error('复制失败:', err)
+      alert('网络错误，请稍后重试')
+    }
   }
 
   if (loading) {
@@ -191,10 +214,11 @@ export default function LauncherDetail() {
                                   {downloading === dl.name ? '生成中...' : '下载'}
                                 </button>
                                 <button
-                                  onClick={() => handleCopy(dl.link)}
+                                  onClick={() => handleCopyLink(dl)}
                                   className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-muted border border-border rounded-btn hover:bg-surface transition-colors"
                                 >
                                   <Copy size={14} />
+                                  复制链接
                                 </button>
                               </>
                             )}
