@@ -7,13 +7,13 @@ const MAPS = [
     id: 1,
     name: '卫星地图',
     image: '/images/map/1.png',
-    path: '/map/satellite'
+    path: '/map/backend-iframe/satellite'
   },
   {
     id: 2,
     name: '线路图',
     image: '/images/map/2.png',
-    path: '/map/railway'
+    path: '/map/backend-iframe/railway'
   }
 ]
 
