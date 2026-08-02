@@ -261,6 +261,46 @@ async function handleProxyDownload(request, env) {
   }
 }
 
+async function handleMapProxy(request, env) {
+  try {
+    const url = new URL(request.url)
+    const target = url.searchParams.get('target')
+
+    if (!target) {
+      return new Response('缺少目标地址', { status: 400 })
+    }
+
+    const response = await fetch(target, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'Cache-Control': 'no-cache'
+      }
+    })
+
+    let html = await response.text()
+
+    const baseUrl = target.replace(/\/$/, '')
+    html = html.replace(/(src|href)=["'](?!https?:\/\/)(\/?[^"']*)["']/g, (match, attr, path) => {
+      const absoluteUrl = path.startsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/${path}`
+      return `${attr}="${absoluteUrl}"`
+    })
+
+    return new Response(html, {
+      status: response.status,
+      headers: {
+        'Content-Type': response.headers.get('content-type') || 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      }
+    })
+
+  } catch (error) {
+    console.error('地图代理错误:', error)
+    return new Response('地图加载失败', { status: 500 })
+  }
+}
+
 async function handleModpacks(request, env) {
   try {
     const auth = request.headers.get('Authorization')
@@ -386,6 +426,10 @@ export default {
 
     if (path === '/api/download/proxy') {
       return handleProxyDownload(request, env)
+    }
+
+    if (path === '/api/map/proxy') {
+      return handleMapProxy(request, env)
     }
 
     return errorResponse('API Not Found', 404, request)
