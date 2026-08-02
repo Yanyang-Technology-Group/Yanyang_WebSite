@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Coffee, ArrowLeft, Download, Copy, Warning } from '@phosphor-icons/react'
 import ScrollReveal from '../../../components/ScrollReveal'
-import { API_ENDPOINTS } from '../../../config'
+import { API_BASE_URL, API_ENDPOINTS } from '../../../config'
 
 function getCookie(name) {
   const value = `; ${document.cookie}`
@@ -66,7 +66,8 @@ export default function JavaDetail() {
       const data = await res.json()
 
       if (data.success) {
-        window.open(data.url, '_blank')
+        const redirectUrl = `${API_BASE_URL}/api/download/redirect?link=${encodeURIComponent(dl.link)}&token=${data.token}&ts=${data.timestamp}&sig=${encodeURIComponent(data.signature)}`
+        window.open(redirectUrl, '_blank')
       } else {
         alert(data.message || '生成下载链接失败')
       }

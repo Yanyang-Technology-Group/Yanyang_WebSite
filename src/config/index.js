@@ -7,5 +7,5 @@ export const API_ENDPOINTS = {
   java: `${API_BASE_URL}/api/java`,
   launchers: `${API_BASE_URL}/api/launchers`,
   oneTime: `${API_BASE_URL}/api/download/one-time`,
-  link: `${API_BASE_URL}/api/download/link`,
+  redirect: `${API_BASE_URL}/api/download/redirect`,
 }
