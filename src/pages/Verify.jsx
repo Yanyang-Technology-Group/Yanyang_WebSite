@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Lock, XCircle } from '@phosphor-icons/react'
+import { Lock, XCircle, Eye } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
 import { API_ENDPOINTS } from '../config'
 
@@ -28,10 +28,36 @@ export default function Verify() {
       const data = await res.json()
 
       if (res.ok && data.success) {
-        document.cookie = `download_token=${data.token}; path=/; max-age=300; SameSite=Lax`
+        document.cookie = `download_token=${data.token}; path=/; max-age=600; SameSite=Lax`
         navigate(from, { replace: true })
       } else {
         setError(data.message || '密码错误，请重试')
+      }
+    } catch (err) {
+      setError('网络错误，请稍后重试')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleGuestLogin() {
+    setLoading(true)
+    setError('')
+
+    try {
+      const res = await fetch(API_ENDPOINTS.verify, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: '888888' })
+      })
+
+      const data = await res.json()
+
+      if (res.ok && data.success) {
+        document.cookie = `download_token=${data.token}; path=/; max-age=600; SameSite=Lax`
+        navigate(from, { replace: true })
+      } else {
+        setError('游客登录失败，请稍后重试')
       }
     } catch (err) {
       setError('网络错误，请稍后重试')
@@ -94,6 +120,17 @@ export default function Verify() {
                   {loading ? '验证中...' : '验证访问'}
                 </button>
               </form>
+
+              <div className="mt-6 text-center">
+                <button
+                  onClick={handleGuestLogin}
+                  disabled={loading}
+                  className="text-sm text-muted hover:text-primary transition-colors flex items-center justify-center gap-1.5 mx-auto"
+                >
+                  <Eye size={14} weight="regular" />
+                  游客想预览？
+                </button>
+              </div>
             </div>
           </ScrollReveal>
         </div>
