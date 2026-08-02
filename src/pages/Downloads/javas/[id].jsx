@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Coffee, ArrowLeft, Download, Copy, Warning } from '@phosphor-icons/react'
+import { Coffee, ArrowLeft, Download, Warning } from '@phosphor-icons/react'
 import ScrollReveal from '../../../components/ScrollReveal'
 import { API_BASE_URL, API_ENDPOINTS } from '../../../config'
 
@@ -49,7 +49,7 @@ export default function JavaDetail() {
     }
   }
 
-  async function handleOneTimeDownload(dl) {
+  async function handleDownload(dl) {
     const token = getCookie('download_token')
     if (!token) {
       navigate('/verify', { state: { from: window.location.pathname } })
@@ -66,8 +66,14 @@ export default function JavaDetail() {
       const data = await res.json()
 
       if (data.success) {
-        const redirectUrl = `${API_BASE_URL}/api/download/redirect?link=${encodeURIComponent(dl.link)}&token=${data.token}&sig=${encodeURIComponent(data.signature)}`
-        window.open(redirectUrl, '_blank')
+        const proxyUrl = `${API_BASE_URL}/api/download/proxy?link=${encodeURIComponent(dl.link)}&token=${data.token}&sig=${encodeURIComponent(data.signature)}`
+        const a = document.createElement('a')
+        a.href = proxyUrl
+        a.target = '_blank'
+        a.style.display = 'none'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
       } else {
         alert(data.message || '生成下载链接失败')
       }
@@ -76,33 +82,6 @@ export default function JavaDetail() {
       alert('网络错误，请稍后重试')
     } finally {
       setDownloading(null)
-    }
-  }
-
-  async function handleCopyLink(dl) {
-    const token = getCookie('download_token')
-    if (!token) {
-      navigate('/verify', { state: { from: window.location.pathname } })
-      return
-    }
-
-    try {
-      const res = await fetch(`${API_ENDPOINTS.oneTime}?id=${encodeURIComponent(dl.name)}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      const data = await res.json()
-
-      if (data.success) {
-        const redirectUrl = `${API_BASE_URL}/api/download/redirect?link=${encodeURIComponent(dl.link)}&token=${data.token}&sig=${encodeURIComponent(data.signature)}`
-        await navigator.clipboard.writeText(redirectUrl)
-        alert('已复制一次性下载链接')
-      } else {
-        alert(data.message || '生成链接失败')
-      }
-    } catch (err) {
-      console.error('复制失败:', err)
-      alert('网络错误，请稍后重试')
     }
   }
 
@@ -204,23 +183,14 @@ export default function JavaDetail() {
                                 已过期
                               </span>
                             ) : (
-                              <>
-                                <button
-                                  onClick={() => handleOneTimeDownload(dl)}
-                                  disabled={downloading === dl.name}
-                                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-medium rounded-btn hover:bg-primary/90 disabled:opacity-50"
-                                >
-                                  <Download size={16} weight="bold" />
-                                  {downloading === dl.name ? '生成中...' : '下载'}
-                                </button>
-                                <button
-                                  onClick={() => handleCopyLink(dl)}
-                                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-muted border border-border rounded-btn hover:bg-surface transition-colors"
-                                >
-                                  <Copy size={14} />
-                                  复制链接
-                                </button>
-                              </>
+                              <button
+                                onClick={() => handleDownload(dl)}
+                                disabled={downloading === dl.name}
+                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-medium rounded-btn hover:bg-primary/90 disabled:opacity-50"
+                              >
+                                <Download size={16} weight="bold" />
+                                {downloading === dl.name ? '生成中...' : '下载'}
+                              </button>
                             )}
                           </div>
                         </div>
