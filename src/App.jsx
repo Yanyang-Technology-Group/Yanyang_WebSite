@@ -15,6 +15,8 @@ import ModpackDetail from './pages/Downloads/modpacks/[id]'
 import JavaDetail from './pages/Downloads/javas/[id]'
 import LauncherDetail from './pages/Downloads/launchers/[id]'
 import FourYearsEvent from './Events/4years.jsx'
+import SatelliteMap from './pages/SatelliteMap'
+import RailwayMap from './pages/RailwayMap'
 
 function NotFound() {
   return (
@@ -53,6 +55,8 @@ export default function App() {
             <Route path="/downloads/javas/:id" element={<JavaDetail />} />
             <Route path="/downloads/launchers/:id" element={<LauncherDetail />} />
             <Route path="/verify" element={<Verify />} />
+            <Route path="/maps/backend-iframe/satellite" element={<SatelliteMap />} />
+            <Route path="/maps/backend-iframe/railway" element={<RailwayMap />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
