@@ -1,0 +1,44 @@
+name: Create Release
+
+on:
+  push:
+    branches:
+      - backend
+    paths:
+      - 'backend/**'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version
+        id: get_version
+        run: |
+          cd backend
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.tag }}
+          name: "Backend v${{ steps.get_version.outputs.version }}"
+          body: |
+            ## 更新内容
+            - 自动发布后端版本
+
+            ## 安装
+            1. 下载 `backend.zip`
+            2. 解压到 Cloudflare Workers
+          draft: false
+          prerelease: false
+          files: |
+            backend/**
