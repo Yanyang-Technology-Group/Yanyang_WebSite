@@ -66,15 +66,8 @@ export default function ModpackDetail() {
       const data = await res.json()
 
       if (data.success) {
-        const filename = `${dl.name}.mrpack`
-        const proxyUrl = `${API_BASE_URL}/api/download/proxy?link=${encodeURIComponent(dl.link)}&token=${data.token}&sig=${encodeURIComponent(data.signature)}&filename=${encodeURIComponent(filename)}`
-        const a = document.createElement('a')
-        a.href = proxyUrl
-        a.download = filename
-        a.style.display = 'none'
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
+        const redirectUrl = `${API_BASE_URL}/api/download/redirect?link=${encodeURIComponent(dl.link)}&token=${data.token}&sig=${encodeURIComponent(data.signature)}`
+        window.open(redirectUrl, '_blank')
       } else {
         alert(data.message || '生成下载链接失败')
       }
