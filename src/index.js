@@ -1,8 +1,9 @@
 import { corsHeaders, jsonResponse, errorResponse } from './utils/response.js'
-import { getDownkey, getModpacks, getJava, getLaunchers, getOneTimeTokens, saveOneTimeToken, verifyPassword } from './services/github.js'
+import { getDownkey, getModpacks, getJava, getLaunchers, verifyPassword } from './services/github.js'
 import { simpleJWT, verifySimpleJWT } from './services/jwt.js'
 
 const TOKEN_EXPIRY = 3600000
+const ONE_TIME_SECRET = 'yanyang-one-time-secret-2026'
 
 function filterByType(items, passwordType) {
   if (passwordType === 'full') {
@@ -21,6 +22,26 @@ function generateOneTimeToken() {
     token += chars[Math.floor(Math.random() * chars.length)]
   }
   return token
+}
+
+function signLink(link, token) {
+  const timestamp = Date.now()
+  const signature = btoa(`${link}|${token}|${timestamp}|${ONE_TIME_SECRET}`)
+  return {
+    url: `${link}?ot_token=${token}&ot_ts=${timestamp}&ot_sig=${encodeURIComponent(signature)}`,
+    expiresIn: 600000
+  }
+}
+
+function verifySignedLink(link, token, timestamp, signature) {
+  const expected = btoa(`${link}|${token}|${timestamp}|${ONE_TIME_SECRET}`)
+  if (signature !== expected) {
+    return { valid: false, reason: '签名无效' }
+  }
+  if (Date.now() - parseInt(timestamp) > 600000) {
+    return { valid: false, reason: '链接已过期（10分钟）' }
+  }
+  return { valid: true }
 }
 
 async function handleHealth(request) {
@@ -123,52 +144,6 @@ async function handleOneTimeDownload(request, env) {
       return errorResponse('缺少链接ID', 400, request)
     }
 
-    const oneTimeToken = generateOneTimeToken()
-    const expiresAt = Date.now() + 600000
-
-    await saveOneTimeToken(env, {
-      token: oneTimeToken,
-      linkId: linkId,
-      used: false,
-      expiresAt: expiresAt,
-      createdAt: Date.now()
-    })
-
-    return jsonResponse({
-      success: true,
-      token: oneTimeToken,
-      expiresIn: 600
-    }, 200, request)
-
-  } catch (error) {
-    console.error('生成一次性链接错误:', error)
-    return errorResponse('服务器错误', 500, request)
-  }
-}
-
-async function handleGetDownloadLink(request, env) {
-  try {
-    const url = new URL(request.url)
-    const oneTimeToken = url.searchParams.get('token')
-    if (!oneTimeToken) {
-      return errorResponse('缺少token', 400, request)
-    }
-
-    const tokensData = await getOneTimeTokens(env)
-    const tokenData = tokensData.tokens.find(t => t.token === oneTimeToken)
-
-    if (!tokenData) {
-      return errorResponse('链接无效', 404, request)
-    }
-
-    if (tokenData.used) {
-      return errorResponse('链接已被使用', 410, request)
-    }
-
-    if (tokenData.expiresAt < Date.now()) {
-      return errorResponse('链接已过期', 404, request)
-    }
-
     const modpacks = await getModpacks(env)
     const java = await getJava(env)
     const launchers = await getLaunchers(env)
@@ -177,13 +152,13 @@ async function handleGetDownloadLink(request, env) {
     let targetLink = null
     for (const item of allItems) {
       if (item.downloads) {
-        const found = item.downloads.find(d => d.name === tokenData.linkId)
+        const found = item.downloads.find(d => d.name === linkId)
         if (found) {
           targetLink = found.link
           break
         }
       }
-      if (item.link && item.name === tokenData.linkId) {
+      if (item.link && item.name === linkId) {
         targetLink = item.link
         break
       }
@@ -193,16 +168,46 @@ async function handleGetDownloadLink(request, env) {
       return errorResponse('链接不存在', 404, request)
     }
 
-    tokenData.used = true
-    await saveOneTimeToken(env, tokenData)
+    const oneTimeToken = generateOneTimeToken()
+    const signed = signLink(targetLink, oneTimeToken)
 
     return jsonResponse({
       success: true,
-      link: targetLink
+      url: signed.url,
+      expiresIn: signed.expiresIn
     }, 200, request)
 
   } catch (error) {
-    console.error('获取下载链接错误:', error)
+    console.error('生成一次性链接错误:', error)
+    return errorResponse('服务器错误', 500, request)
+  }
+}
+
+async function handleVerifyOneTimeLink(request, env) {
+  try {
+    const url = new URL(request.url)
+    const originalUrl = url.searchParams.get('url')
+    const token = url.searchParams.get('ot_token')
+    const timestamp = url.searchParams.get('ot_ts')
+    const signature = url.searchParams.get('ot_sig')
+
+    if (!originalUrl || !token || !timestamp || !signature) {
+      return errorResponse('链接格式无效', 400, request)
+    }
+
+    const result = verifySignedLink(originalUrl, token, timestamp, signature)
+
+    if (!result.valid) {
+      return errorResponse(result.reason, 403, request)
+    }
+
+    return jsonResponse({
+      success: true,
+      link: originalUrl
+    }, 200, request)
+
+  } catch (error) {
+    console.error('验证一次性链接错误:', error)
     return errorResponse('服务器错误', 500, request)
   }
 }
@@ -326,8 +331,8 @@ export default {
       return handleOneTimeDownload(request, env)
     }
 
-    if (path === '/api/download/link') {
-      return handleGetDownloadLink(request, env)
+    if (path === '/api/download/verify') {
+      return handleVerifyOneTimeLink(request, env)
     }
 
     return errorResponse('API Not Found', 404, request)
