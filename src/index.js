@@ -270,24 +270,29 @@ async function handleMapProxy(request, env) {
       return new Response('缺少目标地址', { status: 400 })
     }
 
+    const targetUrl = new URL(target)
+    const host = targetUrl.host
+
     const response = await fetch(target, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Host': host,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
         'Cache-Control': 'no-cache'
+      },
+      cf: {
+        cacheTtl: 0
       }
     })
 
-    let html = await response.text()
+    if (!response.ok) {
+      return new Response(`地图服务响应错误: ${response.status}`, { status: response.status })
+    }
 
-    const baseUrl = target.replace(/\/$/, '')
-    html = html.replace(/(src|href)=["'](?!https?:\/\/)(\/?[^"']*)["']/g, (match, attr, path) => {
-      const absoluteUrl = path.startsWith('/') ? `${baseUrl}${path}` : `${baseUrl}/${path}`
-      return `${attr}="${absoluteUrl}"`
-    })
+    const content = await response.text()
 
-    return new Response(html, {
+    return new Response(content, {
       status: response.status,
       headers: {
         'Content-Type': response.headers.get('content-type') || 'text/html',
@@ -297,7 +302,7 @@ async function handleMapProxy(request, env) {
 
   } catch (error) {
     console.error('地图代理错误:', error)
-    return new Response('地图加载失败', { status: 500 })
+    return new Response('地图加载失败: ' + error.message, { status: 500 })
   }
 }
 
