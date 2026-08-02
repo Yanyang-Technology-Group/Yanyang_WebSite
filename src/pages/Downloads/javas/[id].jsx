@@ -66,7 +66,8 @@ export default function JavaDetail() {
       const data = await res.json()
 
       if (data.success) {
-        const filename = `${dl.name}.zip`
+        const ext = dl.size || '.zip'
+        const filename = `${dl.name}${ext}`
         const proxyUrl = `${API_BASE_URL}/api/download/proxy?link=${encodeURIComponent(dl.link)}&token=${data.token}&sig=${encodeURIComponent(data.signature)}&filename=${encodeURIComponent(filename)}`
         const a = document.createElement('a')
         a.href = proxyUrl
