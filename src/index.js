@@ -28,8 +28,9 @@ function signLink(link, token) {
   const timestamp = Date.now()
   const signature = btoa(`${link}|${token}|${timestamp}|${ONE_TIME_SECRET}`)
   return {
-    url: `${link}?ot_token=${token}&ot_ts=${timestamp}&ot_sig=${encodeURIComponent(signature)}`,
-    expiresIn: 600000
+    token: token,
+    timestamp: timestamp,
+    signature: signature
   }
 }
 
@@ -39,7 +40,7 @@ function verifySignedLink(link, token, timestamp, signature) {
     return { valid: false, reason: '签名无效' }
   }
   if (Date.now() - parseInt(timestamp) > 600000) {
-    return { valid: false, reason: '链接已过期（10分钟）' }
+    return { valid: false, reason: '链接已过期' }
   }
   return { valid: true }
 }
@@ -173,8 +174,10 @@ async function handleOneTimeDownload(request, env) {
 
     return jsonResponse({
       success: true,
-      url: signed.url,
-      expiresIn: signed.expiresIn
+      token: oneTimeToken,
+      timestamp: signed.timestamp,
+      signature: signed.signature,
+      expiresIn: 600
     }, 200, request)
 
   } catch (error) {
@@ -183,32 +186,29 @@ async function handleOneTimeDownload(request, env) {
   }
 }
 
-async function handleVerifyOneTimeLink(request, env) {
+async function handleRedirect(request, env) {
   try {
     const url = new URL(request.url)
-    const originalUrl = url.searchParams.get('url')
-    const token = url.searchParams.get('ot_token')
-    const timestamp = url.searchParams.get('ot_ts')
-    const signature = url.searchParams.get('ot_sig')
+    const link = url.searchParams.get('link')
+    const token = url.searchParams.get('token')
+    const timestamp = url.searchParams.get('ts')
+    const signature = url.searchParams.get('sig')
 
-    if (!originalUrl || !token || !timestamp || !signature) {
-      return errorResponse('链接格式无效', 400, request)
+    if (!link || !token || !timestamp || !signature) {
+      return new Response('链接参数不完整', { status: 400 })
     }
 
-    const result = verifySignedLink(originalUrl, token, timestamp, signature)
+    const result = verifySignedLink(link, token, timestamp, signature)
 
     if (!result.valid) {
-      return errorResponse(result.reason, 403, request)
+      return new Response(result.reason, { status: 403 })
     }
 
-    return jsonResponse({
-      success: true,
-      link: originalUrl
-    }, 200, request)
+    return Response.redirect(link, 302)
 
   } catch (error) {
-    console.error('验证一次性链接错误:', error)
-    return errorResponse('服务器错误', 500, request)
+    console.error('重定向错误:', error)
+    return new Response('服务器错误', { status: 500 })
   }
 }
 
@@ -331,8 +331,8 @@ export default {
       return handleOneTimeDownload(request, env)
     }
 
-    if (path === '/api/download/verify') {
-      return handleVerifyOneTimeLink(request, env)
+    if (path === '/api/download/redirect') {
+      return handleRedirect(request, env)
     }
 
     return errorResponse('API Not Found', 404, request)
