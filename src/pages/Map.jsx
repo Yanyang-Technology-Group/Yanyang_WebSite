@@ -6,42 +6,59 @@ const MAPS = [
   {
     id: 1,
     name: '卫星地图',
-    url: '/api/map/proxy?target=http://103.40.14.23:28826',
-    fallbackUrl: 'http://103.40.14.23:28826'
+    image: '/images/map/1.png',
+    path: '/map/satellite'
   },
   {
     id: 2,
     name: '线路图',
-    url: '/api/map/proxy?target=http://103.40.14.23:50854',
-    fallbackUrl: 'http://103.40.14.23:50854'
+    image: '/images/map/2.png',
+    path: '/map/railway'
   }
 ]
 
 export default function Map() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
-  const [iframeError, setIframeError] = useState(false)
+  const [bumpDirection, setBumpDirection] = useState(null)
 
   const currentMap = MAPS[currentIndex]
 
   const handlePrev = () => {
     if (isTransitioning) return
+    if (currentIndex === 0) {
+      setBumpDirection('left')
+      setIsTransitioning(true)
+      setTimeout(() => {
+        setIsTransitioning(false)
+        setBumpDirection(null)
+      }, 400)
+      return
+    }
     setIsTransitioning(true)
-    setCurrentIndex((prev) => (prev === 0 ? MAPS.length - 1 : prev - 1))
-    setIframeError(false)
+    setCurrentIndex((prev) => prev - 1)
     setTimeout(() => setIsTransitioning(false), 500)
   }
 
   const handleNext = () => {
     if (isTransitioning) return
+    if (currentIndex === MAPS.length - 1) {
+      setBumpDirection('right')
+      setIsTransitioning(true)
+      setTimeout(() => {
+        setIsTransitioning(false)
+        setBumpDirection(null)
+      }, 400)
+      return
+    }
     setIsTransitioning(true)
-    setCurrentIndex((prev) => (prev === MAPS.length - 1 ? 0 : prev + 1))
-    setIframeError(false)
+    setCurrentIndex((prev) => prev + 1)
     setTimeout(() => setIsTransitioning(false), 500)
   }
 
-  const handleIframeError = () => {
-    setIframeError(true)
+  const getBumpClass = () => {
+    if (!bumpDirection) return ''
+    return bumpDirection === 'left' ? 'bump-left' : 'bump-right'
   }
 
   return (
@@ -69,48 +86,32 @@ export default function Map() {
         <div className="relative rounded-container overflow-hidden bg-surface border border-border">
           <div className="relative aspect-[16/7] overflow-hidden bg-black/5">
             <div
-              className={`flex w-full h-full transition-transform duration-500 ease-in-out`}
+              className={`flex w-full h-full transition-transform duration-500 ease-in-out ${getBumpClass()}`}
               style={{ transform: `translateX(-${currentIndex * 100}%)` }}
             >
-              {MAPS.map((map, index) => (
-                <div key={map.id} className="min-w-full h-full relative flex-shrink-0">
-                  {iframeError ? (
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100">
-                      <p className="text-muted mb-4">地图加载失败</p>
-                      <a
-                        href={map.fallbackUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-btn hover:bg-primary/90"
-                      >
-                        <MapPin size={16} weight="bold" />
-                        在新窗口打开
-                      </a>
-                    </div>
-                  ) : (
-                    <iframe
-                      src={map.url}
-                      className="w-full h-full border-0"
-                      title={map.name}
-                      allowFullScreen
-                      onError={handleIframeError}
-                    />
-                  )}
-                  <div className="absolute bottom-8 left-8 z-10 text-white pointer-events-none">
-                    <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold drop-shadow-lg" style={{ fontFamily: '"Source Han Sans SC", "Noto Sans SC", sans-serif' }}>
+              {MAPS.map((map) => (
+                <div key={map.id} className="min-w-full h-full relative flex-shrink-0 overflow-hidden">
+                  <div
+                    className="w-[120%] h-[120%] bg-cover bg-center map-pan"
+                    style={{
+                      backgroundImage: `url(${map.image})`,
+                      filter: 'blur(4px) saturate(1.1)'
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                  <div className="absolute bottom-8 left-8 z-10 text-white">
+                    <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold" style={{ fontFamily: '"Source Han Sans SC", "Noto Sans SC", sans-serif' }}>
                       {map.name}
                     </h2>
                   </div>
                   <div className="absolute bottom-8 right-8 z-10">
-                    <a
-                      href={map.fallbackUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <Link
+                      to={map.path}
                       className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-all shadow-lg"
                     >
                       <MapPin size={16} weight="bold" />
-                      新窗口打开
-                    </a>
+                      立即前往
+                    </Link>
                   </div>
                 </div>
               ))}
@@ -140,7 +141,6 @@ export default function Map() {
                     if (isTransitioning || index === currentIndex) return
                     setIsTransitioning(true)
                     setCurrentIndex(index)
-                    setIframeError(false)
                     setTimeout(() => setIsTransitioning(false), 500)
                   }}
                   className={`w-2.5 h-2.5 rounded-full transition-all ${
