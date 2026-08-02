@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ArrowLeft } from '@phosphor-icons/react'
+import { API_BASE_URL } from '../config'
 
 export default function SatelliteMap() {
   return (
@@ -11,14 +12,15 @@ export default function SatelliteMap() {
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted hover:text-fg border border-border rounded-btn hover:bg-surface transition-all"
           >
             <ArrowLeft size={16} weight="bold" />
-            返回地图
+            返回
           </Link>
         </div>
-        <div className="w-full h-[80vh] rounded-container overflow-hidden border border-border bg-surface">
+        <div className="w-full h-[calc(100vh-150px)] rounded-container overflow-hidden border border-border bg-surface">
           <iframe
-            src="/api/map/proxy?target=http://103.40.14.23:28826"
+            src={`${API_BASE_URL}/api/map/proxy?target=http://103.40.14.23:28826`}
             className="w-full h-full border-0"
             title="卫星地图"
+            allowFullScreen
           />
         </div>
       </div>
