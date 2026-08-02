@@ -66,13 +66,7 @@ export default function JavaDetail() {
       const data = await res.json()
 
       if (data.success) {
-        const linkRes = await fetch(`${API_ENDPOINTS.link}?token=${data.token}`)
-        const linkData = await linkRes.json()
-        if (linkData.success) {
-          window.open(linkData.link, '_blank')
-        } else {
-          alert(linkData.message || '获取下载链接失败')
-        }
+        window.open(data.url, '_blank')
       } else {
         alert(data.message || '生成下载链接失败')
       }
