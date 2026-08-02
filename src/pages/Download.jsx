@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Package, Coffee, Rocket, ArrowRight } from '@phosphor-icons/react'
+import { Package, Coffee, Rocket, ArrowRight, ArrowCounterClockwise } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
 import { useAuth } from '../hooks/useAuth'
 
@@ -34,6 +34,11 @@ export default function DownloadPage() {
   const navigate = useNavigate()
   const { loading } = useAuth()
 
+  function handleReVerify() {
+    document.cookie = 'download_token=; path=/; max-age=0'
+    navigate('/verify', { state: { from: '/download' } })
+  }
+
   if (loading) {
     return (
       <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
@@ -47,9 +52,20 @@ export default function DownloadPage() {
   return (
     <>
       <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">资源下载</h1>
-          <p className="mt-3 text-muted">选择你要下载的资源类型</p>
+        <div className="mx-auto max-w-3xl px-4 sm:px-6">
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={handleReVerify}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted hover:text-fg border border-border rounded-btn hover:bg-surface transition-colors"
+            >
+              <ArrowCounterClockwise size={14} weight="bold" />
+              重新验证
+            </button>
+          </div>
+          <div className="text-center">
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">资源下载</h1>
+            <p className="mt-3 text-muted">选择你要下载的资源类型</p>
+          </div>
         </div>
       </section>
 
