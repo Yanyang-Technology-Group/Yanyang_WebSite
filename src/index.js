@@ -189,6 +189,7 @@ async function handleProxyDownload(request, env) {
     const token = url.searchParams.get('token')
     const sig = url.searchParams.get('sig')
     const link = url.searchParams.get('link')
+    const filename = url.searchParams.get('filename') || 'download'
 
     if (!token || !sig || !link) {
       return new Response('参数不完整', { status: 400 })
@@ -202,9 +203,21 @@ async function handleProxyDownload(request, env) {
 
     usedTokens.add(token)
 
-    const response = await fetch(link)
+    const response = await fetch(link, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': '*/*',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'Referer': 'https://www.123pan.com/',
+        'Origin': 'https://www.123pan.com'
+      }
+    })
 
-    const contentDisposition = response.headers.get('content-disposition') || 'attachment; filename="download"'
+    if (!response.ok) {
+      return new Response(`文件获取失败: ${response.status}`, { status: response.status })
+    }
+
+    const contentDisposition = response.headers.get('content-disposition') || `attachment; filename="${encodeURIComponent(filename)}"`
 
     return new Response(response.body, {
       status: response.status,
