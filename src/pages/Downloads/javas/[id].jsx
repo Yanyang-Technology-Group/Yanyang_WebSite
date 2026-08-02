@@ -66,10 +66,11 @@ export default function JavaDetail() {
       const data = await res.json()
 
       if (data.success) {
-        const proxyUrl = `${API_BASE_URL}/api/download/proxy?link=${encodeURIComponent(dl.link)}&token=${data.token}&sig=${encodeURIComponent(data.signature)}`
+        const filename = `${dl.name}.zip`
+        const proxyUrl = `${API_BASE_URL}/api/download/proxy?link=${encodeURIComponent(dl.link)}&token=${data.token}&sig=${encodeURIComponent(data.signature)}&filename=${encodeURIComponent(filename)}`
         const a = document.createElement('a')
         a.href = proxyUrl
-        a.target = '_blank'
+        a.download = filename
         a.style.display = 'none'
         document.body.appendChild(a)
         a.click()
