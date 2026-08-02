@@ -95,6 +95,115 @@ async function handleVerify(request, env) {
   }
 }
 
+const oneTimeTokens = new Map()
+
+function generateOneTimeToken() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  let token = ''
+  for (let i = 0; i < 32; i++) {
+    token += chars[Math.floor(Math.random() * chars.length)]
+  }
+  return token
+}
+
+async function handleOneTimeDownload(request, env) {
+  try {
+    const auth = request.headers.get('Authorization')
+    if (!auth || !auth.startsWith('Bearer ')) {
+      return errorResponse('未授权', 401, request)
+    }
+
+    const token = auth.replace('Bearer ', '')
+    const decoded = verifySimpleJWT(token, env.JWT_SECRET)
+    if (!decoded) {
+      return errorResponse('token无效或已过期', 401, request)
+    }
+
+    const url = new URL(request.url)
+    const linkId = url.searchParams.get('id')
+    if (!linkId) {
+      return errorResponse('缺少链接ID', 400, request)
+    }
+
+    const oneTimeToken = generateOneTimeToken()
+    oneTimeTokens.set(oneTimeToken, {
+      linkId: linkId,
+      used: false,
+      createdAt: Date.now()
+    })
+
+    setTimeout(() => {
+      oneTimeTokens.delete(oneTimeToken)
+    }, 600000)
+
+    return jsonResponse({
+      success: true,
+      token: oneTimeToken,
+      expiresIn: 600
+    }, 200, request)
+
+  } catch (error) {
+    console.error('生成一次性链接错误:', error)
+    return errorResponse('服务器错误', 500, request)
+  }
+}
+
+async function handleGetDownloadLink(request, env) {
+  try {
+    const url = new URL(request.url)
+    const oneTimeToken = url.searchParams.get('token')
+    if (!oneTimeToken) {
+      return errorResponse('缺少token', 400, request)
+    }
+
+    const data = oneTimeTokens.get(oneTimeToken)
+    if (!data) {
+      return errorResponse('链接无效或已过期', 404, request)
+    }
+
+    if (data.used) {
+      oneTimeTokens.delete(oneTimeToken)
+      return errorResponse('链接已被使用', 410, request)
+    }
+
+    const modpacks = await getModpacks(env)
+    const java = await getJava(env)
+    const launchers = await getLaunchers(env)
+    const allItems = [...(modpacks.items || []), ...(java.items || []), ...(launchers.items || [])]
+
+    let targetLink = null
+    for (const item of allItems) {
+      if (item.downloads) {
+        const found = item.downloads.find(d => d.name === data.linkId)
+        if (found) {
+          targetLink = found.link
+          break
+        }
+      }
+      if (item.link && item.name === data.linkId) {
+        targetLink = item.link
+        break
+      }
+    }
+
+    if (!targetLink) {
+      return errorResponse('链接不存在', 404, request)
+    }
+
+    data.used = true
+    oneTimeTokens.set(oneTimeToken, data)
+
+    return jsonResponse({
+      success: true,
+      link: targetLink
+    }, 200, request)
+
+  } catch (error) {
+    console.error('获取下载链接错误:', error)
+    return errorResponse('服务器错误', 500, request)
+  }
+}
+
 async function handleModpacks(request, env) {
   try {
     const auth = request.headers.get('Authorization')
@@ -208,6 +317,14 @@ export default {
 
     if (path === '/api/website/info') {
       return handleWebsiteInfo(request)
+    }
+
+    if (path === '/api/download/one-time' && request.method === 'POST') {
+      return handleOneTimeDownload(request, env)
+    }
+
+    if (path === '/api/download/link') {
+      return handleGetDownloadLink(request, env)
     }
 
     return errorResponse('API Not Found', 404, request)
