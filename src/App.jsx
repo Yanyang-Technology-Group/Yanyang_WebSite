@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Home from './pages/Home'
@@ -17,6 +18,14 @@ import LauncherDetail from './pages/Downloads/launchers/[id]'
 import FourYearsEvent from './Events/4years.jsx'
 import SatelliteMap from './pages/SatelliteMap'
 import RailwayMap from './pages/RailwayMap'
+
+function ScrollToTop() {
+  const location = useLocation()
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [location])
+  return null
+}
 
 function NotFound() {
   return (
@@ -37,6 +46,7 @@ function NotFound() {
 export default function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <div className="min-h-screen flex flex-col bg-bg">
         <Navbar />
         <main className="flex-1">
