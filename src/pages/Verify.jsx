@@ -26,6 +26,24 @@ export default function Verify() {
     }
   }, [countdown])
 
+  // 渲染 Turnstile
+  useEffect(() => {
+    if (mode === 'find' && step === 1 && window.turnstile) {
+      const container = document.getElementById('turnstile-container')
+      if (container) {
+        container.innerHTML = ''
+        window.turnstile.render(container, {
+          sitekey: '0x4AAAAAAEE8_DN5xRQe-MRk',
+          callback: function(token) {
+            console.log('Turnstile 验证成功', token)
+            const input = document.querySelector('[name="cf-turnstile-response"]')
+            if (input) input.value = token
+          }
+        })
+      }
+    }
+  }, [mode, step])
+
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
@@ -189,12 +207,7 @@ export default function Verify() {
                       />
                     </div>
 
-                    <div className="mb-4 flex justify-center">
-                      <div
-                        className="cf-turnstile"
-                        data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '你的站点密钥'}
-                      />
-                    </div>
+                    <div id="turnstile-container" className="mb-4 flex justify-center min-h-[80px]"></div>
 
                     {error && (
                       <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-btn flex items-center gap-2">
