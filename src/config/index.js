@@ -9,3 +9,5 @@ export const API_ENDPOINTS = {
   findPassword: `${API_BASE_URL}/api/find-password`,
   resetPassword: `${API_BASE_URL}/api/reset-password`,
 }
+
+export const TOKEN_KEY = 'download_token'

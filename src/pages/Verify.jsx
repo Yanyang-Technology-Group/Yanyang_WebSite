@@ -10,22 +10,33 @@ export default function Verify() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [mode, setMode] = useState('login') // 'login' | 'find' | 'reset'
+  const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [countdown, setCountdown] = useState(0)
-  const [step, setStep] = useState(1) // 1: 输入邮箱, 2: 输入验证码
+  const [step, setStep] = useState(1)
+  const [turnstileToken, setTurnstileToken] = useState('')
 
   const from = location.state?.from || '/download'
 
-  // 倒计时
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
       return () => clearTimeout(timer)
     }
   }, [countdown])
+
+  // 加载 Turnstile 脚本
+  useEffect(() => {
+    if (mode === 'find') {
+      const script = document.createElement('script')
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
+      script.async = true
+      script.defer = true
+      document.body.appendChild(script)
+    }
+  }, [mode])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -85,13 +96,19 @@ export default function Verify() {
     setError('')
     setLoading(true)
 
-    // TODO: 调用GeeTest验证
+    // 获取 Turnstile token
+    const token = document.querySelector('[name="cf-turnstile-response"]')?.value
+    if (!token) {
+      setError('请完成人机验证')
+      setLoading(false)
+      return
+    }
 
     try {
       const res = await fetch(API_ENDPOINTS.findPassword, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, geetest_token: 'xxx' })
+        body: JSON.stringify({ email, turnstile_token: token })
       })
 
       const data = await res.json()
@@ -141,7 +158,6 @@ export default function Verify() {
     }
   }
 
-  // 找回密码界面
   if (mode === 'find') {
     return (
       <>
@@ -164,7 +180,6 @@ export default function Verify() {
             <ScrollReveal>
               <div className="bg-surface rounded-container border border-border p-8 sm:p-10">
                 {step === 1 ? (
-                  // 步骤1: 输入邮箱
                   <form onSubmit={handleSendCode}>
                     <div className="flex items-center gap-3 mb-6">
                       <div className="w-12 h-12 rounded-full bg-primary-light text-primary flex items-center justify-center flex-shrink-0">
@@ -187,9 +202,13 @@ export default function Verify() {
                       />
                     </div>
 
-                    {/* GeeTest人机验证组件占位 */}
-                    <div className="mb-4 h-20 bg-surface rounded-btn border border-border flex items-center justify-center text-sm text-muted">
-                      [GeeTest 人机验证组件]
+                    {/* Turnstile 人机验证 */}
+                    <div className="mb-4 flex justify-center">
+                      <div
+                        className="cf-turnstile"
+                        data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                        data-callback="onTurnstileSuccess"
+                      />
                     </div>
 
                     {error && (
@@ -208,7 +227,6 @@ export default function Verify() {
                     </button>
                   </form>
                 ) : (
-                  // 步骤2: 输入验证码和密码
                   <form onSubmit={handleReset}>
                     <div className="flex items-center gap-3 mb-6">
                       <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0">
@@ -285,7 +303,6 @@ export default function Verify() {
     )
   }
 
-  // 登录界面
   return (
     <>
       <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
