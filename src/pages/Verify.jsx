@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Lock, XCircle, Eye, Mail, ArrowLeft, CheckCircle } from '@phosphor-icons/react'
+import { Lock, XCircle, Eye, Envelope, ArrowLeft, CheckCircle } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
 import { API_ENDPOINTS } from '../config'
 
