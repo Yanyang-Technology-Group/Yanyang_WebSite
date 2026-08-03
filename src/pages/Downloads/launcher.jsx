@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Rocket, ArrowLeft, ArrowRight } from '@phosphor-icons/react'
+import { Rocket, ArrowLeft, ArrowRight, FileText } from '@phosphor-icons/react'
 import ScrollReveal from '../../components/ScrollReveal'
 import { API_ENDPOINTS } from '../../config'
 
@@ -15,6 +15,18 @@ const TAG_COLORS = {
   'PCL2': 'bg-blue-100 text-blue-700 border-blue-200',
   'PCLCE': 'bg-purple-100 text-purple-700 border-purple-200',
   'HMCL': 'bg-green-100 text-green-700 border-green-200'
+}
+
+const LICENSE_MAP = {
+  'PCL2': 'PCL LICENSE',
+  'PCLCE': 'Apache-2.0',
+  'HMCL': 'GPL-3.0'
+}
+
+const LICENSE_URL_MAP = {
+  'PCL2': 'https://github.com/Meloong-Git/PCL/blob/main/LICENCE',
+  'PCLCE': 'https://github.com/PCL-Community/PCL-CE/blob/dev/LICENSE',
+  'HMCL': 'https://github.com/HMCL-dev/HMCL/blob/main/LICENSE'
 }
 
 export default function LauncherList() {
@@ -122,6 +134,17 @@ export default function LauncherList() {
                                 <span>v{item.version}</span>
                                 <span>•</span>
                                 <span>{item.size}</span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1.5">
+                                <FileText size={12} className="text-muted" />
+                                <a
+                                  href={LICENSE_URL_MAP[item.tag] || '#'}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-primary hover:underline"
+                                >
+                                  许可证：{LICENSE_MAP[item.tag] || '未知'}
+                                </a>
                               </div>
                             </div>
                           </div>
