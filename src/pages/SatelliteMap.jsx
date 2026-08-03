@@ -17,7 +17,7 @@ export default function SatelliteMap() {
         </div>
         <div className="w-full h-[calc(100vh-150px)] rounded-container overflow-hidden border border-border bg-surface">
           <iframe
-            src={`${API_BASE_URL}/api/map/proxy?target=http://103.40.14.23:28826`}
+            src={`${API_BASE_URL}/api/map/proxy?target=http://ymap.odn.cc`}
             className="w-full h-full border-0"
             title="卫星地图"
             allowFullScreen
