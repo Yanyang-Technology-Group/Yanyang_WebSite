@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Lock, XCircle, Eye, EnvelopeSimple, ArrowLeft, CheckCircle } from '@phosphor-icons/react'
+import { Lock, XCircle, Eye, Envelope, ArrowLeft, CheckCircle } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
 import { API_ENDPOINTS } from '../config'
 
@@ -16,7 +16,6 @@ export default function Verify() {
   const [newPassword, setNewPassword] = useState('')
   const [countdown, setCountdown] = useState(0)
   const [step, setStep] = useState(1)
-  const [turnstileToken, setTurnstileToken] = useState('')
 
   const from = location.state?.from || '/download'
 
@@ -26,16 +25,6 @@ export default function Verify() {
       return () => clearTimeout(timer)
     }
   }, [countdown])
-
-  useEffect(() => {
-    if (mode === 'find') {
-      const script = document.createElement('script')
-      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
-      script.async = true
-      script.defer = true
-      document.body.appendChild(script)
-    }
-  }, [mode])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -181,7 +170,7 @@ export default function Verify() {
                   <form onSubmit={handleSendCode}>
                     <div className="flex items-center gap-3 mb-6">
                       <div className="w-12 h-12 rounded-full bg-primary-light text-primary flex items-center justify-center flex-shrink-0">
-                        <EnvelopeSimple size={24} weight="bold" />
+                        <Envelope size={24} weight="bold" />
                       </div>
                       <div>
                         <h2 className="text-xl font-bold text-fg">输入邮箱</h2>
@@ -203,7 +192,7 @@ export default function Verify() {
                     <div className="mb-4 flex justify-center">
                       <div
                         className="cf-turnstile"
-                        data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                        data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '你的站点密钥'}
                       />
                     </div>
 
