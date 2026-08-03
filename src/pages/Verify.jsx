@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Lock, XCircle, Eye, Envelope, ArrowLeft, CheckCircle } from '@phosphor-icons/react'
+import { Lock, XCircle, Eye, EnvelopeSimple, ArrowLeft, CheckCircle } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
 import { API_ENDPOINTS } from '../config'
 
@@ -27,7 +27,6 @@ export default function Verify() {
     }
   }, [countdown])
 
-  // 加载 Turnstile 脚本
   useEffect(() => {
     if (mode === 'find') {
       const script = document.createElement('script')
@@ -96,7 +95,6 @@ export default function Verify() {
     setError('')
     setLoading(true)
 
-    // 获取 Turnstile token
     const token = document.querySelector('[name="cf-turnstile-response"]')?.value
     if (!token) {
       setError('请完成人机验证')
@@ -183,7 +181,7 @@ export default function Verify() {
                   <form onSubmit={handleSendCode}>
                     <div className="flex items-center gap-3 mb-6">
                       <div className="w-12 h-12 rounded-full bg-primary-light text-primary flex items-center justify-center flex-shrink-0">
-                        <Mail size={24} weight="bold" />
+                        <EnvelopeSimple size={24} weight="bold" />
                       </div>
                       <div>
                         <h2 className="text-xl font-bold text-fg">输入邮箱</h2>
@@ -202,12 +200,10 @@ export default function Verify() {
                       />
                     </div>
 
-                    {/* Turnstile 人机验证 */}
                     <div className="mb-4 flex justify-center">
                       <div
                         className="cf-turnstile"
                         data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-                        data-callback="onTurnstileSuccess"
                       />
                     </div>
 
