@@ -71,7 +71,7 @@ export default function Verify() {
       <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
           <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">验证访问</h1>
-          <p className="mt-3 text-muted">请输入6位数密码以继续访问</p>
+          <p className="mt-3 text-muted">请输入6位密码以继续访问</p>
         </div>
       </section>
 
@@ -85,7 +85,7 @@ export default function Verify() {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-fg">输入密码</h2>
-                  <p className="text-sm text-muted">密码为6位数字</p>
+                  <p className="text-sm text-muted">密码为6位数字或字母</p>
                 </div>
               </div>
 
@@ -93,16 +93,15 @@ export default function Verify() {
                 <div className="mb-4">
                   <input
                     type="password"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
+                    inputMode="text"
+                    pattern="[A-Za-z0-9]*"
                     maxLength="6"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="请输入6位数密码"
+                    onChange={(e) => setPassword(e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 6))}
+                    placeholder="请输入6位密码"
                     className="w-full px-4 py-3 text-center text-2xl tracking-[0.5em] bg-bg border border-border rounded-btn focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                     autoFocus
                   />
-                  <p className="mt-2 text-xs text-muted text-center">密码为6位数字</p>
+                  <p className="mt-2 text-xs text-muted text-center">密码为6位数字或字母</p>
                 </div>
 
                 {error && (
