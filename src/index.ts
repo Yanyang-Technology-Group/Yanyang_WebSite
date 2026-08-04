@@ -470,7 +470,7 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
       return errorResponse('人机验证失败', 400, request)
     }
 
-    // 检查发送限制（使用 KV 或内存）
+    // 检查发送限制
     const now = Date.now()
     const record = sendRecords.get(email)
 
@@ -516,63 +516,111 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
 }
 
 async function sendPasswordEmail(to: string, password: string, label: string, env: Env): Promise<void> {
-  // 登录 CloudMail 获取 token
-  const loginRes = await fetch('https://e-mail.yanyn.cn/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email: env.CLOUDMAIL_EMAIL || 'admin@yanyn.cn',
-      password: env.CLOUDMAIL_PASSWORD
-    })
-  })
-
-  if (!loginRes.ok) {
-    throw new Error(`CloudMail 登录失败: ${loginRes.status}`)
-  }
-
-  const loginData = await loginRes.json() as { token?: string; data?: { token?: string } }
-  const token = loginData.token || loginData.data?.token
-
-  if (!token) {
-    throw new Error('CloudMail 登录失败：未获取到 token')
-  }
-
-  // 发送邮件
-  const sendRes = await fetch('https://e-mail.yanyn.cn/api/email/send', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'authorization': token
-    },
-    body: JSON.stringify({
-      from: 'reply@yanyn.cn',
-      to: to,
-      subject: '晏阳城市建设 - 密码找回',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5;">
-          <div style="background: #3B82F6; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-            <h1 style="color: white; margin: 0;">晏阳城市建设</h1>
-          </div>
-          <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <p style="font-size: 16px; color: #333;">您好，</p>
-            <p style="font-size: 16px; color: #333;">您正在找回晏阳城市建设下载页的密码。</p>
-            <div style="text-align: center; padding: 20px 0;">
-              <p style="font-size: 14px; color: #666;">您的密码是：</p>
-              <span style="font-size: 32px; font-weight: bold; color: #3B82F6; letter-spacing: 4px; background: #f0f4ff; padding: 10px 30px; border-radius: 8px;">${password}</span>
+  // 优先使用 Resend Token 发送邮件
+  if (env.RESEND_TOKEN) {
+    const sendRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${env.RESEND_TOKEN}`
+      },
+      body: JSON.stringify({
+        from: '晏阳城市建设 <reply@yanyn.cn>',
+        to: [to],
+        subject: '晏阳城市建设 - 密码找回',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5;">
+            <div style="background: #3B82F6; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+              <h1 style="color: white; margin: 0;">晏阳城市建设</h1>
             </div>
-            <p style="font-size: 14px; color: #888;">为了账号安全，请尽快登录并修改密码。</p>
-            <p style="font-size: 14px; color: #888;">如果这不是您本人的操作，请忽略此邮件。</p>
-            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-            <p style="font-size: 12px; color: #aaa; text-align: center;">晏阳城市建设 · 用方块构筑城市与轨道的梦想</p>
+            <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+              <p style="font-size: 16px; color: #333;">您好，</p>
+              <p style="font-size: 16px; color: #333;">您正在找回晏阳城市建设下载页的密码。</p>
+              <div style="text-align: center; padding: 20px 0;">
+                <p style="font-size: 14px; color: #666;">您的密码是：</p>
+                <span style="font-size: 32px; font-weight: bold; color: #3B82F6; letter-spacing: 4px; background: #f0f4ff; padding: 10px 30px; border-radius: 8px;">${password}</span>
+              </div>
+              <p style="font-size: 14px; color: #888;">为了账号安全，请尽快登录并修改密码。</p>
+              <p style="font-size: 14px; color: #888;">如果这不是您本人的操作，请忽略此邮件。</p>
+              <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+              <p style="font-size: 12px; color: #aaa; text-align: center;">晏阳城市建设 · 用方块构筑城市与轨道的梦想</p>
+            </div>
           </div>
-        </div>
-      `
+        `
+      })
     })
-  })
 
-  if (!sendRes.ok) {
-    throw new Error(`邮件发送失败: ${sendRes.status}`)
+    if (!sendRes.ok) {
+      const error = await sendRes.text()
+      throw new Error(`邮件发送失败: ${sendRes.status} ${error}`)
+    }
+    return
   }
+
+  // 后备方案：使用 CloudMail API（如果配置了账号密码）
+  if (env.CLOUDMAIL_EMAIL && env.CLOUDMAIL_PASSWORD) {
+    // 登录 CloudMail 获取 token
+    const loginRes = await fetch('https://e-mail.yanyn.cn/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: env.CLOUDMAIL_EMAIL,
+        password: env.CLOUDMAIL_PASSWORD
+      })
+    })
+
+    if (!loginRes.ok) {
+      throw new Error(`CloudMail 登录失败: ${loginRes.status}`)
+    }
+
+    const loginData = await loginRes.json() as { token?: string; data?: { token?: string } }
+    const token = loginData.token || loginData.data?.token
+
+    if (!token) {
+      throw new Error('CloudMail 登录失败：未获取到 token')
+    }
+
+    // 发送邮件
+    const sendRes = await fetch('https://e-mail.yanyn.cn/api/email/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'authorization': token
+      },
+      body: JSON.stringify({
+        from: 'reply@yanyn.cn',
+        to: to,
+        subject: '晏阳城市建设 - 密码找回',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5;">
+            <div style="background: #3B82F6; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+              <h1 style="color: white; margin: 0;">晏阳城市建设</h1>
+            </div>
+            <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+              <p style="font-size: 16px; color: #333;">您好，</p>
+              <p style="font-size: 16px; color: #333;">您正在找回晏阳城市建设下载页的密码。</p>
+              <div style="text-align: center; padding: 20px 0;">
+                <p style="font-size: 14px; color: #666;">您的密码是：</p>
+                <span style="font-size: 32px; font-weight: bold; color: #3B82F6; letter-spacing: 4px; background: #f0f4ff; padding: 10px 30px; border-radius: 8px;">${password}</span>
+              </div>
+              <p style="font-size: 14px; color: #888;">为了账号安全，请尽快登录并修改密码。</p>
+              <p style="font-size: 14px; color: #888;">如果这不是您本人的操作，请忽略此邮件。</p>
+              <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+              <p style="font-size: 12px; color: #aaa; text-align: center;">晏阳城市建设 · 用方块构筑城市与轨道的梦想</p>
+            </div>
+          </div>
+        `
+      })
+    })
+
+    if (!sendRes.ok) {
+      throw new Error(`邮件发送失败: ${sendRes.status}`)
+    }
+    return
+  }
+
+  // 如果都没有配置，记录日志但不报错（测试模式）
+  console.log(`[测试模式] 密码 ${password} 应该发送到 ${to}`)
 }
 
 export default {
