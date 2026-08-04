@@ -65,6 +65,7 @@ export default function App() {
             <Route path="/downloads/javas/:id" element={<JavaDetail />} />
             <Route path="/downloads/launchers/:id" element={<LauncherDetail />} />
             <Route path="/verify" element={<Verify />} />
+              <Route path="/verify/password" element={<Verify />} />
             <Route path="/maps/backend-iframe/satellite" element={<SatelliteMap />} />
             <Route path="/maps/backend-iframe/railway" element={<RailwayMap />} />
             <Route path="*" element={<NotFound />} />
