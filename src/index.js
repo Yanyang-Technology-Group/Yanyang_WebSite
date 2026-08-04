@@ -400,8 +400,7 @@ async function handleFindPassword(request, env) {
       return errorResponse('参数不完整', 400, request)
     }
 
-    // Cap 验证
-    const capValid = await verifyCap(cap_token, env)
+    const capValid = await verifyCap(cap_token)
     if (!capValid) {
       return errorResponse('人机验证失败', 400, request)
     }
@@ -427,17 +426,12 @@ async function handleFindPassword(request, env) {
   }
 }
 
-async function verifyCap(token, env) {
+async function verifyCap(token) {
   try {
-    // 使用 Cap 公共验证节点
     const response = await fetch('https://test.cap.js.cool/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        token: token,
-        // 如果你自托管 Cap，替换为你的 secretKey
-        secret: env.CAP_SECRET_KEY || 'your-secret-key'
-      })
+      body: JSON.stringify({ token })
     })
     const data = await response.json()
     return data.success === true
