@@ -17,10 +17,10 @@ export default function Verify() {
   const from = location.state?.from || '/download'
   const isPasswordPage = location.pathname === '/verify/password'
 
+  // 加载 Cap Widget
   useEffect(() => {
     if (isPasswordPage) {
       const script = document.createElement('script')
-      script.type = 'module'
       script.src = 'https://cdn.jsdelivr.net/npm/@cap-js/widget@latest/dist/cap-widget.js'
       script.onload = () => {
         setCapLoaded(true)
@@ -179,7 +179,7 @@ export default function Verify() {
                     <div className="mb-4">
                       <div className="flex justify-center min-h-[80px] items-center">
                         {capLoaded ? (
-                            <cap-widget endpoint="https://test.cap.js.cool/demo"></cap-widget>
+                            <cap-widget endpoint="https://cap.yanyn.cn/api/"></cap-widget>
                         ) : (
                             <div className="flex items-center gap-2 text-sm text-muted">
                               <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
