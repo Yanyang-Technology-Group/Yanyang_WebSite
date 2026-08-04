@@ -1,8 +1,10 @@
+// pages/Verify.jsx
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Lock, XCircle, Eye, Envelope, ArrowLeft } from '@phosphor-icons/react'
+import { Lock, XCircle, Eye, Envelope, ArrowLeft, CheckCircle } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
-import { API_ENDPOINTS } from '../config'
+import { API_ENDPOINTS, TOKEN_EXPIRY } from '../config'
+import { setToken, removeToken } from '../utils/cookie'
 
 export default function Verify() {
   const navigate = useNavigate()
@@ -13,33 +15,36 @@ export default function Verify() {
   const [email, setEmail] = useState('')
   const [capToken, setCapToken] = useState('')
   const [capLoaded, setCapLoaded] = useState(false)
+  const [success, setSuccess] = useState('')
 
   const from = location.state?.from || '/download'
   const isPasswordPage = location.pathname === '/verify/password'
 
   useEffect(() => {
     if (isPasswordPage) {
-      import('@cap.js/widget')
-          .then(() => {
-            setCapLoaded(true)
-            console.log('Cap Widget 加载成功')
-          })
-          .catch(() => {
-            console.error('Cap Widget 加载失败')
-          })
+      const script = document.createElement('script')
+      script.src = '/cap.min.js'
+      script.onload = () => {
+        setCapLoaded(true)
+        console.log('Cap 加载成功')
 
-      const handleCapEvent = (event) => {
-        if (event.detail && event.detail.token) {
-          setCapToken(event.detail.token)
-          const input = document.querySelector('[name="cap-response"]')
-          if (input) input.value = event.detail.token
-        }
-      }
-      document.addEventListener('cap-token', handleCapEvent)
+        const checkInterval = setInterval(() => {
+          const widget = document.querySelector('cap-widget')
+          if (widget && widget.token) {
+            console.log('获取到 token:', widget.token)
+            setCapToken(widget.token)
+            const input = document.querySelector('[name="cap-response"]')
+            if (input) input.value = widget.token
+            clearInterval(checkInterval)
+          }
+        }, 500)
 
-      return () => {
-        document.removeEventListener('cap-token', handleCapEvent)
+        setTimeout(() => clearInterval(checkInterval), 10000)
       }
+      script.onerror = () => {
+        console.error('Cap 加载失败')
+      }
+      document.body.appendChild(script)
     }
   }, [isPasswordPage])
 
@@ -58,7 +63,7 @@ export default function Verify() {
       const data = await res.json()
 
       if (res.ok && data.success) {
-        document.cookie = `download_token=${data.token}; path=/; max-age=600; SameSite=Lax`
+        setToken(data.token, TOKEN_EXPIRY)
         localStorage.setItem('user_label', data.label || '用户')
         navigate(from, { replace: true })
       } else {
@@ -85,7 +90,7 @@ export default function Verify() {
       const data = await res.json()
 
       if (res.ok && data.success) {
-        document.cookie = `download_token=${data.token}; path=/; max-age=600; SameSite=Lax`
+        setToken(data.token, TOKEN_EXPIRY)
         localStorage.setItem('user_label', '游客')
         navigate(from, { replace: true })
       } else {
@@ -102,6 +107,7 @@ export default function Verify() {
     e.preventDefault()
     setError('')
     setLoading(true)
+    setSuccess('')
 
     if (!capToken) {
       setError('请完成人机验证')
@@ -119,9 +125,11 @@ export default function Verify() {
       const data = await res.json()
 
       if (res.ok && data.success) {
-        setError(`您的密码是：${data.password}`)
+        setSuccess('密码已发送到您的邮箱，请查收')
+        setError('')
+        setEmail('')
       } else {
-        setError(data.message || '查询失败')
+        setError(data.message || '发送失败')
       }
     } catch (err) {
       setError('网络错误，请稍后重试')
@@ -142,8 +150,8 @@ export default function Verify() {
                 <ArrowLeft size={14} />
                 返回登录
               </button>
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">查询密码</h1>
-              <p className="mt-3 text-muted">验证邮箱后查询您的密码</p>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">找回密码</h1>
+              <p className="mt-3 text-muted">验证邮箱后，密码将发送到您的邮箱</p>
             </div>
           </section>
 
@@ -193,6 +201,13 @@ export default function Verify() {
                       </p>
                     </div>
 
+                    {success && (
+                        <div className="mb-4 p-3 bg-green-50 text-green-600 text-sm rounded-btn flex items-center gap-2">
+                          <CheckCircle size={16} weight="bold" />
+                          {success}
+                        </div>
+                    )}
+
                     {error && (
                         <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-btn flex items-center gap-2">
                           <XCircle size={16} weight="bold" />
@@ -205,7 +220,7 @@ export default function Verify() {
                         disabled={loading || !email}
                         className="w-full py-3 bg-primary text-white font-semibold rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {loading ? '查询中...' : '查询密码'}
+                      {loading ? '发送中...' : '发送密码到邮箱'}
                     </button>
                   </form>
                 </div>
@@ -274,7 +289,7 @@ export default function Verify() {
                       onClick={() => navigate('/verify/password')}
                       className="text-xs text-muted hover:text-primary transition-colors"
                   >
-                    忘记密码？查询密码
+                    忘记密码？
                   </button>
                 </div>
 

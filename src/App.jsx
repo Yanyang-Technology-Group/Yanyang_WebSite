@@ -12,9 +12,7 @@ import DownloadPage from './pages/Download'
 import ModpackList from './pages/Downloads/modpack'
 import JavaList from './pages/Downloads/java'
 import LauncherList from './pages/Downloads/launcher'
-import ModpackDetail from './pages/Downloads/modpacks/[id]'
-import JavaDetail from './pages/Downloads/javas/[id]'
-import LauncherDetail from './pages/Downloads/launchers/[id]'
+import Detail from './pages/Downloads/Detail'
 import FourYearsEvent from './Events/4years.jsx'
 import SatelliteMap from './pages/SatelliteMap'
 import RailwayMap from './pages/RailwayMap'
@@ -61,9 +59,9 @@ export default function App() {
             <Route path="/downloads/modpack" element={<ModpackList />} />
             <Route path="/downloads/java" element={<JavaList />} />
             <Route path="/downloads/launcher" element={<LauncherList />} />
-            <Route path="/downloads/modpacks/:id" element={<ModpackDetail />} />
-            <Route path="/downloads/javas/:id" element={<JavaDetail />} />
-            <Route path="/downloads/launchers/:id" element={<LauncherDetail />} />
+              <Route path="/downloads/modpacks/:id" element={<Detail />} />
+              <Route path="/downloads/javas/:id" element={<Detail />} />
+              <Route path="/downloads/launchers/:id" element={<Detail />} />
             <Route path="/verify" element={<Verify />} />
               <Route path="/verify/password" element={<Verify />} />
             <Route path="/maps/backend-iframe/satellite" element={<SatelliteMap />} />

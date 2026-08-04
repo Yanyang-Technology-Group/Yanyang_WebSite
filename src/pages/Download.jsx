@@ -1,8 +1,10 @@
+// pages/Download.jsx
 import { useNavigate } from 'react-router-dom'
 import { Package, Coffee, Rocket, ArrowRight, ArrowCounterClockwise } from '@phosphor-icons/react'
 import { useState, useEffect } from 'react'
 import ScrollReveal from '../components/ScrollReveal'
 import { useAuth } from '../hooks/useAuth'
+import { removeToken } from '../utils/cookie'
 
 const TYPES = [
   {
@@ -144,7 +146,7 @@ export default function DownloadPage() {
   }, [])
 
   function handleReVerify() {
-    document.cookie = 'download_token=; path=/; max-age=0'
+    removeToken()
     localStorage.removeItem('user_label')
     navigate('/verify', { state: { from: '/download' } })
   }
