@@ -163,7 +163,7 @@ export default function DownloadPage() {
       <>
         <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
           <div className="mx-auto max-w-3xl px-4 sm:px-6">
-            <div className="flex flex-col items-start mb-2">
+            <div className="flex flex-col items-start mb-2 pl-1">
               <div className="flex items-center gap-3 flex-wrap">
                 <button
                     onClick={handleReVerify}
@@ -181,7 +181,7 @@ export default function DownloadPage() {
                 </span>
                 )}
               </div>
-              <span className="text-xs text-muted/40 mt-0.5 ml-1">
+              <span className="text-xs text-muted/40 mt-0.5 pl-1">
               {phrase}
             </span>
             </div>
