@@ -18,7 +18,7 @@ export default function Verify() {
   useEffect(() => {
     if (isPasswordPage) {
       const script = document.createElement('script')
-      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/turnstile/0.3.0/api.js'
       script.async = true
       script.defer = true
       document.body.appendChild(script)
@@ -171,7 +171,14 @@ export default function Verify() {
                       />
                     </div>
 
-                    <div id="turnstile-container" className="mb-4 flex justify-center min-h-[80px]"></div>
+                    <div className="mb-4">
+                      <div className="flex justify-center min-h-[80px] items-center">
+                        <div id="turnstile-container"></div>
+                      </div>
+                      <p className="text-xs text-muted text-center mt-2">
+                        请等待人机验证加载，如长时间未加载请联系管理员
+                      </p>
+                    </div>
 
                     {error && (
                         <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-btn flex items-center gap-2">
