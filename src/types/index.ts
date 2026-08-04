@@ -71,6 +71,6 @@ export interface Env {
     CLOUDMAIL_EMAIL: string;
     CLOUDMAIL_PASSWORD: string;
     ONE_TIME_SECRET: string;
-    RESEND_TOKEN?: string; 
+    RESEND_TOKEN?: string;
     KV?: KVNamespace;
 }

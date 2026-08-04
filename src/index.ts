@@ -172,7 +172,8 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
 
   } catch (error) {
     console.error('验证错误:', error)
-    return errorResponse('服务器错误，请稍后重试', 500, request)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return errorResponse('服务器错误，请稍后重试: ' + errorMessage, 500, request)
   }
 }
 
@@ -230,7 +231,8 @@ async function handleOneTimeDownload(request: Request, env: Env): Promise<Respon
 
   } catch (error) {
     console.error('生成一次性链接错误:', error)
-    return errorResponse('服务器错误', 500, request)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return errorResponse('服务器错误: ' + errorMessage, 500, request)
   }
 }
 
@@ -257,7 +259,8 @@ async function handleRedirect(request: Request, env: Env): Promise<Response> {
 
   } catch (error) {
     console.error('重定向错误:', error)
-    return new Response('服务器错误', { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return new Response('服务器错误: ' + errorMessage, { status: 500 })
   }
 }
 
@@ -309,7 +312,8 @@ async function handleProxyDownload(request: Request, env: Env): Promise<Response
 
   } catch (error) {
     console.error('代理下载错误:', error)
-    return new Response('服务器错误', { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return new Response('服务器错误: ' + errorMessage, { status: 500 })
   }
 }
 
@@ -357,7 +361,8 @@ async function handleMapProxy(request: Request, env: Env): Promise<Response> {
 
   } catch (error) {
     console.error('地图代理错误:', error)
-    return new Response('地图加载失败: ' + error.message, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return new Response('地图加载失败: ' + errorMessage, { status: 500 })
   }
 }
 
@@ -380,7 +385,8 @@ async function handleModpacks(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ success: true, data: filtered }, 200, request)
   } catch (error) {
     console.error('获取整合包错误:', error)
-    return errorResponse('服务器错误', 500, request)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return errorResponse('服务器错误: ' + errorMessage, 500, request)
   }
 }
 
@@ -403,7 +409,8 @@ async function handleJava(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ success: true, data: filtered }, 200, request)
   } catch (error) {
     console.error('获取JDK错误:', error)
-    return errorResponse('服务器错误', 500, request)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return errorResponse('服务器错误: ' + errorMessage, 500, request)
   }
 }
 
@@ -426,7 +433,8 @@ async function handleLaunchers(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ success: true, data: filtered }, 200, request)
   } catch (error) {
     console.error('获取启动器错误:', error)
-    return errorResponse('服务器错误', 500, request)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return errorResponse('服务器错误: ' + errorMessage, 500, request)
   }
 }
 
@@ -511,7 +519,8 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
 
   } catch (error) {
     console.error('找回密码错误:', error)
-    return errorResponse('服务器错误，请稍后重试', 500, request)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return errorResponse('服务器错误: ' + errorMessage, 500, request)
   }
 }
 
@@ -598,15 +607,15 @@ async function sendPasswordEmail(to: string, password: string, label: string, en
             </div>
             <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
               <p style="font-size: 16px; color: #333;">您好，</p>
-              <p style="font-size: 16px; color: #333;">您正在找回晏阳城市建设下载页的密码。</p>
+              <p style="font-size: 16px; color: #333;">您正在找回晏阳城市建设内群的密码。</p>
               <div style="text-align: center; padding: 20px 0;">
                 <p style="font-size: 14px; color: #666;">您的密码是：</p>
                 <span style="font-size: 32px; font-weight: bold; color: #3B82F6; letter-spacing: 4px; background: #f0f4ff; padding: 10px 30px; border-radius: 8px;">${password}</span>
               </div>
-              <p style="font-size: 14px; color: #888;">为了账号安全，请尽快登录并修改密码。</p>
-              <p style="font-size: 14px; color: #888;">如果这不是您本人的操作，请忽略此邮件。</p>
+              <p style="font-size: 14px; color: #888;">如果这不是您本人的操作，请忽略此邮件，并向管理员说明。</p>
+              <p style="font-size: 14px; color: #888;">如果您不需要再次获取密码，可向管理员设置。</p>
               <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-              <p style="font-size: 12px; color: #aaa; text-align: center;">晏阳城市建设 · 用方块构筑城市与轨道的梦想</p>
+              <p style="font-size: 12px; color: #aaa; text-align: center;">Copyright 2025-2026 晏阳技术组</p>
             </div>
           </div>
         `
@@ -614,7 +623,8 @@ async function sendPasswordEmail(to: string, password: string, label: string, en
     })
 
     if (!sendRes.ok) {
-      throw new Error(`邮件发送失败: ${sendRes.status}`)
+      const error = await sendRes.text()
+      throw new Error(`邮件发送失败: ${sendRes.status} ${error}`)
     }
     return
   }
