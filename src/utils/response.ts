@@ -1,4 +1,4 @@
-export function corsHeaders(request) {
+export function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get('Origin') || ''
   const allowed = [
     'https://www.yanyn.cn',
@@ -18,16 +18,19 @@ export function corsHeaders(request) {
   }
 }
 
-export function jsonResponse(data, status = 200, request) {
+export function jsonResponse<T>(data: T, status: number = 200, request: Request): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       ...corsHeaders(request),
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Cache-Control': 'no-cache, no-store, must-revalidate'
     }
   })
 }
 
-export function errorResponse(message, status = 400, request) {
+export function errorResponse(message: string, status: number = 400, request: Request): Response {
   return jsonResponse({ success: false, message }, status, request)
 }

@@ -1,11 +1,7 @@
-name = "yanyang-website-backend"
-main = "src/index.js"
-compatibility_date = "2024-01-01"
+name = "yanyang-backend"
+main = "src/index.ts"
+compatibility_date = "2024-12-18"
 
-[[send_email]]
-name = "EMAIL"
-
-[vars]
-REPO_OWNER = "Yanyang-Technology-Group"
-REPO_NAME = "Yanyang_WebSite_date"
-JWT_SECRET = "yanyang-backend-2026-secret"
+[[kv_namespaces]]
+binding = "KV"
+id = "95f421b44b8643a4aca1a75c16b924c0"

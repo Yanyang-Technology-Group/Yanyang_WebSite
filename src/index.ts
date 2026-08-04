@@ -1,15 +1,14 @@
 import { corsHeaders, jsonResponse, errorResponse } from './utils/response.js'
 import { getDownkey, getModpacks, getJava, getLaunchers, verifyPassword } from './services/github.js'
 import { simpleJWT, verifySimpleJWT } from './services/jwt.js'
+import { Env, PasswordEntry, DownloadItem } from './types'
 
-const TOKEN_EXPIRY = 3600000
-const ONE_TIME_SECRET = 'yanyang-one-time-secret-2026'
-const usedTokens = new Set()
+const TOKEN_EXPIRY = 3600000 // 1 小时
 
-// 发送记录 { email: { count, firstSendTime } }
-const sendRecords = new Map()
+// 发送记录（内存缓存，Worker 重启会重置，但配合 KV 使用）
+const sendRecords = new Map<string, { count: number; firstSendTime: number }>()
 
-function filterByType(items, passwordType) {
+function filterByType<T extends { public?: boolean }>(items: T[], passwordType: string): T[] {
   if (passwordType === 'full') {
     return items
   }
@@ -19,7 +18,7 @@ function filterByType(items, passwordType) {
   return items
 }
 
-function generateOneTimeToken() {
+function generateOneTimeToken(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
   let token = ''
   for (let i = 0; i < 32; i++) {
@@ -28,26 +27,76 @@ function generateOneTimeToken() {
   return token
 }
 
-function signLink(link, token) {
-  const signature = btoa(`${link}|${token}|${ONE_TIME_SECRET}`)
-  return {
-    token: token,
-    signature: signature
+async function signLink(link: string, token: string, env: Env): Promise<{ token: string; signature: string }> {
+  const encoder = new TextEncoder()
+  const secret = env.ONE_TIME_SECRET || 'yanyang-one-time-secret-2026'
+  const message = `${link}|${token}|${secret}`
+
+  const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+  )
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(message))
+  const signatureArray = new Uint8Array(signature)
+  let signatureStr = ''
+  for (let i = 0; i < signatureArray.length; i++) {
+    signatureStr += String.fromCharCode(signatureArray[i])
   }
+
+  return { token, signature: btoa(signatureStr) }
 }
 
-function verifySignedLink(link, token, signature) {
-  const expected = btoa(`${link}|${token}|${ONE_TIME_SECRET}`)
-  if (signature !== expected) {
+async function verifySignedLink(link: string, token: string, signature: string, env: Env): Promise<{ valid: boolean; reason?: string }> {
+  const secret = env.ONE_TIME_SECRET || 'yanyang-one-time-secret-2026'
+  const encoder = new TextEncoder()
+  const message = `${link}|${token}|${secret}`
+
+  const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify']
+  )
+
+  const signatureStr = atob(signature)
+  const signatureBytes = new Uint8Array(signatureStr.length)
+  for (let i = 0; i < signatureStr.length; i++) {
+    signatureBytes[i] = signatureStr.charCodeAt(i)
+  }
+
+  const isValid = await crypto.subtle.verify(
+      'HMAC',
+      key,
+      signatureBytes,
+      encoder.encode(message)
+  )
+
+  if (!isValid) {
     return { valid: false, reason: '签名无效' }
   }
-  if (usedTokens.has(token)) {
-    return { valid: false, reason: '链接已被使用' }
+
+  // 检查 token 是否已被使用（使用 KV）
+  if (env.KV) {
+    const used = await env.KV.get(`used_token:${token}`)
+    if (used) {
+      return { valid: false, reason: '链接已被使用' }
+    }
   }
+
   return { valid: true }
 }
 
-async function handleHealth(request) {
+async function markTokenUsed(token: string, env: Env): Promise<void> {
+  if (env.KV) {
+    await env.KV.put(`used_token:${token}`, '1', { expirationTtl: 3600 })
+  }
+}
+
+async function handleHealth(request: Request): Promise<Response> {
   return jsonResponse({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -57,14 +106,14 @@ async function handleHealth(request) {
   }, 200, request)
 }
 
-async function handleVerify(request, env) {
+async function handleVerify(request: Request, env: Env): Promise<Response> {
   try {
     console.log('=== 开始验证 ===')
     console.log('GITHUB_TOKEN 是否存在:', !!env.GITHUB_TOKEN)
     console.log('REPO_OWNER:', env.REPO_OWNER)
     console.log('REPO_NAME:', env.REPO_NAME)
 
-    const { password } = await request.json()
+    const { password } = await request.json() as { password: string }
     console.log('收到密码:', password)
 
     if (!password || typeof password !== 'string') {
@@ -85,7 +134,7 @@ async function handleVerify(request, env) {
     }
 
     console.log('密码匹配，生成 token')
-    const token = simpleJWT({
+    const token = await simpleJWT({
       verified: true,
       type: passwordInfo.type,
       exp: Date.now() + TOKEN_EXPIRY,
@@ -122,13 +171,12 @@ async function handleVerify(request, env) {
     }, 200, request)
 
   } catch (error) {
-    console.error('验证错误:', error.message)
-    console.error('错误堆栈:', error.stack)
+    console.error('验证错误:', error)
     return errorResponse('服务器错误，请稍后重试', 500, request)
   }
 }
 
-async function handleOneTimeDownload(request, env) {
+async function handleOneTimeDownload(request: Request, env: Env): Promise<Response> {
   try {
     const auth = request.headers.get('Authorization')
     if (!auth || !auth.startsWith('Bearer ')) {
@@ -136,7 +184,7 @@ async function handleOneTimeDownload(request, env) {
     }
 
     const token = auth.replace('Bearer ', '')
-    const decoded = verifySimpleJWT(token, env.JWT_SECRET)
+    const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
     if (!decoded) {
       return errorResponse('token无效或已过期', 401, request)
     }
@@ -152,16 +200,16 @@ async function handleOneTimeDownload(request, env) {
     const launchers = await getLaunchers(env)
     const allItems = [...(modpacks.items || []), ...(java.items || []), ...(launchers.items || [])]
 
-    let targetLink = null
+    let targetLink: string | null = null
     for (const item of allItems) {
-      if (item.downloads) {
-        const found = item.downloads.find(d => d.name === linkId)
+      if ('downloads' in item && Array.isArray(item.downloads)) {
+        const found = (item.downloads as DownloadItem[]).find(d => d.name === linkId)
         if (found) {
           targetLink = found.link
           break
         }
       }
-      if (item.link && item.name === linkId) {
+      if ('link' in item && item.link && item.name === linkId) {
         targetLink = item.link
         break
       }
@@ -172,7 +220,7 @@ async function handleOneTimeDownload(request, env) {
     }
 
     const oneTimeToken = generateOneTimeToken()
-    const signed = signLink(targetLink, oneTimeToken)
+    const signed = await signLink(targetLink, oneTimeToken, env)
 
     return jsonResponse({
       success: true,
@@ -186,7 +234,7 @@ async function handleOneTimeDownload(request, env) {
   }
 }
 
-async function handleRedirect(request, env) {
+async function handleRedirect(request: Request, env: Env): Promise<Response> {
   try {
     const url = new URL(request.url)
     const link = url.searchParams.get('link')
@@ -197,13 +245,13 @@ async function handleRedirect(request, env) {
       return new Response('链接参数不完整', { status: 400 })
     }
 
-    const result = verifySignedLink(link, token, sig)
+    const result = await verifySignedLink(link, token, sig, env)
 
     if (!result.valid) {
-      return new Response(result.reason, { status: 403 })
+      return new Response(result.reason || '链接无效', { status: 403 })
     }
 
-    usedTokens.add(token)
+    await markTokenUsed(token, env)
 
     return Response.redirect(link, 302)
 
@@ -213,7 +261,7 @@ async function handleRedirect(request, env) {
   }
 }
 
-async function handleProxyDownload(request, env) {
+async function handleProxyDownload(request: Request, env: Env): Promise<Response> {
   try {
     const url = new URL(request.url)
     const token = url.searchParams.get('token')
@@ -225,13 +273,13 @@ async function handleProxyDownload(request, env) {
       return new Response('参数不完整', { status: 400 })
     }
 
-    const result = verifySignedLink(link, token, sig)
+    const result = await verifySignedLink(link, token, sig, env)
 
     if (!result.valid) {
-      return new Response(result.reason, { status: 403 })
+      return new Response(result.reason || '链接无效', { status: 403 })
     }
 
-    usedTokens.add(token)
+    await markTokenUsed(token, env)
 
     const response = await fetch(link, {
       headers: {
@@ -254,7 +302,8 @@ async function handleProxyDownload(request, env) {
       headers: {
         'Content-Type': response.headers.get('content-type') || 'application/octet-stream',
         'Content-Disposition': contentDisposition,
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Content-Type-Options': 'nosniff'
       }
     })
 
@@ -264,7 +313,7 @@ async function handleProxyDownload(request, env) {
   }
 }
 
-async function handleMapProxy(request, env) {
+async function handleMapProxy(request: Request, env: Env): Promise<Response> {
   try {
     const url = new URL(request.url)
     const target = url.searchParams.get('target')
@@ -301,7 +350,8 @@ async function handleMapProxy(request, env) {
       status: response.status,
       headers: {
         'Content-Type': response.headers.get('content-type') || 'text/html',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Content-Type-Options': 'nosniff'
       }
     })
 
@@ -311,14 +361,14 @@ async function handleMapProxy(request, env) {
   }
 }
 
-async function handleModpacks(request, env) {
+async function handleModpacks(request: Request, env: Env): Promise<Response> {
   try {
     const auth = request.headers.get('Authorization')
     if (!auth || !auth.startsWith('Bearer ')) {
       return errorResponse('未授权', 401, request)
     }
     const token = auth.replace('Bearer ', '')
-    const decoded = verifySimpleJWT(token, env.JWT_SECRET)
+    const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
     if (!decoded) {
       return errorResponse('token无效或已过期', 401, request)
     }
@@ -334,14 +384,14 @@ async function handleModpacks(request, env) {
   }
 }
 
-async function handleJava(request, env) {
+async function handleJava(request: Request, env: Env): Promise<Response> {
   try {
     const auth = request.headers.get('Authorization')
     if (!auth || !auth.startsWith('Bearer ')) {
       return errorResponse('未授权', 401, request)
     }
     const token = auth.replace('Bearer ', '')
-    const decoded = verifySimpleJWT(token, env.JWT_SECRET)
+    const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
     if (!decoded) {
       return errorResponse('token无效或已过期', 401, request)
     }
@@ -357,14 +407,14 @@ async function handleJava(request, env) {
   }
 }
 
-async function handleLaunchers(request, env) {
+async function handleLaunchers(request: Request, env: Env): Promise<Response> {
   try {
     const auth = request.headers.get('Authorization')
     if (!auth || !auth.startsWith('Bearer ')) {
       return errorResponse('未授权', 401, request)
     }
     const token = auth.replace('Bearer ', '')
-    const decoded = verifySimpleJWT(token, env.JWT_SECRET)
+    const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
     if (!decoded) {
       return errorResponse('token无效或已过期', 401, request)
     }
@@ -380,7 +430,7 @@ async function handleLaunchers(request, env) {
   }
 }
 
-async function handleWebsiteInfo(request) {
+async function handleWebsiteInfo(request: Request): Promise<Response> {
   return jsonResponse({
     success: true,
     data: {
@@ -393,11 +443,23 @@ async function handleWebsiteInfo(request) {
   }, 200, request)
 }
 
-// ========== 找回密码（用 send_email 绑定发送） ==========
-
-async function handleFindPassword(request, env) {
+async function verifyCap(token: string): Promise<boolean> {
   try {
-    const { email, cap_token } = await request.json()
+    const response = await fetch('https://cap.yanyn.cn/api/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    })
+    const data = await response.json() as { success: boolean }
+    return data.success === true
+  } catch {
+    return false
+  }
+}
+
+async function handleFindPassword(request: Request, env: Env): Promise<Response> {
+  try {
+    const { email, cap_token } = await request.json() as { email: string; cap_token: string }
 
     if (!email || !cap_token) {
       return errorResponse('参数不完整', 400, request)
@@ -408,7 +470,7 @@ async function handleFindPassword(request, env) {
       return errorResponse('人机验证失败', 400, request)
     }
 
-    // 检查发送限制
+    // 检查发送限制（使用 KV 或内存）
     const now = Date.now()
     const record = sendRecords.get(email)
 
@@ -439,36 +501,8 @@ async function handleFindPassword(request, env) {
       return errorResponse('邮箱未注册', 404, request)
     }
 
-    // 用 send_email 绑定发送邮件
-    try {
-      await env.EMAIL.send({
-        from: { email: 'reply@yanyn.cn', name: '晏阳城市建设' },
-        to: [{ email: email }],
-        subject: '晏阳城市建设 - 密码找回',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5;">
-            <div style="background: #3B82F6; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-              <h1 style="color: white; margin: 0;">晏阳城市建设</h1>
-            </div>
-            <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-              <p style="font-size: 16px; color: #333;">您好，</p>
-              <p style="font-size: 16px; color: #333;">您正在找回晏阳城市建设下载页的密码。</p>
-              <div style="text-align: center; padding: 20px 0;">
-                <p style="font-size: 14px; color: #666;">您的密码是：</p>
-                <span style="font-size: 32px; font-weight: bold; color: #3B82F6; letter-spacing: 4px; background: #f0f4ff; padding: 10px 30px; border-radius: 8px;">${found.password}</span>
-              </div>
-              <p style="font-size: 14px; color: #888;">为了账号安全，请尽快登录并修改密码。</p>
-              <p style="font-size: 14px; color: #888;">如果这不是您本人的操作，请忽略此邮件。</p>
-              <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-              <p style="font-size: 12px; color: #aaa; text-align: center;">晏阳城市建设 · 用方块构筑城市与轨道的梦想</p>
-            </div>
-          </div>
-        `
-      })
-    } catch (emailError) {
-      console.error('发送邮件失败:', emailError)
-      return errorResponse('邮件发送失败，请稍后重试', 500, request)
-    }
+    // 发送邮件到邮箱
+    await sendPasswordEmail(email, found.password, found.label, env)
 
     return jsonResponse({
       success: true,
@@ -481,22 +515,68 @@ async function handleFindPassword(request, env) {
   }
 }
 
-async function verifyCap(token) {
-  try {
-    const response = await fetch('https://cap.yanyn.cn/api/validate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token })
+async function sendPasswordEmail(to: string, password: string, label: string, env: Env): Promise<void> {
+  // 登录 CloudMail 获取 token
+  const loginRes = await fetch('https://e-mail.yanyn.cn/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: env.CLOUDMAIL_EMAIL || 'admin@yanyn.cn',
+      password: env.CLOUDMAIL_PASSWORD
     })
-    const data = await response.json()
-    return data.success === true
-  } catch {
-    return false
+  })
+
+  if (!loginRes.ok) {
+    throw new Error(`CloudMail 登录失败: ${loginRes.status}`)
+  }
+
+  const loginData = await loginRes.json() as { token?: string; data?: { token?: string } }
+  const token = loginData.token || loginData.data?.token
+
+  if (!token) {
+    throw new Error('CloudMail 登录失败：未获取到 token')
+  }
+
+  // 发送邮件
+  const sendRes = await fetch('https://e-mail.yanyn.cn/api/email/send', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'authorization': token
+    },
+    body: JSON.stringify({
+      from: 'reply@yanyn.cn',
+      to: to,
+      subject: '晏阳城市建设 - 密码找回',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5;">
+          <div style="background: #3B82F6; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0;">晏阳城市建设</h1>
+          </div>
+          <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <p style="font-size: 16px; color: #333;">您好，</p>
+            <p style="font-size: 16px; color: #333;">您正在找回晏阳城市建设下载页的密码。</p>
+            <div style="text-align: center; padding: 20px 0;">
+              <p style="font-size: 14px; color: #666;">您的密码是：</p>
+              <span style="font-size: 32px; font-weight: bold; color: #3B82F6; letter-spacing: 4px; background: #f0f4ff; padding: 10px 30px; border-radius: 8px;">${password}</span>
+            </div>
+            <p style="font-size: 14px; color: #888;">为了账号安全，请尽快登录并修改密码。</p>
+            <p style="font-size: 14px; color: #888;">如果这不是您本人的操作，请忽略此邮件。</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="font-size: 12px; color: #aaa; text-align: center;">晏阳城市建设 · 用方块构筑城市与轨道的梦想</p>
+          </div>
+        </div>
+      `
+    })
+  })
+
+  if (!sendRes.ok) {
+    throw new Error(`邮件发送失败: ${sendRes.status}`)
   }
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
     const path = url.pathname
 
