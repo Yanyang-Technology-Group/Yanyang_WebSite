@@ -17,19 +17,16 @@ export default function Verify() {
   const from = location.state?.from || '/download'
   const isPasswordPage = location.pathname === '/verify/password'
 
-  // 加载 Cap Widget
   useEffect(() => {
     if (isPasswordPage) {
-      const script = document.createElement('script')
-      script.src = 'https://cdn.jsdelivr.net/npm/@cap-js/widget@latest/dist/cap-widget.js'
-      script.onload = () => {
-        setCapLoaded(true)
-        console.log('Cap Widget 加载成功')
-      }
-      script.onerror = () => {
-        console.error('Cap Widget 加载失败')
-      }
-      document.body.appendChild(script)
+      import('@cap.js/widget')
+          .then(() => {
+            setCapLoaded(true)
+            console.log('Cap Widget 加载成功')
+          })
+          .catch(() => {
+            console.error('Cap Widget 加载失败')
+          })
 
       const handleCapEvent = (event) => {
         if (event.detail && event.detail.token) {
