@@ -6,6 +6,9 @@ const TOKEN_EXPIRY = 3600000
 const ONE_TIME_SECRET = 'yanyang-one-time-secret-2026'
 const usedTokens = new Set()
 
+// 发送记录 { email: { count, firstSendTime } }
+const sendRecords = new Map()
+
 function filterByType(items, passwordType) {
   if (passwordType === 'full') {
     return items
@@ -390,7 +393,7 @@ async function handleWebsiteInfo(request) {
   }, 200, request)
 }
 
-// ========== 找回密码（Cap 验证） ==========
+// ========== 找回密码（发送密码到邮箱） ==========
 
 async function handleFindPassword(request, env) {
   try {
@@ -405,6 +408,29 @@ async function handleFindPassword(request, env) {
       return errorResponse('人机验证失败', 400, request)
     }
 
+    // 检查发送限制
+    const now = Date.now()
+    const record = sendRecords.get(email)
+
+    if (record) {
+      if (now - record.firstSendTime < 60000) {
+        const remaining = Math.ceil((60000 - (now - record.firstSendTime)) / 1000)
+        return errorResponse(`请等待 ${remaining} 秒后再试`, 429, request)
+      }
+
+      if (record.count >= 5) {
+        return errorResponse('发送次数过多，请稍后再试', 429, request)
+      }
+
+      if (now - record.firstSendTime >= 60000) {
+        sendRecords.set(email, { count: 1, firstSendTime: now })
+      } else {
+        sendRecords.set(email, { count: record.count + 1, firstSendTime: record.firstSendTime })
+      }
+    } else {
+      sendRecords.set(email, { count: 1, firstSendTime: now })
+    }
+
     const data = await getDownkey(env)
     const passwords = data.passwords || []
     const found = passwords.find(p => p.email === email)
@@ -413,17 +439,52 @@ async function handleFindPassword(request, env) {
       return errorResponse('邮箱未注册', 404, request)
     }
 
+    await sendPasswordEmail(email, found.password, found.label, env)
+
     return jsonResponse({
       success: true,
-      password: found.password,
-      label: found.label,
-      type: found.type
+      message: '密码已发送到您的邮箱'
     }, 200, request)
 
   } catch (error) {
     console.error('找回密码错误:', error)
     return errorResponse('服务器错误，请稍后重试', 500, request)
   }
+}
+
+async function sendPasswordEmail(to, password, label, env) {
+  const cloudMailApi = env.CLOUDMAIL_API || 'https://cloudmail.yanyn.cn/api/send'
+  await fetch(cloudMailApi, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${env.CLOUDMAIL_TOKEN}`
+    },
+    body: JSON.stringify({
+      from: 'reply@yanyn.cn',
+      to: to,
+      subject: '晏阳城市建设 - 密码找回',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5;">
+          <div style="background: #3B82F6; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0;">晏阳城市建设</h1>
+          </div>
+          <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <p style="font-size: 16px; color: #333;">您好，</p>
+            <p style="font-size: 16px; color: #333;">您正在找回晏阳城市建设下载页的密码。</p>
+            <div style="text-align: center; padding: 20px 0;">
+              <p style="font-size: 14px; color: #666;">您的密码是：</p>
+              <span style="font-size: 32px; font-weight: bold; color: #3B82F6; letter-spacing: 4px; background: #f0f4ff; padding: 10px 30px; border-radius: 8px;">${password}</span>
+            </div>
+            <p style="font-size: 14px; color: #888;">为了账号安全，请尽快登录并修改密码。</p>
+            <p style="font-size: 14px; color: #888;">如果这不是您本人的操作，请忽略此邮件。</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="font-size: 12px; color: #aaa; text-align: center;">晏阳城市建设 · 用方块构筑城市与轨道的梦想</p>
+          </div>
+        </div>
+      `
+    })
+  })
 }
 
 async function verifyCap(token) {
