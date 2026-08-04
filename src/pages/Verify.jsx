@@ -4,62 +4,6 @@ import { Lock, XCircle, Eye, Envelope, ArrowLeft } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
 import { API_ENDPOINTS } from '../config'
 
-const TURNSTILE_SOURCES = [
-  'https://challenges.cloudflare.com/turnstile/v0/api.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/turnstile/0.3.0/api.js',
-  'https://unpkg.com/@cloudflare/turnstile@0.3.0/dist/api.js',
-  'https://jsd.onmicrosoft.cn/npm/@cloudflare/turnstile@0.3.0/dist/api.js'
-]
-
-function loadTurnstileWithRetry(sources, callback, retries = 3) {
-  let currentIndex = 0
-  let retryCount = 0
-
-  function tryLoad() {
-    if (currentIndex >= sources.length) {
-      if (retryCount < retries) {
-        retryCount++
-        currentIndex = 0
-        setTimeout(tryLoad, 2000)
-        return
-      }
-      callback(false)
-      return
-    }
-
-    const script = document.createElement('script')
-    script.src = sources[currentIndex]
-    script.async = true
-    script.defer = true
-
-    script.onload = () => {
-      if (window.turnstile) {
-        callback(true)
-      } else {
-        currentIndex++
-        tryLoad()
-      }
-    }
-
-    script.onerror = () => {
-      currentIndex++
-      tryLoad()
-    }
-
-    const timeout = setTimeout(() => {
-      script.onload = null
-      script.onerror = null
-      currentIndex++
-      tryLoad()
-    }, 8000)
-
-    script._timeout = timeout
-    document.body.appendChild(script)
-  }
-
-  tryLoad()
-}
-
 export default function Verify() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -67,36 +11,40 @@ export default function Verify() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [email, setEmail] = useState('')
-  const [turnstileReady, setTurnstileReady] = useState(false)
-  const [turnstileError, setTurnstileError] = useState(false)
+  const [capToken, setCapToken] = useState('')
+  const [capLoaded, setCapLoaded] = useState(false)
 
   const from = location.state?.from || '/download'
   const isPasswordPage = location.pathname === '/verify/password'
 
+  // 加载 Cap
   useEffect(() => {
     if (isPasswordPage) {
-      setTurnstileReady(false)
-      setTurnstileError(false)
+      const script = document.createElement('script')
+      script.type = 'module'
+      script.src = 'https://cdn.jsdelivr.net/npm/@cap-js/widget@latest/dist/cap-widget.js'
+      script.onload = () => {
+        setCapLoaded(true)
+        console.log('Cap Widget 加载成功')
+      }
+      script.onerror = () => {
+        console.error('Cap Widget 加载失败')
+      }
+      document.body.appendChild(script)
 
-      loadTurnstileWithRetry(TURNSTILE_SOURCES, (success) => {
-        if (success && window.turnstile) {
-          setTurnstileReady(true)
-          const container = document.getElementById('turnstile-container')
-          if (container) {
-            container.innerHTML = ''
-            window.turnstile.render(container, {
-              sitekey: '0x4AAAAAAEE8_DN5xRQe-MRk',
-              callback: function(token) {
-                const input = document.querySelector('[name="cf-turnstile-response"]')
-                if (input) input.value = token
-              }
-            })
-          }
-        } else {
-          setTurnstileError(true)
-          setTurnstileReady(false)
+      // 监听 Cap token 事件
+      const handleCapEvent = (event) => {
+        if (event.detail && event.detail.token) {
+          setCapToken(event.detail.token)
+          const input = document.querySelector('[name="cap-response"]')
+          if (input) input.value = event.detail.token
         }
-      })
+      }
+      document.addEventListener('cap-token', handleCapEvent)
+
+      return () => {
+        document.removeEventListener('cap-token', handleCapEvent)
+      }
     }
   }, [isPasswordPage])
 
@@ -160,8 +108,7 @@ export default function Verify() {
     setError('')
     setLoading(true)
 
-    const token = document.querySelector('[name="cf-turnstile-response"]')?.value
-    if (!token) {
+    if (!capToken) {
       setError('请完成人机验证')
       setLoading(false)
       return
@@ -171,7 +118,7 @@ export default function Verify() {
       const res = await fetch(API_ENDPOINTS.verifyPassword, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, turnstile_token: token })
+        body: JSON.stringify({ email, cap_token: capToken })
       })
 
       const data = await res.json()
@@ -233,28 +180,18 @@ export default function Verify() {
 
                     <div className="mb-4">
                       <div className="flex justify-center min-h-[80px] items-center">
-                        {turnstileError ? (
-                            <div className="text-sm text-red-500 text-center">
-                              人机验证加载失败，请刷新页面重试
-                              <button
-                                  type="button"
-                                  onClick={() => window.location.reload()}
-                                  className="ml-2 text-primary hover:underline"
-                              >
-                                刷新
-                              </button>
-                            </div>
-                        ) : turnstileReady ? (
-                            <div id="turnstile-container"></div>
+                        {capLoaded ? (
+                            <cap-widget endpoint="https://test.cap.js.cool/your-site-key/"></cap-widget>
                         ) : (
                             <div className="flex items-center gap-2 text-sm text-muted">
                               <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
-                              人机验证加载中...
+                              加载验证中...
                             </div>
                         )}
                       </div>
+                      <input type="hidden" name="cap-response" />
                       <p className="text-xs text-muted text-center mt-2">
-                        如长时间未加载，请刷新页面或更换网络环境
+                        如长时间未加载，请刷新页面
                       </p>
                     </div>
 
