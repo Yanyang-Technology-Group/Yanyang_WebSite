@@ -1,10 +1,9 @@
-// pages/Verify.jsx
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Lock, XCircle, Eye, Envelope, ArrowLeft, CheckCircle } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
 import { API_ENDPOINTS, TOKEN_EXPIRY } from '../config'
-import { setToken, removeToken } from '../utils/cookie'
+import { setToken } from '../utils/cookie'
 
 export default function Verify() {
   const navigate = useNavigate()
@@ -284,23 +283,20 @@ export default function Verify() {
                   </button>
                 </form>
 
-                <div className="mt-4 text-center">
-                  <button
-                      onClick={() => navigate('/verify/password')}
-                      className="text-xs text-muted hover:text-primary transition-colors"
-                  >
-                    忘记密码？
-                  </button>
-                </div>
-
-                <div className="mt-2 text-center">
+                <div className="mt-4 flex items-center justify-center gap-8">
                   <button
                       onClick={handleGuestLogin}
                       disabled={loading}
-                      className="text-sm text-muted hover:text-primary transition-colors flex items-center justify-center gap-1.5 mx-auto"
+                      className="text-sm text-muted hover:text-primary transition-colors flex items-center gap-1.5"
                   >
                     <Eye size={14} weight="regular" />
                     游客想预览？
+                  </button>
+                  <button
+                      onClick={() => navigate('/verify/password')}
+                      className="text-sm text-muted hover:text-primary transition-colors"
+                  >
+                    忘记密码？
                   </button>
                 </div>
               </div>
