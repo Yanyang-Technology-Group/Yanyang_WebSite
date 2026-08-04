@@ -17,7 +17,6 @@ export default function Verify() {
   const from = location.state?.from || '/download'
   const isPasswordPage = location.pathname === '/verify/password'
 
-  // 加载 Cap
   useEffect(() => {
     if (isPasswordPage) {
       const script = document.createElement('script')
@@ -32,7 +31,6 @@ export default function Verify() {
       }
       document.body.appendChild(script)
 
-      // 监听 Cap token 事件
       const handleCapEvent = (event) => {
         if (event.detail && event.detail.token) {
           setCapToken(event.detail.token)
@@ -181,7 +179,7 @@ export default function Verify() {
                     <div className="mb-4">
                       <div className="flex justify-center min-h-[80px] items-center">
                         {capLoaded ? (
-                            <cap-widget endpoint="https://test.cap.js.cool/your-site-key/"></cap-widget>
+                            <cap-widget endpoint="https://test.cap.js.cool/demo"></cap-widget>
                         ) : (
                             <div className="flex items-center gap-2 text-sm text-muted">
                               <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
