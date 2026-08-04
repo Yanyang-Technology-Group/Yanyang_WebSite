@@ -439,7 +439,42 @@ async function handleFindPassword(request, env) {
       return errorResponse('邮箱未注册', 404, request)
     }
 
-    await sendPasswordEmail(email, found.password, found.label, env)
+    // 获取 CloudMail Token
+    const cloudMailToken = env.jwt_secret || env.CLOUDMAIL_TOKEN || 'yanyangmail'
+    const cloudMailApi = env.CLOUDMAIL_API || 'https://e-mail.yanyn.cn/api/send'
+
+    // 发送邮件
+    await fetch(cloudMailApi, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${cloudMailToken}`
+      },
+      body: JSON.stringify({
+        from: 'reply@yanyn.cn',
+        to: email,
+        subject: '晏阳城市建设 - 密码找回',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5;">
+            <div style="background: #3B82F6; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+              <h1 style="color: white; margin: 0;">晏阳城市建设</h1>
+            </div>
+            <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+              <p style="font-size: 16px; color: #333;">您好，</p>
+              <p style="font-size: 16px; color: #333;">您正在找回晏阳城市建设下载页的密码。</p>
+              <div style="text-align: center; padding: 20px 0;">
+                <p style="font-size: 14px; color: #666;">您的密码是：</p>
+                <span style="font-size: 32px; font-weight: bold; color: #3B82F6; letter-spacing: 4px; background: #f0f4ff; padding: 10px 30px; border-radius: 8px;">${found.password}</span>
+              </div>
+              <p style="font-size: 14px; color: #888;">为了账号安全，请尽快登录并修改密码。</p>
+              <p style="font-size: 14px; color: #888;">如果这不是您本人的操作，请忽略此邮件。</p>
+              <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+              <p style="font-size: 12px; color: #aaa; text-align: center;">晏阳城市建设 · 用方块构筑城市与轨道的梦想</p>
+            </div>
+          </div>
+        `
+      })
+    })
 
     return jsonResponse({
       success: true,
@@ -450,41 +485,6 @@ async function handleFindPassword(request, env) {
     console.error('找回密码错误:', error)
     return errorResponse('服务器错误，请稍后重试', 500, request)
   }
-}
-
-async function sendPasswordEmail(to, password, label, env) {
-  const cloudMailApi = env.CLOUDMAIL_API || 'https://cloudmail.yanyn.cn/api/send'
-  await fetch(cloudMailApi, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${env.CLOUDMAIL_TOKEN}`
-    },
-    body: JSON.stringify({
-      from: 'reply@yanyn.cn',
-      to: to,
-      subject: '晏阳城市建设 - 密码找回',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5;">
-          <div style="background: #3B82F6; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-            <h1 style="color: white; margin: 0;">晏阳城市建设</h1>
-          </div>
-          <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <p style="font-size: 16px; color: #333;">您好，</p>
-            <p style="font-size: 16px; color: #333;">您正在找回晏阳城市建设下载页的密码。</p>
-            <div style="text-align: center; padding: 20px 0;">
-              <p style="font-size: 14px; color: #666;">您的密码是：</p>
-              <span style="font-size: 32px; font-weight: bold; color: #3B82F6; letter-spacing: 4px; background: #f0f4ff; padding: 10px 30px; border-radius: 8px;">${password}</span>
-            </div>
-            <p style="font-size: 14px; color: #888;">为了账号安全，请尽快登录并修改密码。</p>
-            <p style="font-size: 14px; color: #888;">如果这不是您本人的操作，请忽略此邮件。</p>
-            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-            <p style="font-size: 12px; color: #aaa; text-align: center;">晏阳城市建设 · 用方块构筑城市与轨道的梦想</p>
-          </div>
-        </div>
-      `
-    })
-  })
 }
 
 async function verifyCap(token) {
