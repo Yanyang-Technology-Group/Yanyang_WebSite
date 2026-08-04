@@ -390,18 +390,19 @@ async function handleWebsiteInfo(request) {
   }, 200, request)
 }
 
-// ========== 找回密码 ==========
+// ========== 找回密码（Cap 验证） ==========
 
 async function handleFindPassword(request, env) {
   try {
-    const { email, turnstile_token } = await request.json()
+    const { email, cap_token } = await request.json()
 
-    if (!email || !turnstile_token) {
+    if (!email || !cap_token) {
       return errorResponse('参数不完整', 400, request)
     }
 
-    const turnstileValid = await verifyTurnstile(turnstile_token, env.TURNSTILE_SECRET_KEY)
-    if (!turnstileValid) {
+    // Cap 验证
+    const capValid = await verifyCap(cap_token, env)
+    if (!capValid) {
       return errorResponse('人机验证失败', 400, request)
     }
 
@@ -426,14 +427,16 @@ async function handleFindPassword(request, env) {
   }
 }
 
-async function verifyTurnstile(token, secretKey) {
+async function verifyCap(token, env) {
   try {
-    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    // 使用 Cap 公共验证节点
+    const response = await fetch('https://test.cap.js.cool/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        secret: secretKey,
-        response: token,
+        token: token,
+        // 如果你自托管 Cap，替换为你的 secretKey
+        secret: env.CAP_SECRET_KEY || 'your-secret-key'
       })
     })
     const data = await response.json()
@@ -458,6 +461,10 @@ export default {
 
     if (path === '/api/verify' && request.method === 'POST') {
       return handleVerify(request, env)
+    }
+
+    if (path === '/api/verify/password' && request.method === 'POST') {
+      return handleFindPassword(request, env)
     }
 
     if (path === '/api/modpacks') {
@@ -490,10 +497,6 @@ export default {
 
     if (path === '/api/map/proxy') {
       return handleMapProxy(request, env)
-    }
-
-    if (path === '/api/find-password' && request.method === 'POST') {
-      return handleFindPassword(request, env)
     }
 
     return errorResponse('API Not Found', 404, request)
