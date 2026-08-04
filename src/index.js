@@ -428,7 +428,7 @@ async function handleFindPassword(request, env) {
 
 async function verifyCap(token) {
   try {
-    const response = await fetch('https://test.cap.js.cool/verify', {
+    const response = await fetch('https://cap.yanyn.cn/api/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token })
