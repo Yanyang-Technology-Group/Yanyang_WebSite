@@ -393,7 +393,7 @@ async function handleWebsiteInfo(request) {
   }, 200, request)
 }
 
-// ========== 找回密码（发送密码到邮箱） ==========
+// ========== 找回密码（用 send_email 绑定发送） ==========
 
 async function handleFindPassword(request, env) {
   try {
@@ -439,20 +439,11 @@ async function handleFindPassword(request, env) {
       return errorResponse('邮箱未注册', 404, request)
     }
 
-    // 获取 CloudMail Token
-    const cloudMailToken = env.jwt_secret || env.CLOUDMAIL_TOKEN || 'yanyangmail'
-    const cloudMailApi = env.CLOUDMAIL_API || 'https://e-mail.yanyn.cn/api/send'
-
-    // 发送邮件
-    await fetch(cloudMailApi, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${cloudMailToken}`
-      },
-      body: JSON.stringify({
-        from: 'reply@yanyn.cn',
-        to: email,
+    // 用 send_email 绑定发送邮件
+    try {
+      await env.EMAIL.send({
+        from: { email: 'reply@yanyn.cn', name: '晏阳城市建设' },
+        to: [{ email: email }],
         subject: '晏阳城市建设 - 密码找回',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5;">
@@ -474,7 +465,10 @@ async function handleFindPassword(request, env) {
           </div>
         `
       })
-    })
+    } catch (emailError) {
+      console.error('发送邮件失败:', emailError)
+      return errorResponse('邮件发送失败，请稍后重试', 500, request)
+    }
 
     return jsonResponse({
       success: true,
