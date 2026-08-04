@@ -8,13 +8,13 @@ async function getCommitCountFromGitHub(retries = 10) {
       console.log(`[GitHub API] 尝试 ${i + 1}/${retries}...`)
 
       const response = await fetch(
-        'https://api.github.com/repos/Yanyang-Technology-Group/Yanyang_WebSite/commits?per_page=1',
-        {
-          headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'Yanyang-Website'
+          'https://api.github.com/repos/Yanyang-Technology-Group/Yanyang_WebSite/commits?per_page=1',
+          {
+            headers: {
+              'Accept': 'application/json',
+              'User-Agent': 'Yanyang-Website'
+            }
           }
-        }
       )
 
       if (!response.ok) {
@@ -110,6 +110,7 @@ export default defineConfig(async ({ mode, command }) => {
   console.log(`\n最终版本: ${version} (来源: ${versionSource})\n`)
 
   return {
+    base: '/',
     plugins: [react(), tailwindcss()],
     define: {
       __USER_DEBUG__: isUserDebug,
