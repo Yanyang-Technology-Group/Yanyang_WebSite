@@ -176,7 +176,10 @@ export default function Verify() {
                     <div className="mb-4">
                       <div className="flex justify-center min-h-[80px] items-center">
                         {capLoaded ? (
-                            <cap-widget endpoint="https://cap.yanyn.cn/api/"></cap-widget>
+                            <cap-widget
+                                data-cap-api-endpoint="https://cap.yanyn.cn/api/"
+                                id="cap-widget"
+                            ></cap-widget>
                         ) : (
                             <div className="flex items-center gap-2 text-sm text-muted">
                               <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
