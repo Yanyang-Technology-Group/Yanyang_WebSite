@@ -58,6 +58,7 @@ export default function Verify() {
 
       if (res.ok && data.success) {
         document.cookie = `download_token=${data.token}; path=/; max-age=600; SameSite=Lax`
+        localStorage.setItem('user_label', data.label || '用户')
         navigate(from, { replace: true })
       } else {
         setError(data.message || '密码错误，请重试')
@@ -84,6 +85,7 @@ export default function Verify() {
 
       if (res.ok && data.success) {
         document.cookie = `download_token=${data.token}; path=/; max-age=600; SameSite=Lax`
+        localStorage.setItem('user_label', '游客')
         navigate(from, { replace: true })
       } else {
         setError('游客登录失败，请稍后重试')
