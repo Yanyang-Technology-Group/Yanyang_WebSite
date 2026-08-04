@@ -49,23 +49,66 @@
 ## 项目结构
 
 ```
-src/
-├── components/          # 共享组件
-│   ├── Navbar.jsx       # 顶部导航
-│   ├── Footer.jsx       # 全局页脚
-│   ├── ScrollReveal.jsx # 滚动渐入
-│   └── Skeleton.jsx     # 骨架屏
-├── pages/               # 页面组件
-│   ├── Home.jsx         # 首页
-│   ├── About.jsx        # 关于
-│   ├── Join.jsx         # 加入
-│   ├── Event.jsx        # 活动
-│   └── Map.jsx          # 线路图
-├── Events/              # 活动详情页
-│   └── 4years.jsx       # 4 周年庆典
-├── App.jsx              # 路由 + 布局
-├── index.css            # Tailwind + 设计 Token
-└── main.jsx             # 入口
+Yanyang_WebSite/
+├── public/
+│   ├── images/
+│   │   ├── icon.png
+│   │   ├── logo2.png
+│   │   ├── events/
+│   │   │   └── 4yearslogo.png
+│   │   ├── join/
+│   │   │   ├── frp.svg
+│   │   │   ├── cf.png
+│   │   │   └── github.svg
+│   │   └── map/
+│   │       ├── 1.png
+│   │       └── 2.png
+│   ├── docs/
+│   │   ├── yanyangchengshijianshefaan.pdf
+│   │   ├── yanyangruanjianxvkejifuwuxieyi.pdf
+│   │   └── yanyangertonggerenxinxibaohuguizejijianhurenxvzhi.docx
+│   └── cap.min.js
+├── src/
+│   ├── components/
+│   │   ├── Navbar.jsx
+│   │   ├── Footer.jsx
+│   │   ├── ScrollReveal.jsx
+│   │   └── Skeleton.jsx
+│   ├── pages/
+│   │   ├── Home.jsx
+│   │   ├── About.jsx
+│   │   ├── Join.jsx
+│   │   ├── Event.jsx
+│   │   ├── Map.jsx
+│   │   ├── Download.jsx
+│   │   ├── Verify.jsx
+│   │   ├── SatelliteMap.jsx
+│   │   ├── RailwayMap.jsx
+│   │   └── Downloads/
+│   │       ├── modpack.jsx
+│   │       ├── java.jsx
+│   │       ├── launcher.jsx
+│   │       └── Detail.jsx
+│   ├── Events/
+│   │   ├── 4years.jsx
+│   │   └── 4years.css
+│   ├── hooks/
+│   │   └── useAuth.js
+│   ├── utils/
+│   │   ├── api.js
+│   │   ├── cookie.js
+│   │   └── version.js
+│   ├── config/
+│   │   └── index.js
+│   ├── App.jsx
+│   ├── index.css
+│   └── main.jsx
+├── index.html
+├── package.json
+├── package-lock.json
+├── vite.config.js
+├── build.bat
+└── README.md
 ```
 
 ## 页面
