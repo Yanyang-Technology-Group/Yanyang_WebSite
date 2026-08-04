@@ -4,6 +4,62 @@ import { Lock, XCircle, Eye, Envelope, ArrowLeft } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
 import { API_ENDPOINTS } from '../config'
 
+const TURNSTILE_SOURCES = [
+  'https://challenges.cloudflare.com/turnstile/v0/api.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/turnstile/0.3.0/api.js',
+  'https://unpkg.com/@cloudflare/turnstile@0.3.0/dist/api.js',
+  'https://jsd.onmicrosoft.cn/npm/@cloudflare/turnstile@0.3.0/dist/api.js'
+]
+
+function loadTurnstileWithRetry(sources, callback, retries = 3) {
+  let currentIndex = 0
+  let retryCount = 0
+
+  function tryLoad() {
+    if (currentIndex >= sources.length) {
+      if (retryCount < retries) {
+        retryCount++
+        currentIndex = 0
+        setTimeout(tryLoad, 2000)
+        return
+      }
+      callback(false)
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = sources[currentIndex]
+    script.async = true
+    script.defer = true
+
+    script.onload = () => {
+      if (window.turnstile) {
+        callback(true)
+      } else {
+        currentIndex++
+        tryLoad()
+      }
+    }
+
+    script.onerror = () => {
+      currentIndex++
+      tryLoad()
+    }
+
+    const timeout = setTimeout(() => {
+      script.onload = null
+      script.onerror = null
+      currentIndex++
+      tryLoad()
+    }, 8000)
+
+    script._timeout = timeout
+    document.body.appendChild(script)
+  }
+
+  tryLoad()
+}
+
 export default function Verify() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -11,34 +67,36 @@ export default function Verify() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [email, setEmail] = useState('')
+  const [turnstileReady, setTurnstileReady] = useState(false)
+  const [turnstileError, setTurnstileError] = useState(false)
 
   const from = location.state?.from || '/download'
   const isPasswordPage = location.pathname === '/verify/password'
 
   useEffect(() => {
     if (isPasswordPage) {
-      const script = document.createElement('script')
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/turnstile/0.3.0/api.js'
-      script.async = true
-      script.defer = true
-      document.body.appendChild(script)
-    }
-  }, [isPasswordPage])
+      setTurnstileReady(false)
+      setTurnstileError(false)
 
-  useEffect(() => {
-    if (isPasswordPage && window.turnstile) {
-      const container = document.getElementById('turnstile-container')
-      if (container) {
-        container.innerHTML = ''
-        window.turnstile.render(container, {
-          sitekey: '0x4AAAAAAEE8_DN5xRQe-MRk',
-          callback: function(token) {
-            console.log('Turnstile 验证成功', token)
-            const input = document.querySelector('[name="cf-turnstile-response"]')
-            if (input) input.value = token
+      loadTurnstileWithRetry(TURNSTILE_SOURCES, (success) => {
+        if (success && window.turnstile) {
+          setTurnstileReady(true)
+          const container = document.getElementById('turnstile-container')
+          if (container) {
+            container.innerHTML = ''
+            window.turnstile.render(container, {
+              sitekey: '0x4AAAAAAEE8_DN5xRQe-MRk',
+              callback: function(token) {
+                const input = document.querySelector('[name="cf-turnstile-response"]')
+                if (input) input.value = token
+              }
+            })
           }
-        })
-      }
+        } else {
+          setTurnstileError(true)
+          setTurnstileReady(false)
+        }
+      })
     }
   }, [isPasswordPage])
 
@@ -175,10 +233,28 @@ export default function Verify() {
 
                     <div className="mb-4">
                       <div className="flex justify-center min-h-[80px] items-center">
-                        <div id="turnstile-container"></div>
+                        {turnstileError ? (
+                            <div className="text-sm text-red-500 text-center">
+                              人机验证加载失败，请刷新页面重试
+                              <button
+                                  type="button"
+                                  onClick={() => window.location.reload()}
+                                  className="ml-2 text-primary hover:underline"
+                              >
+                                刷新
+                              </button>
+                            </div>
+                        ) : turnstileReady ? (
+                            <div id="turnstile-container"></div>
+                        ) : (
+                            <div className="flex items-center gap-2 text-sm text-muted">
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+                              人机验证加载中...
+                            </div>
+                        )}
                       </div>
                       <p className="text-xs text-muted text-center mt-2">
-                        请等待人机验证加载，如长时间未加载请联系管理员
+                        如长时间未加载，请刷新页面或更换网络环境
                       </p>
                     </div>
 
