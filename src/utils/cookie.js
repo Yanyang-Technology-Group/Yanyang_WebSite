@@ -1,4 +1,3 @@
-// utils/cookie.js
 import { TOKEN_KEY, TOKEN_EXPIRY } from '../config'
 
 export function getCookie(name) {
@@ -9,7 +8,6 @@ export function getCookie(name) {
 }
 
 export function setCookie(name, value, maxAge = TOKEN_EXPIRY) {
-    // Secure 标志仅在 HTTPS 环境下生效，开发环境 localhost 也支持
     const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost'
     const secureFlag = isSecure ? '; Secure' : ''
     document.cookie = `${name}=${value}; path=/; max-age=${maxAge}; SameSite=Lax${secureFlag}`

@@ -8,7 +8,11 @@ export const API_ENDPOINTS = {
   java: `${API_BASE_URL}/api/java`,
   launchers: `${API_BASE_URL}/api/launchers`,
   oneTime: `${API_BASE_URL}/api/download/one-time`,
+  adminLogin: `${API_BASE_URL}/api/admin/login`,
+  adminBanned: `${API_BASE_URL}/api/admin/banned`,
+  adminUnban: `${API_BASE_URL}/api/admin/unban`,
+  adminUpdateBan: `${API_BASE_URL}/api/admin/update-ban`,
 }
 
 export const TOKEN_KEY = 'download_token'
-export const TOKEN_EXPIRY = 3600 // 1 小时
+export const TOKEN_EXPIRY = 3600
