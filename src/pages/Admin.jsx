@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Shield, Lock, Unlock, ArrowClockwise, Clock, XCircle } from '@phosphor-icons/react'
+import { Shield, Lock, LockOpen, ArrowClockwise, Clock, XCircle } from '@phosphor-icons/react'
 import { API_BASE_URL } from '../config'
 
 function getCookie(name) {
@@ -234,7 +234,7 @@ export default function Admin() {
                             onClick={handleLogout}
                             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-500 hover:text-red-600 border border-red-200 rounded-btn hover:bg-red-50 transition-all"
                         >
-                            <Unlock size={16} weight="bold" />
+                            <LockOpen size={16} weight="bold" />
                             退出
                         </button>
                     </div>
