@@ -5,8 +5,14 @@ import { Env, PasswordEntry, DownloadItem } from './types'
 
 const TOKEN_EXPIRY = 3600000 // 1 小时
 
-// 发送记录（内存缓存，Worker 重启会重置，但配合 KV 使用）
-const sendRecords = new Map<string, { count: number; firstSendTime: number }>()
+// 发送记录（内存缓存，Worker 重启会重置）
+// 结构：email -> { count, firstSendTime, ip }
+const sendRecords = new Map<string, { count: number; firstSendTime: number; ip: string }>()
+// IP 封禁记录：ip -> { banTime: number, reason: string }
+const bannedIPs = new Map<string, { banTime: number; reason: string }>()
+const BAN_DURATION = 24 * 60 * 60 * 1000 // 1 天封禁
+const MAX_ATTEMPTS = 5 // 最大尝试次数
+const RATE_LIMIT_WINDOW = 60000 // 60 秒
 
 function filterByType<T extends { public?: boolean }>(items: T[], passwordType: string): T[] {
   if (passwordType === 'full') {
@@ -467,6 +473,30 @@ async function verifyCap(token: string): Promise<boolean> {
 
 async function handleFindPassword(request: Request, env: Env): Promise<Response> {
   try {
+    // 获取客户端 IP
+    const clientIP = request.headers.get('CF-Connecting-IP') ||
+        request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ||
+        'unknown'
+
+    // 检查 IP 是否被封禁
+    const banned = bannedIPs.get(clientIP)
+    if (banned) {
+      const remaining = Math.ceil((banned.banTime + BAN_DURATION - Date.now()) / 1000)
+      if (remaining > 0) {
+        const hours = Math.ceil(remaining / 3600)
+        const minutes = Math.ceil((remaining % 3600) / 60)
+        const timeStr = hours > 0 ? `${hours} 小时 ${minutes} 分钟` : `${minutes} 分钟`
+        return errorResponse(
+            `您的 IP 已被暂时封禁（剩余 ${timeStr}），请联系管理员申诉解封\n管理员邮箱：feedback@yanyn.cn`,
+            403,
+            request
+        )
+      } else {
+        // 封禁过期，移除记录
+        bannedIPs.delete(clientIP)
+      }
+    }
+
     const { email, cap_token } = await request.json() as { email: string; cap_token: string }
 
     if (!email || !cap_token) {
@@ -478,27 +508,41 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
       return errorResponse('人机验证失败', 400, request)
     }
 
-    // 检查发送限制
     const now = Date.now()
     const record = sendRecords.get(email)
 
+    // 检查发送限制
     if (record) {
-      if (now - record.firstSendTime < 60000) {
-        const remaining = Math.ceil((60000 - (now - record.firstSendTime)) / 1000)
+      // 同一邮箱 60 秒内只能发一次
+      if (now - record.firstSendTime < RATE_LIMIT_WINDOW) {
+        const remaining = Math.ceil((RATE_LIMIT_WINDOW - (now - record.firstSendTime)) / 1000)
         return errorResponse(`请等待 ${remaining} 秒后再试`, 429, request)
       }
 
-      if (record.count >= 5) {
-        return errorResponse('发送次数过多，请稍后再试', 429, request)
+      // 连续 5 次失败 → 封禁 IP 1 天
+      if (record.count >= MAX_ATTEMPTS) {
+        bannedIPs.set(clientIP, {
+          banTime: now,
+          reason: '连续5次密码找回失败，触发安全防护机制'
+        })
+        return errorResponse(
+            '您已被暂时封禁（1天），请联系管理员申诉解封\n管理员邮箱：feedback@yanyn.cn',
+            403,
+            request
+        )
       }
 
-      if (now - record.firstSendTime >= 60000) {
-        sendRecords.set(email, { count: 1, firstSendTime: now })
+      // 正常计数
+      if (now - record.firstSendTime >= RATE_LIMIT_WINDOW) {
+        // 超过 60 秒，重置计数
+        sendRecords.set(email, { count: 1, firstSendTime: now, ip: clientIP })
       } else {
-        sendRecords.set(email, { count: record.count + 1, firstSendTime: record.firstSendTime })
+        // 60 秒内再次请求，计数 +1
+        sendRecords.set(email, { count: record.count + 1, firstSendTime: record.firstSendTime, ip: clientIP })
       }
     } else {
-      sendRecords.set(email, { count: 1, firstSendTime: now })
+      // 首次请求
+      sendRecords.set(email, { count: 1, firstSendTime: now, ip: clientIP })
     }
 
     const data = await getDownkey(env)
@@ -506,11 +550,15 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
     const found = passwords.find(p => p.email === email)
 
     if (!found) {
+      // 邮箱不存在也算一次失败尝试
       return errorResponse('邮箱未注册', 404, request)
     }
 
     // 发送邮件到邮箱
     await sendPasswordEmail(email, found.password, found.label, env)
+
+    // 发送成功后重置该邮箱的失败计数
+    sendRecords.delete(email)
 
     return jsonResponse({
       success: true,
@@ -538,21 +586,22 @@ async function sendPasswordEmail(to: string, password: string, label: string, en
         to: [to],
         subject: '晏阳城市建设 - 密码找回',
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5;">
-            <div style="background: #3B82F6; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-              <h1 style="color: white; margin: 0;">晏阳城市建设</h1>
+          <div style="font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 0;">
+            <div style="background: linear-gradient(135deg, #3B82F6, #2563EB); padding: 32px 24px; text-align: center; border-radius: 16px 16px 0 0;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 2px;">晏阳城市建设</h1>
+              <p style="color: rgba(255,255,255,0.85); margin: 6px 0 0 0; font-size: 14px; font-weight: 400;">用方块构筑城市与轨道的梦想</p>
             </div>
-            <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-              <p style="font-size: 16px; color: #333;">您好，</p>
-              <p style="font-size: 16px; color: #333;">您正在找回晏阳城市建设下载页的密码。</p>
-              <div style="text-align: center; padding: 20px 0;">
-                <p style="font-size: 14px; color: #666;">您的密码是：</p>
-                <span style="font-size: 32px; font-weight: bold; color: #3B82F6; letter-spacing: 4px; background: #f0f4ff; padding: 10px 30px; border-radius: 8px;">${password}</span>
+            <div style="background: #ffffff; padding: 32px 28px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #f0f0f0;">
+              <p style="font-size: 15px; color: #1a1a1a; line-height: 1.6; margin: 0 0 6px 0;">您好，</p>
+              <p style="font-size: 15px; color: #333333; line-height: 1.8; margin: 0 0 24px 0;">您正在找回晏阳城市建设下载页的密码，以下是您的账号信息：</p>
+              <div style="background: #f8faff; border: 2px dashed #dbeafe; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 28px;">
+                <p style="font-size: 13px; color: #888888; margin: 0 0 10px 0; letter-spacing: 2px;">密 码</p>
+                <span style="font-size: 34px; font-weight: bold; color: #3B82F6; letter-spacing: 6px; background: #eff6ff; padding: 8px 32px; border-radius: 8px; font-family: 'Courier New', monospace;">${password}</span>
               </div>
-              <p style="font-size: 14px; color: #888;">为了账号安全，请尽快登录并修改密码。</p>
-              <p style="font-size: 14px; color: #888;">如果这不是您本人的操作，请忽略此邮件。</p>
-              <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-              <p style="font-size: 12px; color: #aaa; text-align: center;">晏阳城市建设 · 用方块构筑城市与轨道的梦想</p>
+              <p style="font-size: 14px; color: #888888; line-height: 1.8; margin: 0 0 8px 0;">如果这不是您本人的操作，请忽略此邮件，并向管理员说明。</p>
+              <p style="font-size: 14px; color: #888888; line-height: 1.8; margin: 0 0 24px 0;">如果不再需要获取密码，请联系管理员关闭此功能。</p>
+              <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;">
+              <p style="font-size: 12px; color: #bbbbbb; text-align: center; margin: 0; letter-spacing: 1px;">Copyright 2025-2026 晏阳技术组</p>
             </div>
           </div>
         `
@@ -601,21 +650,22 @@ async function sendPasswordEmail(to: string, password: string, label: string, en
         to: to,
         subject: '晏阳城市建设 - 密码找回',
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5;">
-            <div style="background: #3B82F6; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-              <h1 style="color: white; margin: 0;">晏阳城市建设</h1>
+          <div style="font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 0;">
+            <div style="background: linear-gradient(135deg, #3B82F6, #2563EB); padding: 32px 24px; text-align: center; border-radius: 16px 16px 0 0;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 2px;">晏阳城市建设</h1>
+              <p style="color: rgba(255,255,255,0.85); margin: 6px 0 0 0; font-size: 14px; font-weight: 400;">用方块构筑城市与轨道的梦想</p>
             </div>
-            <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-              <p style="font-size: 16px; color: #333;">您好，</p>
-              <p style="font-size: 16px; color: #333;">您正在找回晏阳城市建设内群的密码。</p>
-              <div style="text-align: center; padding: 20px 0;">
-                <p style="font-size: 14px; color: #666;">您的密码是：</p>
-                <span style="font-size: 32px; font-weight: bold; color: #3B82F6; letter-spacing: 4px; background: #f0f4ff; padding: 10px 30px; border-radius: 8px;">${password}</span>
+            <div style="background: #ffffff; padding: 32px 28px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #f0f0f0;">
+              <p style="font-size: 15px; color: #1a1a1a; line-height: 1.6; margin: 0 0 6px 0;">您好，</p>
+              <p style="font-size: 15px; color: #333333; line-height: 1.8; margin: 0 0 24px 0;">您正在找回晏阳城市建设内群的密码，以下是您的账号信息：</p>
+              <div style="background: #f8faff; border: 2px dashed #dbeafe; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 28px;">
+                <p style="font-size: 13px; color: #888888; margin: 0 0 10px 0; letter-spacing: 2px;">密 码</p>
+                <span style="font-size: 34px; font-weight: bold; color: #3B82F6; letter-spacing: 6px; background: #eff6ff; padding: 8px 32px; border-radius: 8px; font-family: 'Courier New', monospace;">${password}</span>
               </div>
-              <p style="font-size: 14px; color: #888;">如果这不是您本人的操作，请忽略此邮件，并向管理员说明。</p>
-              <p style="font-size: 14px; color: #888;">如果您不需要再次获取密码，可向管理员设置。</p>
-              <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-              <p style="font-size: 12px; color: #aaa; text-align: center;">Copyright 2025-2026 晏阳技术组</p>
+              <p style="font-size: 14px; color: #888888; line-height: 1.8; margin: 0 0 8px 0;">如果这不是您本人的操作，请忽略此邮件，并向管理员说明。</p>
+              <p style="font-size: 14px; color: #888888; line-height: 1.8; margin: 0 0 24px 0;">如果不再需要获取密码，请联系管理员关闭此功能。</p>
+              <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;">
+              <p style="font-size: 12px; color: #bbbbbb; text-align: center; margin: 0; letter-spacing: 1px;">Copyright 2025-2026 晏阳技术组</p>
             </div>
           </div>
         `
