@@ -904,7 +904,7 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
         email: email,
         userAgent: userAgent
       }, env)
-      return errorResponse('人机验证失败', 400, request)
+      return errorResponse('人机验证失败，请刷新页面后再重新尝试', 400, request)
     }
 
     const now = Date.now()
