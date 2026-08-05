@@ -149,6 +149,12 @@ export default function Verify() {
         return
       }
 
+      if (res.status === 400 && data.message && data.message.includes('人机验证失败')) {
+        setError('人机验证失败，请刷新页面后再重新尝试')
+        setLoading(false)
+        return
+      }
+
       if (res.status === 429) {
         const match = data.message.match(/(\d+)\s*秒/)
         let seconds = 60
