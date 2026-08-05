@@ -126,26 +126,33 @@ export default function Home() {
           <div className="mx-auto max-w-xl px-4 sm:px-6 text-center">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-fg">准备好加入了吗？</h2>
             <p className="mt-2 text-muted">加入 QQ 群，获取白名单，开始你的城市建造之旅</p>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
-              <Link
-                  to="/join"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-semibold rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-transform"
-              >
-                立即加入 <ArrowRight size={16} weight="bold" />
-              </Link>
-              <a
-                  href="https://ifdian.net/a/YanyangUG"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-fg text-bg font-semibold rounded-btn text-sm hover:bg-muted active:scale-[0.97] transition-transform"
-              >
-                <Heart size={16} weight="fill" />
-                爱发电支持我们
-              </a>
-            </div>
-            <p className="mt-4 text-xs text-muted">
-              喜欢晏阳？欢迎在爱发电为服务器“发电”，每一份支持都是我们继续建设城市的动力。
+            <Link
+                to="/join"
+                className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-semibold rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-transform"
+            >
+              立即加入 <ArrowRight size={16} weight="bold" />
+            </Link>
+          </div>
+        </section>
+
+        {/* Support - 爱发电 */}
+        <section className="bg-bg py-section">
+          <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
+            <span className="text-xs font-semibold text-primary uppercase tracking-wider">支持我们</span>
+            <h2 className="mt-2 text-2xl sm:text-3xl font-extrabold text-fg">为晏阳发电</h2>
+            <p className="mt-3 text-sm sm:text-base text-muted leading-relaxed">
+              晏阳是一座由热爱与创意堆砌起来的城市。如果你喜欢这里，欢迎在爱发电支持我们，
+              每一份心意都会化为服务器继续运营与建设的动力。
             </p>
+            <a
+                href="https://ifdian.net/a/YanyangUG"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-fg text-bg font-semibold rounded-btn text-sm hover:bg-muted active:scale-[0.97] transition-transform"
+            >
+              <Heart size={18} weight="fill" />
+              爱发电支持我们
+            </a>
           </div>
         </section>
       </>
