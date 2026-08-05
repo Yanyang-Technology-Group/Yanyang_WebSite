@@ -45,6 +45,23 @@ function generateOneTimeToken(): string {
   return token
 }
 
+function getTokenFromRequest(request: Request): string | null {
+  const auth = request.headers.get('Authorization')
+  if (auth && auth.startsWith('Bearer ')) {
+    return auth.replace('Bearer ', '')
+  }
+
+  const cookie = request.headers.get('Cookie')
+  if (cookie) {
+    const match = cookie.match(/download_token=([^;]+)/)
+    if (match) {
+      return match[1]
+    }
+  }
+
+  return null
+}
+
 async function signLink(link: string, token: string, env: Env): Promise<{ token: string; signature: string }> {
   const encoder = new TextEncoder()
   const secret = env.ONE_TIME_SECRET || 'yanyang-one-time-secret-2026'
@@ -522,12 +539,10 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
 
 async function handleOneTimeDownload(request: Request, env: Env): Promise<Response> {
   try {
-    const auth = request.headers.get('Authorization')
-    if (!auth || !auth.startsWith('Bearer ')) {
+    const token = getTokenFromRequest(request)
+    if (!token) {
       return errorResponse('未授权', 401, request)
     }
-
-    const token = auth.replace('Bearer ', '')
     const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
     if (!decoded) {
       return errorResponse('token无效或已过期', 401, request)
@@ -711,11 +726,10 @@ async function handleMapProxy(request: Request, env: Env): Promise<Response> {
 
 async function handleModpacks(request: Request, env: Env): Promise<Response> {
   try {
-    const auth = request.headers.get('Authorization')
-    if (!auth || !auth.startsWith('Bearer ')) {
+    const token = getTokenFromRequest(request)
+    if (!token) {
       return errorResponse('未授权', 401, request)
     }
-    const token = auth.replace('Bearer ', '')
     const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
     if (!decoded) {
       return errorResponse('token无效或已过期', 401, request)
@@ -735,11 +749,10 @@ async function handleModpacks(request: Request, env: Env): Promise<Response> {
 
 async function handleJava(request: Request, env: Env): Promise<Response> {
   try {
-    const auth = request.headers.get('Authorization')
-    if (!auth || !auth.startsWith('Bearer ')) {
+    const token = getTokenFromRequest(request)
+    if (!token) {
       return errorResponse('未授权', 401, request)
     }
-    const token = auth.replace('Bearer ', '')
     const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
     if (!decoded) {
       return errorResponse('token无效或已过期', 401, request)
@@ -759,11 +772,10 @@ async function handleJava(request: Request, env: Env): Promise<Response> {
 
 async function handleLaunchers(request: Request, env: Env): Promise<Response> {
   try {
-    const auth = request.headers.get('Authorization')
-    if (!auth || !auth.startsWith('Bearer ')) {
+    const token = getTokenFromRequest(request)
+    if (!token) {
       return errorResponse('未授权', 401, request)
     }
-    const token = auth.replace('Bearer ', '')
     const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
     if (!decoded) {
       return errorResponse('token无效或已过期', 401, request)
@@ -809,6 +821,9 @@ async function verifyCap(token: string): Promise<boolean> {
 }
 
 async function handleFindPassword(request: Request, env: Env): Promise<Response> {
+  console.log('=== handleFindPassword 被调用 ===')
+  console.log('env.KV 是否存在:', !!env.KV)
+
   let clientIP = 'unknown'
   let userAgent = ''
   let email = ''
@@ -886,7 +901,6 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
       }
     }
 
-    // ===== 限流检查 =====
     if (record) {
       const elapsed = now - record.firstSendTime
       if (elapsed < RATE_LIMIT_WINDOW) {
@@ -939,7 +953,6 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
       }
     }
 
-    // ===== 验证邮箱是否存在 =====
     const data = await getDownkey(env)
     const passwords = data.passwords || []
     const found = passwords.find(p => p.email === email)
@@ -970,7 +983,6 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
       return errorResponse('邮箱未注册', 404, request)
     }
 
-    // ===== 发送邮件 =====
     await sendPasswordEmail(email, found.password, found.label, env)
 
     if (env.KV) {
