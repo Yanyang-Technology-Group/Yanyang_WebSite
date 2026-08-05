@@ -2,7 +2,3 @@ name = "yanyang-website-backend"
 main = "src/index.ts"
 compatibility_date = "2024-12-18"
 keep_vars = true
-
-[[kv_namespaces]]
-binding = "KV"
-id = "95f421b44b8643a4aca1a75c16b924c0"
