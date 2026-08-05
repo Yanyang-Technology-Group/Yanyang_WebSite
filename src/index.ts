@@ -705,16 +705,43 @@ async function handleMapProxy(request: Request, env: Env): Promise<Response> {
       return new Response('目标地址不在允许列表中', { status: 403 })
     }
 
-    const response = await fetch(targetUrl.href, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8'
-      }
-    })
+    // 给上游请求加 15 秒超时，避免目标站点无响应时整个请求卡死变成空 500
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000)
+
+    let response: Response
+    try {
+      response = await fetch(targetUrl.href, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8'
+        },
+        signal: controller.signal
+      })
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      return new Response(`地图服务连接失败，请稍后重试（${reason}）`, { status: 504 })
+    } finally {
+      clearTimeout(timeout)
+    }
 
     if (!response.ok) {
       return new Response(`地图服务响应错误: ${response.status}`, { status: response.status })
+    }
+
+    const contentType = response.headers.get('content-type') || ''
+
+    // 非 HTML 资源（CSS/JS/图片/瓦片等）直接透传，不做文本改写，避免损坏二进制内容
+    if (!contentType.includes('text/html')) {
+      return new Response(response.body, {
+        status: response.status,
+        headers: {
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=3600',
+          'X-Content-Type-Options': 'nosniff'
+        }
+      })
     }
 
     let html = await response.text()
@@ -732,7 +759,7 @@ async function handleMapProxy(request: Request, env: Env): Promise<Response> {
     return new Response(html, {
       status: response.status,
       headers: {
-        'Content-Type': response.headers.get('content-type') || 'text/html',
+        'Content-Type': contentType || 'text/html',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'X-Content-Type-Options': 'nosniff'
       }
