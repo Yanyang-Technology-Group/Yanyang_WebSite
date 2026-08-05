@@ -7,14 +7,14 @@ function copyToClipboard(text, label) {
     () => {
       const el = document.createElement('div')
       el.textContent = `已复制${label}: ${text}`
-      el.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 bg-fg text-white text-sm px-4 py-2 rounded-btn shadow-none z-50'
+      el.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 bg-footer text-white text-sm px-4 py-2 rounded-btn shadow-none z-50'
       document.body.appendChild(el)
       setTimeout(() => el.remove(), 2000)
     },
     () => {
       const el = document.createElement('div')
       el.textContent = '复制失败，请手动复制'
-      el.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 bg-fg text-white text-sm px-4 py-2 rounded-btn shadow-none z-50'
+      el.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 bg-footer text-white text-sm px-4 py-2 rounded-btn shadow-none z-50'
       document.body.appendChild(el)
       setTimeout(() => el.remove(), 2000)
     }
@@ -151,7 +151,7 @@ export default function Join() {
           <ScrollReveal delay={120}>
             <h2 className="text-xl font-bold text-fg mt-8 mb-6">技术服务</h2>
             <div className="flex flex-wrap items-center gap-8">
-              <a href="https://www.passnat.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-surface rounded-container hover:bg-gray-100 transition-colors">
+              <a href="https://www.passnat.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-surface rounded-container hover:bg-bg transition-colors">
                 <img src="/images/join/frp.svg" alt="FRP" className="h-8 w-auto" />
                 <span className="text-sm font-medium">
                   <span className=" font-bold text-base">PassNAT</span>
@@ -159,11 +159,11 @@ export default function Join() {
                   <span className="text-fg">FRP 内网穿透</span>
                 </span>
               </a>
-              <a href="https://www.cloudflare-cn.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-surface rounded-container hover:bg-gray-100 transition-colors">
+              <a href="https://www.cloudflare-cn.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-surface rounded-container hover:bg-bg transition-colors">
                 <img src="/images/join/cf.png" alt="CDN" className="h-8 w-auto" />
                 <span className="text-sm font-medium text-fg">CDN/DNS/网页部署</span>
               </a>
-              <a href="https://github.com/Yanyang-Technology-Group/Yanyang_WebSite" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-surface rounded-container hover:bg-gray-100 transition-colors">
+              <a href="https://github.com/Yanyang-Technology-Group/Yanyang_WebSite" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-surface rounded-container hover:bg-bg transition-colors">
                 <img src="/images/join/github.svg" alt="CDN" className="h-8 w-auto" />
                 <span className="text-sm font-medium text-fg">网页源码 (遵循GPL-V3协议)</span>
               </a>

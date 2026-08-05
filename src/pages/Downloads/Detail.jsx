@@ -241,7 +241,7 @@ export default function Detail() {
                                                     </div>
                                                     <div className="flex gap-2 flex-shrink-0">
                                                         {expired ? (
-                                                            <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-200 text-gray-500 text-sm font-medium rounded-btn cursor-not-allowed">
+                                                            <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-surface text-muted text-sm font-medium rounded-btn cursor-not-allowed">
                                 <Download size={16} weight="bold" />
                                 已过期
                               </span>

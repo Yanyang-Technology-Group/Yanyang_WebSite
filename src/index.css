@@ -1,15 +1,45 @@
 @import "tailwindcss";
 
-@theme {
-  --color-primary: #3B82F6;
-  --color-primary-light: #DBEAFE;
-  --color-secondary: #10B981;
-  --color-accent: #EA580C;
-  --color-bg: #FFFFFF;
-  --color-surface: #F3F4F6;
-  --color-fg: #111827;
-  --color-muted: #6B7280;
-  --color-border: #E5E7EB;
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+:root {
+  --yy-bg: #FFFFFF;
+  --yy-surface: #F3F4F6;
+  --yy-fg: #111827;
+  --yy-muted: #6B7280;
+  --yy-border: #E5E7EB;
+  --yy-primary: #3B82F6;
+  --yy-primary-light: #DBEAFE;
+  --yy-secondary: #10B981;
+  --yy-accent: #EA580C;
+  --yy-footer: #111827;
+}
+
+html[data-theme='dark'] {
+  --yy-bg: #0A101B;
+  --yy-surface: #141D2C;
+  --yy-fg: #EAEFF6;
+  --yy-muted: #94A1B5;
+  --yy-border: #233045;
+  --yy-primary: #2E6FE0;
+  --yy-primary-light: #123C8C;
+  --yy-secondary: #2ECC9B;
+  --yy-accent: #FF8A3C;
+  --yy-footer: #060B12;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-primary: var(--yy-primary);
+  --color-primary-light: var(--yy-primary-light);
+  --color-secondary: var(--yy-secondary);
+  --color-accent: var(--yy-accent);
+  --color-bg: var(--yy-bg);
+  --color-surface: var(--yy-surface);
+  --color-fg: var(--yy-fg);
+  --color-muted: var(--yy-muted);
+  --color-border: var(--yy-border);
+  --color-footer: var(--yy-footer);
 
   --font-sans: 'Inter', 'Noto Sans SC', ui-sans-serif, system-ui, sans-serif;
 
@@ -40,6 +70,32 @@
 
   p {
     line-height: 1.625;
+  }
+
+  button,
+  .btn {
+    background-color: var(--color-surface);
+    color: var(--color-fg);
+    border: 1px solid var(--color-border);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-btn);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  button:hover,
+  .btn:hover {
+    background-color: var(--color-border);
+  }
+
+  .btn-primary {
+    background-color: var(--color-primary);
+    color: #FFFFFF;
+    border: none;
+  }
+
+  .btn-primary:hover {
+    background-color: #0044A8;
   }
 }
 
@@ -106,4 +162,73 @@
 
 .bump-right {
   animation: shakeRight 0.4s ease-in-out !important;
+}
+
+/* 主题切换：所有组件依次坠落动画 */
+@keyframes comp-fall {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  35% {
+    transform: translateY(28px);
+    opacity: 0.35;
+  }
+  55% {
+    transform: translateY(30px);
+    opacity: 0.3;
+  }
+  75% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.page-theme-fall > div > *,
+.page-theme-fall > div > main > * {
+  animation: comp-fall 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.page-theme-fall > div > *:nth-child(1) { animation-delay: 0s; }
+.page-theme-fall > div > *:nth-child(2) { animation-delay: 0.06s; }
+.page-theme-fall > div > *:nth-child(3) { animation-delay: 0.12s; }
+.page-theme-fall > div > *:nth-child(4) { animation-delay: 0.18s; }
+.page-theme-fall > div > *:nth-child(5) { animation-delay: 0.24s; }
+.page-theme-fall > div > *:nth-child(6) { animation-delay: 0.3s; }
+
+.page-theme-fall > div > main > *:nth-child(1) { animation-delay: 0.1s; }
+.page-theme-fall > div > main > *:nth-child(2) { animation-delay: 0.16s; }
+.page-theme-fall > div > main > *:nth-child(3) { animation-delay: 0.22s; }
+.page-theme-fall > div > main > *:nth-child(4) { animation-delay: 0.28s; }
+.page-theme-fall > div > main > *:nth-child(5) { animation-delay: 0.34s; }
+.page-theme-fall > div > main > *:nth-child(6) { animation-delay: 0.4s; }
+.page-theme-fall > div > main > *:nth-child(n+7) { animation-delay: 0.46s; }
+
+.theme-toggle-icon {
+  display: inline-flex;
+}
+
+/* Cap 人机验证控件跟随站点主题 */
+cap-widget {
+  --cap-background: var(--yy-surface);
+  --cap-background-hover: var(--yy-border);
+  --cap-background-dark: var(--yy-surface);
+  --cap-background-hover-dark: var(--yy-border);
+  --cap-color: var(--yy-fg);
+  --cap-color-dark: var(--yy-fg);
+  --cap-color-initial: var(--yy-fg);
+  --cap-border-color: var(--yy-border);
+  --cap-border-color-dark: var(--yy-border);
+  --cap-checkbox-background: var(--yy-bg);
+  --cap-checkbox-background-dark: var(--yy-bg);
+  --cap-checkbox-border: 2px solid var(--yy-border);
+  --cap-checkbox-border-dark: 2px solid var(--yy-border);
+  --cap-accent: var(--yy-primary);
+  --cap-spinner-color: var(--yy-primary);
+  --cap-credits-color: var(--yy-muted);
+  --cap-credits-color-dark: var(--yy-muted);
 }

@@ -154,7 +154,7 @@ export default function LauncherList() {
               ) : (
                   groupNames.map((tag) => (
                       <div key={tag} className="mb-10">
-                        <h2 className={`text-xl font-bold mb-4 inline-block px-4 py-1.5 rounded-full border ${TAG_COLORS[tag] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+                        <h2 className={`text-xl font-bold mb-4 inline-block px-4 py-1.5 rounded-full border ${TAG_COLORS[tag] || 'bg-surface text-muted border-border'}`}>
                           {tag}
                         </h2>
                         <div className="grid gap-4 mt-4">

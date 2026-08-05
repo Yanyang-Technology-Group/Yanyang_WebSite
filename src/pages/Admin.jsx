@@ -312,7 +312,7 @@ export default function Admin() {
                         className={`flex-1 px-4 py-2 rounded-btn text-sm font-medium transition-all ${
                             activeTab === 'banned'
                                 ? 'bg-primary text-white'
-                                : 'text-muted hover:text-fg hover:bg-white/50'
+                                : 'text-muted hover:text-fg hover:bg-bg/50'
                         }`}
                     >
             <span className="flex items-center justify-center gap-2">
@@ -325,7 +325,7 @@ export default function Admin() {
                         className={`flex-1 px-4 py-2 rounded-btn text-sm font-medium transition-all ${
                             activeTab === 'logs'
                                 ? 'bg-primary text-white'
-                                : 'text-muted hover:text-fg hover:bg-white/50'
+                                : 'text-muted hover:text-fg hover:bg-bg/50'
                         }`}
                     >
             <span className="flex items-center justify-center gap-2">
@@ -372,7 +372,7 @@ export default function Admin() {
                                     </thead>
                                     <tbody>
                                     {bannedList.map((item) => (
-                                        <tr key={item.ip} className="border-b border-border last:border-0 hover:bg-white/50 transition-colors">
+                                        <tr key={item.ip} className="border-b border-border last:border-0 hover:bg-bg/50 transition-colors">
                                             <td className="px-4 py-3 font-mono text-sm">{item.ip}</td>
                                             <td className="px-4 py-3 text-muted max-w-[200px] truncate">{item.reason || '触发安全防护机制'}</td>
                                             <td className="px-4 py-3">
@@ -440,7 +440,7 @@ export default function Admin() {
                                     </thead>
                                     <tbody>
                                     {logs.map((log) => (
-                                        <tr key={log.id} className="border-b border-border last:border-0 hover:bg-white/50 transition-colors">
+                                        <tr key={log.id} className="border-b border-border last:border-0 hover:bg-bg/50 transition-colors">
                                             <td className="px-4 py-2.5 text-xs text-muted whitespace-nowrap">{formatTimestamp(log.timestamp)}</td>
                                             <td className="px-4 py-2.5 font-mono text-xs">{log.ip}</td>
                                             <td className="px-4 py-2.5 text-xs">{log.email || '-'}</td>
@@ -471,7 +471,7 @@ export default function Admin() {
             {/* 日志详情弹窗 */}
             {showLogModal && selectedLog && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/40 backdrop-blur-sm" onClick={() => setShowLogModal(false)}>
-                    <div className="bg-white rounded-container max-w-lg w-full p-6 shadow-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-bg rounded-container max-w-lg w-full p-6 shadow-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-bold text-fg">请求详情</h3>
                             <button

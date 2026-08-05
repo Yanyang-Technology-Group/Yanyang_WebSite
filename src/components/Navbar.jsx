@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { List, X } from '@phosphor-icons/react'
+import { List, X, Sun, Moon } from '@phosphor-icons/react'
+import { useTheme } from '../hooks/useTheme'
 
 const NAV_ITEMS = [
   { path: '/', label: '首页' },
@@ -14,6 +15,7 @@ const NAV_ITEMS = [
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
+  const { theme, toggleTheme } = useTheme()
 
   useEffect(() => {
     setMobileOpen(false)
@@ -28,14 +30,14 @@ export default function Navbar() {
 
   return (
     <>
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-border">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-bg/80 backdrop-blur-md border-b border-border">
       <div className="mx-auto max-w-6xl flex items-center justify-between h-14 px-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2 text-fg no-underline" onClick={() => window.scrollTo(0, 0)}>
           <img src="/images/icon.png" alt="晏阳" className="h-8 w-auto" />
           <span className="hidden sm:inline font-bold text-sm">晏阳城市建设</span>
         </Link>
 
-        <div className="hidden md:flex items-center gap-1">
+        <div className="hidden md:flex items-center gap-1 ml-auto mr-2">
           {NAV_ITEMS.map(({ path, label }) => (
             <Link key={path} to={path} className={linkClass(path)}>
               {label}
@@ -43,13 +45,25 @@ export default function Navbar() {
           ))}
         </div>
 
-        <button
-          className="md:hidden p-2 -mr-2 text-fg"
-          onClick={() => setMobileOpen(true)}
-          aria-label="打开菜单"
-        >
-          <List size={24} weight="bold" />
-        </button>
+        <div className="flex items-center gap-1 sm:gap-2">
+          <button
+            className="md:hidden p-2 text-fg"
+            onClick={() => setMobileOpen(true)}
+            aria-label="打开菜单"
+          >
+            <List size={24} weight="bold" />
+          </button>
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-btn bg-transparent border-transparent text-muted hover:text-fg hover:bg-transparent transition-colors"
+            aria-label={theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
+            title={theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
+          >
+            <span key={theme} className="theme-toggle-icon">
+              {theme === 'dark' ? <Sun size={20} weight="bold" /> : <Moon size={20} weight="bold" />}
+            </span>
+          </button>
+        </div>
       </div>
     </nav>
 
@@ -65,10 +79,9 @@ export default function Navbar() {
         onClick={() => setMobileOpen(false)}
       />
       <div
-        className={`fixed top-0 right-0 bottom-0 w-64 p-6 transition-transform duration-300 ease-out ${
+        className={`fixed top-0 right-0 bottom-0 w-64 p-6 transition-transform duration-300 ease-out bg-bg border-l border-border ${
           mobileOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
-        style={{ backgroundColor: '#fff' }}
       >
           <button
             className="absolute top-4 right-4 p-2 text-fg"
