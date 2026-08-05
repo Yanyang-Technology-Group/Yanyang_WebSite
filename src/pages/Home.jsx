@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Buildings, Train, ShieldCheck, ArrowRight } from '@phosphor-icons/react'
+import { Buildings, Train, ShieldCheck, ArrowRight, Heart } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
 
 export default function Home() {
@@ -126,12 +126,26 @@ export default function Home() {
           <div className="mx-auto max-w-xl px-4 sm:px-6 text-center">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-fg">准备好加入了吗？</h2>
             <p className="mt-2 text-muted">加入 QQ 群，获取白名单，开始你的城市建造之旅</p>
-            <Link
-                to="/join"
-                className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-semibold rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-transform"
-            >
-              立即加入 <ArrowRight size={16} weight="bold" />
-            </Link>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
+              <Link
+                  to="/join"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-semibold rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-transform"
+              >
+                立即加入 <ArrowRight size={16} weight="bold" />
+              </Link>
+              <a
+                  href="https://ifdian.net/a/YanyangUG"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-fg text-bg font-semibold rounded-btn text-sm hover:bg-muted active:scale-[0.97] transition-transform"
+              >
+                <Heart size={16} weight="fill" />
+                爱发电支持我们
+              </a>
+            </div>
+            <p className="mt-4 text-xs text-muted">
+              喜欢晏阳？欢迎在爱发电为服务器“发电”，每一份支持都是我们继续建设城市的动力。
+            </p>
           </div>
         </section>
       </>
