@@ -7,7 +7,7 @@ export function corsHeaders(request: Request): Record<string, string> {
     'http://localhost:4173'
   ]
 
-  const isAllowed = allowed.some(o => origin === o || origin.startsWith(o))
+  const isAllowed = allowed.includes(origin)
 
   return {
     'Access-Control-Allow-Origin': isAllowed ? origin : 'https://www.yanyn.cn',

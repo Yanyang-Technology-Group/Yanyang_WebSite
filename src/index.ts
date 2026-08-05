@@ -14,6 +14,7 @@ const KV_KEY_BAN_LIST = 'ban:list'
 const KV_KEY_RATE_PREFIX = 'rate:'
 const KV_KEY_LOG_PREFIX = 'log:'
 const KV_KEY_LOG_LIST = 'log:list'
+const ALLOWED_MAP_ORIGINS = ['umap.odn.cc', 'ymap.odn.cc']
 
 interface RequestLog {
   id: string
@@ -396,6 +397,10 @@ async function handleAdminUpdateBan(request: Request, env: Env): Promise<Respons
       return errorResponse('请提供有效的封禁时长（分钟）', 400, request)
     }
 
+    if (!env.KV) {
+      return errorResponse('KV 存储未配置', 500, request)
+    }
+
     const key = `${KV_KEY_BAN_PREFIX}${ip}`
     const existing = await env.KV.get(key, 'json') as { banTime: number; reason: string } | null
 
@@ -474,7 +479,7 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
     console.log('REPO_NAME:', env.REPO_NAME)
 
     const { password } = await request.json() as { password: string }
-    console.log('收到密码:', password)
+    console.log('收到密码验证请求')
 
     if (!password || typeof password !== 'string') {
       return errorResponse('请提供密码', 400, request)
@@ -486,7 +491,7 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
 
     console.log('开始获取 GitHub 数据')
     const passwordInfo = await verifyPassword(password, env)
-    console.log('密码验证结果:', passwordInfo)
+    console.log('密码验证结果:', passwordInfo ? `匹配成功，类型: ${passwordInfo.type}` : '未匹配')
 
     if (!passwordInfo) {
       console.log('密码不匹配')
@@ -684,7 +689,22 @@ async function handleMapProxy(request: Request, env: Env): Promise<Response> {
       return new Response('缺少目标地址', { status: 400 })
     }
 
-    const response = await fetch(target, {
+    let targetUrl: URL
+    try {
+      targetUrl = new URL(target)
+    } catch {
+      return new Response('目标地址无效', { status: 400 })
+    }
+
+    if (targetUrl.protocol !== 'http:' && targetUrl.protocol !== 'https:') {
+      return new Response('仅支持 http/https 目标', { status: 400 })
+    }
+
+    if (!ALLOWED_MAP_ORIGINS.includes(targetUrl.hostname)) {
+      return new Response('目标地址不在允许列表中', { status: 403 })
+    }
+
+    const response = await fetch(targetUrl.href, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -699,7 +719,7 @@ async function handleMapProxy(request: Request, env: Env): Promise<Response> {
     let html = await response.text()
 
     const proxyBase = `${url.origin}${url.pathname}?target=`
-    const targetOrigin = new URL(target).origin
+    const targetOrigin = targetUrl.origin
 
     html = html.replace(/(src|href)=["'](?!https?:\/\/)(\/?[^"']*)["']/g, (match, attr, path) => {
       const absoluteUrl = path.startsWith('/') ? `${targetOrigin}${path}` : `${targetOrigin}/${path}`

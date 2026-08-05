@@ -1,3 +1,7 @@
-/src/
-/package.json
-/wrangler.toml
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+.idea/
+.DS_Store
+*.log
