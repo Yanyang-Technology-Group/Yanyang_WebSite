@@ -17,7 +17,7 @@ export default function RailwayMap() {
         </div>
         <div className="w-full h-[calc(100vh-150px)] rounded-container overflow-hidden border border-border bg-surface">
           <iframe
-            src={`${API_BASE_URL}/api/map/proxy?target=http://umap.odn.cc`}
+            src={`${API_BASE_URL}/api/map/proxy?target=http://103.40.14.23:50854`}
             className="w-full h-full border-0"
             title="线路图"
             allowFullScreen
