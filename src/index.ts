@@ -3,16 +3,16 @@ import { getDownkey, getModpacks, getJava, getLaunchers, verifyPassword } from '
 import { simpleJWT, verifySimpleJWT } from './services/jwt.js'
 import { Env, PasswordEntry, DownloadItem } from './types'
 
-const TOKEN_EXPIRY = 3600000 // 1 小时
+const TOKEN_EXPIRY = 3600000
 
-// 发送记录（内存缓存，Worker 重启会重置）
-// 结构：email -> { count, firstSendTime, ip }
 const sendRecords = new Map<string, { count: number; firstSendTime: number; ip: string }>()
-// IP 封禁记录：ip -> { banTime: number, reason: string }
-const bannedIPs = new Map<string, { banTime: number; reason: string }>()
-const BAN_DURATION = 24 * 60 * 60 * 1000 // 1 天封禁
-const MAX_ATTEMPTS = 5 // 最大尝试次数
-const RATE_LIMIT_WINDOW = 60000 // 60 秒
+
+const BAN_DURATION = 24 * 60 * 60 * 1000
+const MAX_ATTEMPTS = 5
+const RATE_LIMIT_WINDOW = 60000
+
+const KV_KEY_BAN_PREFIX = 'ban:'
+const KV_KEY_BAN_LIST = 'ban:list'
 
 function filterByType<T extends { public?: boolean }>(items: T[], passwordType: string): T[] {
   if (passwordType === 'full') {
@@ -85,7 +85,6 @@ async function verifySignedLink(link: string, token: string, signature: string, 
     return { valid: false, reason: '签名无效' }
   }
 
-  // 检查 token 是否已被使用（使用 KV）
   if (env.KV) {
     const used = await env.KV.get(`used_token:${token}`)
     if (used) {
@@ -99,6 +98,240 @@ async function verifySignedLink(link: string, token: string, signature: string, 
 async function markTokenUsed(token: string, env: Env): Promise<void> {
   if (env.KV) {
     await env.KV.put(`used_token:${token}`, '1', { expirationTtl: 3600 })
+  }
+}
+
+async function isIPBanned(ip: string, env: Env): Promise<{ banned: boolean; remaining?: number; reason?: string }> {
+  if (!env.KV) return { banned: false }
+
+  const key = `${KV_KEY_BAN_PREFIX}${ip}`
+  const data = await env.KV.get(key, 'json') as { banTime: number; reason: string } | null
+
+  if (!data) return { banned: false }
+
+  const elapsed = Date.now() - data.banTime
+  if (elapsed >= BAN_DURATION) {
+    await env.KV.delete(key)
+    return { banned: false }
+  }
+
+  const remaining = Math.ceil((BAN_DURATION - elapsed) / 1000)
+  return { banned: true, remaining, reason: data.reason }
+}
+
+async function banIP(ip: string, reason: string, env: Env): Promise<void> {
+  if (!env.KV) return
+
+  const key = `${KV_KEY_BAN_PREFIX}${ip}`
+  await env.KV.put(key, JSON.stringify({
+    banTime: Date.now(),
+    reason: reason
+  }), { expirationTtl: Math.ceil(BAN_DURATION / 1000) })
+}
+
+async function unbanIP(ip: string, env: Env): Promise<boolean> {
+  if (!env.KV) return false
+
+  const key = `${KV_KEY_BAN_PREFIX}${ip}`
+  const exists = await env.KV.get(key)
+  if (!exists) return false
+
+  await env.KV.delete(key)
+  return true
+}
+
+async function getBannedList(env: Env): Promise<{ ip: string; banTime: number; reason: string; remaining: number }[]> {
+  if (!env.KV) return []
+
+  const list: { ip: string; banTime: number; reason: string; remaining: number }[] = []
+  const now = Date.now()
+
+  const indexData = await env.KV.get(KV_KEY_BAN_LIST, 'json') as string[] | null
+  if (!indexData) return []
+
+  for (const ip of indexData) {
+    const key = `${KV_KEY_BAN_PREFIX}${ip}`
+    const data = await env.KV.get(key, 'json') as { banTime: number; reason: string } | null
+    if (data) {
+      const elapsed = now - data.banTime
+      if (elapsed < BAN_DURATION) {
+        list.push({
+          ip,
+          banTime: data.banTime,
+          reason: data.reason,
+          remaining: Math.ceil((BAN_DURATION - elapsed) / 1000)
+        })
+      } else {
+        await env.KV.delete(key)
+      }
+    }
+  }
+
+  const activeIPs = list.map(item => item.ip)
+  await env.KV.put(KV_KEY_BAN_LIST, JSON.stringify(activeIPs))
+
+  return list
+}
+
+async function addToBanList(ip: string, env: Env): Promise<void> {
+  if (!env.KV) return
+
+  const indexData = await env.KV.get(KV_KEY_BAN_LIST, 'json') as string[] | null
+  const list = indexData || []
+  if (!list.includes(ip)) {
+    list.push(ip)
+    await env.KV.put(KV_KEY_BAN_LIST, JSON.stringify(list))
+  }
+}
+
+async function removeFromBanList(ip: string, env: Env): Promise<void> {
+  if (!env.KV) return
+
+  const indexData = await env.KV.get(KV_KEY_BAN_LIST, 'json') as string[] | null
+  if (!indexData) return
+
+  const list = indexData.filter(item => item !== ip)
+  await env.KV.put(KV_KEY_BAN_LIST, JSON.stringify(list))
+}
+
+async function verifyAdmin(password: string, env: Env): Promise<boolean> {
+  try {
+    const url = `https://api.github.com/repos/${env.REPO_OWNER}/${env.REPO_NAME}/contents/adminkey.json`
+    const res = await fetch(url, {
+      headers: {
+        'Authorization': `token ${env.GITHUB_TOKEN}`,
+        'User-Agent': 'Cloudflare-Worker',
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    })
+    if (!res.ok) return false
+    const data: any = await res.json()
+    const binary = atob(data.content)
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i)
+    }
+    const decoder = new TextDecoder('utf-8')
+    const text = decoder.decode(bytes)
+    const config = JSON.parse(text)
+    return config.admin_password === password
+  } catch {
+    return false
+  }
+}
+
+async function handleAdminLogin(request: Request, env: Env): Promise<Response> {
+  try {
+    const { password } = await request.json() as { password: string }
+    if (!password) {
+      return errorResponse('请提供密码', 400, request)
+    }
+
+    const valid = await verifyAdmin(password, env)
+    if (!valid) {
+      return errorResponse('密码错误', 401, request)
+    }
+
+    const token = await simpleJWT({
+      admin: true,
+      exp: Date.now() + 3600000,
+      iat: Date.now()
+    }, env.JWT_SECRET)
+
+    return jsonResponse({ success: true, token }, 200, request)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return errorResponse('登录失败: ' + errorMessage, 500, request)
+  }
+}
+
+async function handleGetBannedList(request: Request, env: Env): Promise<Response> {
+  try {
+    const auth = request.headers.get('Authorization')
+    if (!auth || !auth.startsWith('Bearer ')) {
+      return errorResponse('未授权', 401, request)
+    }
+    const token = auth.replace('Bearer ', '')
+    const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
+    if (!decoded || !decoded.admin) {
+      return errorResponse('未授权', 401, request)
+    }
+
+    const list = await getBannedList(env)
+    return jsonResponse({ success: true, data: list }, 200, request)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return errorResponse('获取列表失败: ' + errorMessage, 500, request)
+  }
+}
+
+async function handleAdminUnban(request: Request, env: Env): Promise<Response> {
+  try {
+    const auth = request.headers.get('Authorization')
+    if (!auth || !auth.startsWith('Bearer ')) {
+      return errorResponse('未授权', 401, request)
+    }
+    const token = auth.replace('Bearer ', '')
+    const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
+    if (!decoded || !decoded.admin) {
+      return errorResponse('未授权', 401, request)
+    }
+
+    const { ip } = await request.json() as { ip: string }
+    if (!ip) {
+      return errorResponse('请提供 IP 地址', 400, request)
+    }
+
+    const success = await unbanIP(ip, env)
+    if (success) {
+      await removeFromBanList(ip, env)
+      return jsonResponse({ success: true, message: `IP ${ip} 已解封` }, 200, request)
+    } else {
+      return jsonResponse({ success: false, message: `IP ${ip} 不在封禁列表中` }, 404, request)
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return errorResponse('解封失败: ' + errorMessage, 500, request)
+  }
+}
+
+async function handleAdminUpdateBan(request: Request, env: Env): Promise<Response> {
+  try {
+    const auth = request.headers.get('Authorization')
+    if (!auth || !auth.startsWith('Bearer ')) {
+      return errorResponse('未授权', 401, request)
+    }
+    const token = auth.replace('Bearer ', '')
+    const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
+    if (!decoded || !decoded.admin) {
+      return errorResponse('未授权', 401, request)
+    }
+
+    const { ip, duration } = await request.json() as { ip: string; duration: number }
+    if (!ip) {
+      return errorResponse('请提供 IP 地址', 400, request)
+    }
+    if (!duration || duration < 1) {
+      return errorResponse('请提供有效的封禁时长（分钟）', 400, request)
+    }
+
+    const key = `${KV_KEY_BAN_PREFIX}${ip}`
+    const existing = await env.KV.get(key, 'json') as { banTime: number; reason: string } | null
+
+    await env.KV.put(key, JSON.stringify({
+      banTime: Date.now(),
+      reason: existing?.reason || `管理员设置封禁 ${duration} 分钟`
+    }), { expirationTtl: duration * 60 })
+
+    await addToBanList(ip, env)
+
+    return jsonResponse({
+      success: true,
+      message: `IP ${ip} 封禁时间已更新为 ${duration} 分钟`
+    }, 200, request)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return errorResponse('更新封禁失败: ' + errorMessage, 500, request)
   }
 }
 
@@ -473,28 +706,21 @@ async function verifyCap(token: string): Promise<boolean> {
 
 async function handleFindPassword(request: Request, env: Env): Promise<Response> {
   try {
-    // 获取客户端 IP
     const clientIP = request.headers.get('CF-Connecting-IP') ||
         request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ||
         'unknown'
 
-    // 检查 IP 是否被封禁
-    const banned = bannedIPs.get(clientIP)
-    if (banned) {
-      const remaining = Math.ceil((banned.banTime + BAN_DURATION - Date.now()) / 1000)
-      if (remaining > 0) {
-        const hours = Math.ceil(remaining / 3600)
-        const minutes = Math.ceil((remaining % 3600) / 60)
-        const timeStr = hours > 0 ? `${hours} 小时 ${minutes} 分钟` : `${minutes} 分钟`
-        return errorResponse(
-            `您的 IP 已被暂时封禁（剩余 ${timeStr}），请联系管理员申诉解封\n管理员邮箱：feedback@yanyn.cn`,
-            403,
-            request
-        )
-      } else {
-        // 封禁过期，移除记录
-        bannedIPs.delete(clientIP)
-      }
+    const banCheck = await isIPBanned(clientIP, env)
+    if (banCheck.banned) {
+      const remaining = banCheck.remaining || 0
+      const hours = Math.floor(remaining / 3600)
+      const minutes = Math.ceil((remaining % 3600) / 60)
+      const timeStr = hours > 0 ? `${hours} 小时 ${minutes} 分钟` : `${minutes} 分钟`
+      return errorResponse(
+          `您的 IP 已被暂时封禁（剩余 ${timeStr}），请联系管理员申诉解封\n管理员邮箱：feedback@yanyn.cn`,
+          403,
+          request
+      )
     }
 
     const { email, cap_token } = await request.json() as { email: string; cap_token: string }
@@ -511,20 +737,15 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
     const now = Date.now()
     const record = sendRecords.get(email)
 
-    // 检查发送限制
     if (record) {
-      // 同一邮箱 60 秒内只能发一次
       if (now - record.firstSendTime < RATE_LIMIT_WINDOW) {
         const remaining = Math.ceil((RATE_LIMIT_WINDOW - (now - record.firstSendTime)) / 1000)
         return errorResponse(`请等待 ${remaining} 秒后再试`, 429, request)
       }
 
-      // 连续 5 次失败 → 封禁 IP 1 天
       if (record.count >= MAX_ATTEMPTS) {
-        bannedIPs.set(clientIP, {
-          banTime: now,
-          reason: '连续5次密码找回失败，触发安全防护机制'
-        })
+        await banIP(clientIP, '连续5次密码找回失败，触发安全防护机制', env)
+        await addToBanList(clientIP, env)
         return errorResponse(
             '您已被暂时封禁（1天），请联系管理员申诉解封\n管理员邮箱：feedback@yanyn.cn',
             403,
@@ -532,16 +753,12 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
         )
       }
 
-      // 正常计数
       if (now - record.firstSendTime >= RATE_LIMIT_WINDOW) {
-        // 超过 60 秒，重置计数
         sendRecords.set(email, { count: 1, firstSendTime: now, ip: clientIP })
       } else {
-        // 60 秒内再次请求，计数 +1
         sendRecords.set(email, { count: record.count + 1, firstSendTime: record.firstSendTime, ip: clientIP })
       }
     } else {
-      // 首次请求
       sendRecords.set(email, { count: 1, firstSendTime: now, ip: clientIP })
     }
 
@@ -550,14 +767,11 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
     const found = passwords.find(p => p.email === email)
 
     if (!found) {
-      // 邮箱不存在也算一次失败尝试
       return errorResponse('邮箱未注册', 404, request)
     }
 
-    // 发送邮件到邮箱
     await sendPasswordEmail(email, found.password, found.label, env)
 
-    // 发送成功后重置该邮箱的失败计数
     sendRecords.delete(email)
 
     return jsonResponse({
@@ -573,7 +787,6 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
 }
 
 async function sendPasswordEmail(to: string, password: string, label: string, env: Env): Promise<void> {
-  // 优先使用 Resend Token 发送邮件
   if (env.RESEND_TOKEN) {
     const sendRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -615,9 +828,7 @@ async function sendPasswordEmail(to: string, password: string, label: string, en
     return
   }
 
-  // 后备方案：使用 CloudMail API（如果配置了账号密码）
   if (env.CLOUDMAIL_EMAIL && env.CLOUDMAIL_PASSWORD) {
-    // 登录 CloudMail 获取 token
     const loginRes = await fetch('https://e-mail.yanyn.cn/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -638,7 +849,6 @@ async function sendPasswordEmail(to: string, password: string, label: string, en
       throw new Error('CloudMail 登录失败：未获取到 token')
     }
 
-    // 发送邮件
     const sendRes = await fetch('https://e-mail.yanyn.cn/api/email/send', {
       method: 'POST',
       headers: {
@@ -679,7 +889,6 @@ async function sendPasswordEmail(to: string, password: string, label: string, en
     return
   }
 
-  // 如果都没有配置，记录日志但不报错（测试模式）
   console.log(`[测试模式] 密码 ${password} 应该发送到 ${to}`)
 }
 
@@ -734,6 +943,19 @@ export default {
 
     if (path === '/api/map/proxy') {
       return handleMapProxy(request, env)
+    }
+
+    if (path === '/api/admin/login' && request.method === 'POST') {
+      return handleAdminLogin(request, env)
+    }
+    if (path === '/api/admin/banned' && request.method === 'GET') {
+      return handleGetBannedList(request, env)
+    }
+    if (path === '/api/admin/unban' && request.method === 'POST') {
+      return handleAdminUnban(request, env)
+    }
+    if (path === '/api/admin/update-ban' && request.method === 'POST') {
+      return handleAdminUpdateBan(request, env)
     }
 
     return errorResponse('API Not Found', 404, request)
