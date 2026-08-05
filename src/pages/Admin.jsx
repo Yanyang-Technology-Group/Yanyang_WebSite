@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Shield, Lock, Unlock, RefreshCw, Clock, XCircle } from '@phosphor-icons/react'
+import { Shield, Lock, Unlock, ArrowClockwise, Clock, XCircle } from '@phosphor-icons/react'
 import { API_BASE_URL } from '../config'
 
 function getCookie(name) {
@@ -227,7 +227,7 @@ export default function Admin() {
                             onClick={() => { const token = getCookie('admin_token'); if (token) fetchBannedList(token) }}
                             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted hover:text-fg border border-border rounded-btn hover:bg-surface transition-all"
                         >
-                            <RefreshCw size={16} weight="bold" />
+                            <ArrowClockwise size={16} weight="bold" />
                             刷新
                         </button>
                         <button
