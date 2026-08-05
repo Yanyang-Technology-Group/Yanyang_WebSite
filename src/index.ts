@@ -15,7 +15,13 @@ const KV_KEY_BAN_LIST = 'ban:list'
 const KV_KEY_RATE_PREFIX = 'rate:'
 const KV_KEY_LOG_PREFIX = 'log:'
 const KV_KEY_LOG_LIST = 'log:list'
-const ALLOWED_MAP_ORIGINS = ['umap.odn.cc', 'ymap.odn.cc']
+const ALLOWED_MAP_ORIGINS = ['umap.odn.cc', 'ymap.odn.cc', '103.40.14.23']
+const MAP_PROXY_PREFIX = '/api/map/proxy'
+const MAP_TARGET_COOKIE = 'map_target'
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
 
 interface RequestLog {
   id: string
@@ -684,25 +690,46 @@ async function handleProxyDownload(request: Request, env: Env): Promise<Response
 async function handleMapProxy(request: Request, env: Env): Promise<Response> {
   try {
     const url = new URL(request.url)
+    const rest = url.pathname.slice(MAP_PROXY_PREFIX.length).replace(/^\/+/, '')
     const target = url.searchParams.get('target')
 
-    if (!target) {
+    // 目标地址：首页请求用 query 参数，子资源请求（相对路径）从 Cookie 读取
+    let baseUrl: URL | null = null
+    if (target) {
+      try {
+        baseUrl = new URL(target)
+      } catch {
+        return new Response('目标地址无效', { status: 400 })
+      }
+    } else {
+      const cookie = request.headers.get('Cookie') || ''
+      const match = cookie.match(new RegExp(`${MAP_TARGET_COOKIE}=([^;]+)`))
+      if (match) {
+        try {
+          baseUrl = new URL(decodeURIComponent(match[1]))
+        } catch {}
+      }
+    }
+
+    if (!baseUrl) {
       return new Response('缺少目标地址', { status: 400 })
     }
 
-    let targetUrl: URL
-    try {
-      targetUrl = new URL(target)
-    } catch {
-      return new Response('目标地址无效', { status: 400 })
-    }
-
-    if (targetUrl.protocol !== 'http:' && targetUrl.protocol !== 'https:') {
+    if (baseUrl.protocol !== 'http:' && baseUrl.protocol !== 'https:') {
       return new Response('仅支持 http/https 目标', { status: 400 })
     }
 
-    if (!ALLOWED_MAP_ORIGINS.includes(targetUrl.hostname)) {
+    if (!ALLOWED_MAP_ORIGINS.includes(baseUrl.hostname)) {
       return new Response('目标地址不在允许列表中', { status: 403 })
+    }
+
+    const baseHref = baseUrl.href.endsWith('/') ? baseUrl.href : baseUrl.href + '/'
+
+    // 拼接上游地址：首页取 base/，子资源取 base/rest（保留请求自带的查询参数）
+    let fetchUrl = baseHref
+    if (rest) fetchUrl += rest
+    if (!target && url.search) {
+      fetchUrl += url.search
     }
 
     // 给上游请求加 15 秒超时，避免目标站点无响应时整个请求卡死变成空 500
@@ -711,7 +738,7 @@ async function handleMapProxy(request: Request, env: Env): Promise<Response> {
 
     let response: Response
     try {
-      response = await fetch(targetUrl.href, {
+      response = await fetch(fetchUrl, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -731,9 +758,14 @@ async function handleMapProxy(request: Request, env: Env): Promise<Response> {
     }
 
     const contentType = response.headers.get('content-type') || ''
+    const isHtml = contentType.includes('text/html')
+    const isTextual = isHtml ||
+        contentType.includes('javascript') ||
+        contentType.includes('json') ||
+        contentType.includes('text/css')
 
-    // 非 HTML 资源（CSS/JS/图片/瓦片等）直接透传，不做文本改写，避免损坏二进制内容
-    if (!contentType.includes('text/html')) {
+    // 二进制资源（瓦片/图片等）直接透传，不做文本改写，避免损坏二进制内容
+    if (!isTextual) {
       return new Response(response.body, {
         status: response.status,
         headers: {
@@ -744,25 +776,39 @@ async function handleMapProxy(request: Request, env: Env): Promise<Response> {
       })
     }
 
-    let html = await response.text()
+    let text = await response.text()
 
-    const proxyBase = `${url.origin}${url.pathname}?target=`
-    const targetOrigin = targetUrl.origin
+    const targetOrigin = baseUrl.origin
+    const originPattern = new RegExp(escapeRegExp(targetOrigin), 'g')
 
-    html = html.replace(/(src|href)=["'](?!https?:\/\/)(\/?[^"']*)["']/g, (match, attr, path) => {
-      const absoluteUrl = path.startsWith('/') ? `${targetOrigin}${path}` : `${targetOrigin}/${path}`
-      return `${attr}="${proxyBase}${encodeURIComponent(absoluteUrl)}"`
-    })
+    if (isHtml) {
+      const proxyQueryBase = `${url.origin}${MAP_PROXY_PREFIX}?target=${encodeURIComponent(baseHref)}`
+      // 重写 HTML 中的相对 src/href 为带 target 参数的绝对代理地址
+      text = text.replace(/(src|href)=["'](?!https?:\/\/)(\/?[^"']*)["']/g, (match, attr, path) => {
+        const absoluteUrl = path.startsWith('/') ? `${targetOrigin}${path}` : `${baseHref}${path}`
+        return `${attr}="${proxyQueryBase}${encodeURIComponent(absoluteUrl)}"`
+      })
+      // HTML 中写死的绝对地址也改写为代理前缀（子路径由 Cookie 定位目标）
+      text = text.replace(originPattern, `${url.origin}${MAP_PROXY_PREFIX}`)
+    } else {
+      // JS/CSS/JSON：把绝对 origin 引用改写成代理前缀，避免混入 http 资源被浏览器拦截
+      text = text.replace(originPattern, `${url.origin}${MAP_PROXY_PREFIX}`)
+    }
 
-    html = html.replace(new RegExp(targetOrigin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), `${url.origin}${url.pathname}?target=${encodeURIComponent(targetOrigin)}`)
+    const headers: Record<string, string> = {
+      'Content-Type': contentType || 'text/html',
+      'Cache-Control': isHtml ? 'no-cache, no-store, must-revalidate' : 'public, max-age=3600',
+      'X-Content-Type-Options': 'nosniff'
+    }
 
-    return new Response(html, {
+    // 首页响应时写入 Cookie，后续相对路径子请求据此找到目标地址
+    if (isHtml && !rest) {
+      headers['Set-Cookie'] = `${MAP_TARGET_COOKIE}=${encodeURIComponent(baseHref)}; Path=${MAP_PROXY_PREFIX}; Max-Age=3600; SameSite=Lax`
+    }
+
+    return new Response(text, {
       status: response.status,
-      headers: {
-        'Content-Type': contentType || 'text/html',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'X-Content-Type-Options': 'nosniff'
-      }
+      headers
     })
 
   } catch (error) {
@@ -1307,7 +1353,7 @@ export default {
       return handleProxyDownload(request, env)
     }
 
-    if (path === '/api/map/proxy') {
+    if (path.startsWith('/api/map/proxy')) {
       return handleMapProxy(request, env)
     }
 
