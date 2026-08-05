@@ -8,6 +8,7 @@ const TOKEN_EXPIRY = 3600000
 const BAN_DURATION = 24 * 60 * 60 * 1000
 const MAX_ATTEMPTS = 5
 const RATE_LIMIT_WINDOW = 60000
+const COUNT_RESET_WINDOW = 30 * 60 * 1000
 
 const KV_KEY_BAN_PREFIX = 'ban:'
 const KV_KEY_BAN_LIST = 'ban:list'
@@ -923,7 +924,7 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
 
     const saveRateRecord = async () => {
       if (env.KV && record) {
-        await env.KV.put(rateKey, JSON.stringify(record), { expirationTtl: 120 })
+        await env.KV.put(rateKey, JSON.stringify(record), { expirationTtl: Math.ceil(COUNT_RESET_WINDOW / 1000) })
       }
     }
 
@@ -952,8 +953,8 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
       )
     }
 
-    // 每个邮箱 60 秒一个窗口：窗口内每次尝试计数，达到 5 次直接封禁 IP
-    if (!record || now - record.firstSendTime >= RATE_LIMIT_WINDOW) {
+    // 每个邮箱 30 分钟内累计尝试次数，达到 5 次直接封禁 IP
+    if (!record || now - record.firstSendTime >= COUNT_RESET_WINDOW) {
       record = { count: 1, firstSendTime: now, lastSendAt: null, ip: clientIP }
     } else {
       record.count += 1
