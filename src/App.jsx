@@ -66,6 +66,7 @@ export default function App() {
                         <Route path="/verify" element={<Verify />} />
                         <Route path="/verify/password" element={<Verify />} />
                         <Route path="/verify/password/success" element={<Verify />} />
+                        <Route path="/verify/password/error" element={<Verify />} />
                         <Route path="/backend/api/admin" element={<Admin />} />
                         <Route path="/maps/backend-iframe/satellite" element={<SatelliteMap />} />
                         <Route path="/maps/backend-iframe/railway" element={<RailwayMap />} />

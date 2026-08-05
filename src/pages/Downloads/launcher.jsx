@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Rocket, ArrowLeft, ArrowRight, FileText } from '@phosphor-icons/react'
 import ScrollReveal from '../../components/ScrollReveal'
-import { API_ENDPOINTS } from '../../config'
+import { API_BASE_URL, API_ENDPOINTS } from '../../config'
 import { fetchWithAuth } from '../../utils/api'
 import { getToken } from '../../utils/cookie'
 
@@ -30,6 +30,7 @@ export default function LauncherList() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [downloading, setDownloading] = useState(null)
 
   useEffect(() => {
     const token = getToken()
@@ -53,6 +54,36 @@ export default function LauncherList() {
       setError(result.message || '加载失败，请刷新重试')
     }
     setLoading(false)
+  }
+
+  async function handleDownload(item) {
+    const token = getToken()
+    if (!token) {
+      navigate('/verify', { state: { from: window.location.pathname } })
+      return
+    }
+
+    setDownloading(item.id)
+
+    try {
+      const res = await fetch(`${API_ENDPOINTS.oneTime}?id=${encodeURIComponent(item.name)}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        const redirectUrl = `${API_BASE_URL}/api/download/redirect?link=${encodeURIComponent(item.link)}&token=${data.token}&sig=${encodeURIComponent(data.signature)}`
+        window.open(redirectUrl, '_blank')
+      } else {
+        alert(data.message || '生成下载链接失败')
+      }
+    } catch (err) {
+      console.error('下载失败:', err)
+      alert('网络错误，请稍后重试')
+    } finally {
+      setDownloading(null)
+    }
   }
 
   function getGroups() {
@@ -158,15 +189,14 @@ export default function LauncherList() {
                                       </div>
                                     </div>
                                   </div>
-                                  <a
-                                      href={item.link}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-btn hover:bg-primary/90 active:scale-[0.97] transition-all"
+                                  <button
+                                      onClick={() => handleDownload(item)}
+                                      disabled={downloading === item.id}
+                                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-btn hover:bg-primary/90 active:scale-[0.97] transition-all disabled:opacity-50"
                                   >
-                                    下载
+                                    {downloading === item.id ? '生成中...' : '下载'}
                                     <ArrowRight size={16} weight="bold" />
-                                  </a>
+                                  </button>
                                 </div>
                               </div>
                           ))}

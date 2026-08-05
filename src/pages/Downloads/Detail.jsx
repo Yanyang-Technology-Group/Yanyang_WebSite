@@ -1,6 +1,6 @@
 // pages/Downloads/Detail.jsx
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { Package, Coffee, Rocket, ArrowLeft, Download, Warning } from '@phosphor-icons/react'
 import ScrollReveal from '../../components/ScrollReveal'
 import { API_BASE_URL, API_ENDPOINTS } from '../../config'
@@ -39,9 +39,17 @@ const CONFIG = {
     }
 }
 
+const TYPE_MAP = {
+    modpacks: 'modpack',
+    javas: 'java',
+    launchers: 'launcher',
+}
+
 export default function Detail() {
     const navigate = useNavigate()
-    const { type, id } = useParams()
+    const location = useLocation()
+    const { id } = useParams()
+    const type = TYPE_MAP[location.pathname.split('/')[2]]
     const config = CONFIG[type]
     const Icon = config?.icon
 
@@ -96,12 +104,12 @@ export default function Detail() {
             const data = await res.json()
 
             if (data.success) {
-                if (type === 'modpack') {
+                if (type === 'modpack' || type === 'launcher') {
                     const redirectUrl = `${API_BASE_URL}/api/download/redirect?link=${encodeURIComponent(dl.link)}&token=${data.token}&sig=${encodeURIComponent(data.signature)}`
                     window.open(redirectUrl, '_blank')
                 } else {
-                    const ext = dl.size || '.zip'
-                    const filename = `${dl.name}${ext}`
+                    const extMatch = dl.link?.match(/\.([a-zA-Z0-9]+)(?:[?#]|$)/)
+                    const filename = `${dl.name}${extMatch ? `.${extMatch[1]}` : '.zip'}`
                     const proxyUrl = `${API_BASE_URL}/api/download/proxy?link=${encodeURIComponent(dl.link)}&token=${data.token}&sig=${encodeURIComponent(data.signature)}&filename=${encodeURIComponent(filename)}`
                     const a = document.createElement('a')
                     a.href = proxyUrl
@@ -165,7 +173,9 @@ export default function Detail() {
         )
     }
 
-    const downloads = item.downloads || []
+    const downloads = item.downloads?.length
+        ? item.downloads
+        : (item.link ? [{ name: item.name, link: item.link, size: item.size }] : [])
 
     return (
         <>

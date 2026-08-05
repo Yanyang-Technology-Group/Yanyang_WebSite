@@ -14,11 +14,12 @@ export default function Verify() {
   const [email, setEmail] = useState('')
   const [capToken, setCapToken] = useState('')
   const [capLoaded, setCapLoaded] = useState(false)
-  const [success, setSuccess] = useState('')
+  const [countdown, setCountdown] = useState(0)
 
   const from = location.state?.from || '/download'
   const isPasswordPage = location.pathname === '/verify/password'
   const isSuccessPage = location.pathname === '/verify/password/success'
+  const isErrorPage = location.pathname === '/verify/password/error'
 
   useEffect(() => {
     if (isPasswordPage) {
@@ -26,19 +27,15 @@ export default function Verify() {
       script.src = '/cap.min.js'
       script.onload = () => {
         setCapLoaded(true)
-        console.log('Cap 加载成功')
-
         const checkInterval = setInterval(() => {
           const widget = document.querySelector('cap-widget')
           if (widget && widget.token) {
-            console.log('获取到 token:', widget.token)
             setCapToken(widget.token)
             const input = document.querySelector('[name="cap-response"]')
             if (input) input.value = widget.token
             clearInterval(checkInterval)
           }
         }, 500)
-
         setTimeout(() => clearInterval(checkInterval), 10000)
       }
       script.onerror = () => {
@@ -47,6 +44,25 @@ export default function Verify() {
       document.body.appendChild(script)
     }
   }, [isPasswordPage])
+
+  useEffect(() => {
+    const lock = localStorage.getItem('find_password_lock')
+    if (lock) {
+      const remaining = Math.ceil((parseInt(lock) - Date.now()) / 1000)
+      if (remaining > 0) {
+        setCountdown(remaining)
+      } else {
+        localStorage.removeItem('find_password_lock')
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [countdown])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -107,7 +123,6 @@ export default function Verify() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    setSuccess('')
 
     if (!capToken) {
       setError('请完成人机验证')
@@ -126,14 +141,78 @@ export default function Verify() {
 
       if (res.ok && data.success) {
         navigate('/verify/password/success', { replace: true })
-      } else {
-        setError(data.message || '发送失败')
-        setLoading(false)
+        return
       }
+
+      if (res.status === 403) {
+        navigate('/verify/password/error', { replace: true })
+        return
+      }
+
+      if (res.status === 429) {
+        const match = data.message.match(/(\d+)\s*秒/)
+        let seconds = 60
+        if (match) {
+          seconds = parseInt(match[1])
+        }
+        const expireTime = Date.now() + seconds * 1000
+        localStorage.setItem('find_password_lock', expireTime.toString())
+        setCountdown(seconds)
+        setError(data.message || '请求过于频繁，请稍后重试')
+        setLoading(false)
+        return
+      }
+
+      setError(data.message || '发送失败')
     } catch (err) {
       setError('网络错误，请稍后重试')
+    } finally {
       setLoading(false)
     }
+  }
+
+  // ========== 错误页面 ==========
+  if (isErrorPage) {
+    return (
+        <>
+          <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
+            <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
+              <div className="w-20 h-20 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-6">
+                <XCircle size={40} weight="bold" />
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">操作受限</h1>
+              <p className="mt-3 text-muted">您触发了安全防护机制</p>
+            </div>
+          </section>
+
+          <section className="bg-bg pb-section">
+            <div className="mx-auto max-w-2xl px-4 sm:px-6">
+              <div className="bg-surface rounded-container border border-border p-8 sm:p-10 text-center">
+                <div className="w-16 h-16 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-4">
+                  <Lock size={28} weight="bold" />
+                </div>
+                <h2 className="text-xl font-bold text-fg mb-2">您的操作已被限制</h2>
+                <p className="text-muted text-sm mb-2">由于多次密码找回失败，您的 IP 已被暂时封禁。</p>
+                <p className="text-muted text-sm mb-6">如需解封，请联系管理员申诉。</p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <button
+                      onClick={() => navigate('/verify')}
+                      className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white font-semibold rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-transform"
+                  >
+                    返回登录
+                  </button>
+                  <button
+                      onClick={() => navigate('/')}
+                      className="inline-flex items-center gap-2 px-6 py-2.5 text-muted hover:text-fg border border-border rounded-btn text-sm hover:bg-surface transition-all"
+                  >
+                    返回首页
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </>
+    )
   }
 
   // ========== 成功页面 ==========
@@ -252,10 +331,10 @@ export default function Verify() {
 
                     <button
                         type="submit"
-                        disabled={loading || !email}
+                        disabled={loading || !email || countdown > 0}
                         className="w-full py-3 bg-primary text-white font-semibold rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {loading ? '发送中...' : '发送密码到邮箱'}
+                      {countdown > 0 ? `${countdown}秒后可重试` : loading ? '发送中...' : '发送密码到邮箱'}
                     </button>
                   </form>
                 </div>

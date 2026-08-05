@@ -26,7 +26,7 @@ export async function fetchWithAuth(endpoint, token, options = {}) {
         }
 
         const data = await response.json()
-        return { success: true, data }
+        return { success: true, ...data }
     } catch (error) {
         return { success: false, status: 0, message: '网络错误，请检查网络连接后重试' }
     }
