@@ -158,7 +158,6 @@ export default function Verify() {
         const expireTime = Date.now() + seconds * 1000
         localStorage.setItem('find_password_lock', expireTime.toString())
         setCountdown(seconds)
-        setError(data.message || '请求过于频繁，请稍后重试')
         setLoading(false)
         return
       }
@@ -322,7 +321,12 @@ export default function Verify() {
                       </p>
                     </div>
 
-                    {error && (
+                    {countdown > 0 ? (
+                        <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-btn flex items-center gap-2">
+                          <XCircle size={16} weight="bold" />
+                          请等待 {countdown} 秒后再试
+                        </div>
+                    ) : error && (
                         <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-btn flex items-center gap-2">
                           <XCircle size={16} weight="bold" />
                           {error}
