@@ -249,7 +249,7 @@ export default function Verify() {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-fg">输入密码</h2>
-                    <p className="text-sm text-muted">密码为英文或数字</p>
+                    <p className="text-sm text-muted">输入您进入内群的密码</p>
                   </div>
                 </div>
 
