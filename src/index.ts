@@ -5,14 +5,26 @@ import { Env, PasswordEntry, DownloadItem } from './types'
 
 const TOKEN_EXPIRY = 3600000
 
-const sendRecords = new Map<string, { count: number; firstSendTime: number; ip: string }>()
-
 const BAN_DURATION = 24 * 60 * 60 * 1000
 const MAX_ATTEMPTS = 5
 const RATE_LIMIT_WINDOW = 60000
 
 const KV_KEY_BAN_PREFIX = 'ban:'
 const KV_KEY_BAN_LIST = 'ban:list'
+const KV_KEY_RATE_PREFIX = 'rate:'
+const KV_KEY_LOG_PREFIX = 'log:'
+const KV_KEY_LOG_LIST = 'log:list'
+
+interface RequestLog {
+  id: string
+  timestamp: number
+  ip: string
+  path: string
+  method: string
+  status: number
+  email?: string
+  userAgent?: string
+}
 
 function filterByType<T extends { public?: boolean }>(items: T[], passwordType: string): T[] {
   if (passwordType === 'full') {
@@ -194,6 +206,58 @@ async function removeFromBanList(ip: string, env: Env): Promise<void> {
   await env.KV.put(KV_KEY_BAN_LIST, JSON.stringify(list))
 }
 
+async function saveRequestLog(log: Omit<RequestLog, 'id' | 'timestamp'>, env: Env): Promise<void> {
+  if (!env.KV) return
+
+  const id = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
+  const entry: RequestLog = {
+    id,
+    timestamp: Date.now(),
+    ...log
+  }
+
+  await env.KV.put(`${KV_KEY_LOG_PREFIX}${id}`, JSON.stringify(entry), { expirationTtl: 86400 * 7 })
+
+  const indexData = await env.KV.get(KV_KEY_LOG_LIST, 'json') as string[] | null
+  const list = indexData || []
+  list.push(id)
+  if (list.length > 100) {
+    const removed = list.splice(0, list.length - 100)
+    for (const oldId of removed) {
+      await env.KV.delete(`${KV_KEY_LOG_PREFIX}${oldId}`)
+    }
+  }
+  await env.KV.put(KV_KEY_LOG_LIST, JSON.stringify(list))
+}
+
+async function getRequestLogs(env: Env): Promise<RequestLog[]> {
+  if (!env.KV) return []
+
+  const indexData = await env.KV.get(KV_KEY_LOG_LIST, 'json') as string[] | null
+  if (!indexData) return []
+
+  const logs: RequestLog[] = []
+  for (const id of indexData) {
+    const data = await env.KV.get(`${KV_KEY_LOG_PREFIX}${id}`, 'json') as RequestLog | null
+    if (data) {
+      logs.push(data)
+    }
+  }
+  return logs
+}
+
+async function clearRequestLogs(env: Env): Promise<void> {
+  if (!env.KV) return
+
+  const indexData = await env.KV.get(KV_KEY_LOG_LIST, 'json') as string[] | null
+  if (!indexData) return
+
+  for (const id of indexData) {
+    await env.KV.delete(`${KV_KEY_LOG_PREFIX}${id}`)
+  }
+  await env.KV.delete(KV_KEY_LOG_LIST)
+}
+
 async function verifyAdmin(password: string, env: Env): Promise<boolean> {
   try {
     const url = `https://api.github.com/repos/${env.REPO_OWNER}/${env.REPO_NAME}/contents/adminkey.json`
@@ -332,6 +396,46 @@ async function handleAdminUpdateBan(request: Request, env: Env): Promise<Respons
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     return errorResponse('更新封禁失败: ' + errorMessage, 500, request)
+  }
+}
+
+async function handleGetLogs(request: Request, env: Env): Promise<Response> {
+  try {
+    const auth = request.headers.get('Authorization')
+    if (!auth || !auth.startsWith('Bearer ')) {
+      return errorResponse('未授权', 401, request)
+    }
+    const token = auth.replace('Bearer ', '')
+    const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
+    if (!decoded || !decoded.admin) {
+      return errorResponse('未授权', 401, request)
+    }
+
+    const logs = await getRequestLogs(env)
+    return jsonResponse({ success: true, data: logs }, 200, request)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return errorResponse('获取日志失败: ' + errorMessage, 500, request)
+  }
+}
+
+async function handleClearLogs(request: Request, env: Env): Promise<Response> {
+  try {
+    const auth = request.headers.get('Authorization')
+    if (!auth || !auth.startsWith('Bearer ')) {
+      return errorResponse('未授权', 401, request)
+    }
+    const token = auth.replace('Bearer ', '')
+    const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
+    if (!decoded || !decoded.admin) {
+      return errorResponse('未授权', 401, request)
+    }
+
+    await clearRequestLogs(env)
+    return jsonResponse({ success: true, message: '日志已清空' }, 200, request)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return errorResponse('清空日志失败: ' + errorMessage, 500, request)
   }
 }
 
@@ -705,17 +809,32 @@ async function verifyCap(token: string): Promise<boolean> {
 }
 
 async function handleFindPassword(request: Request, env: Env): Promise<Response> {
+  let clientIP = 'unknown'
+  let userAgent = ''
+  let email = ''
+  let statusCode = 200
+
   try {
-    const clientIP = request.headers.get('CF-Connecting-IP') ||
+    clientIP = request.headers.get('CF-Connecting-IP') ||
         request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ||
         'unknown'
+    userAgent = request.headers.get('User-Agent') || ''
 
     const banCheck = await isIPBanned(clientIP, env)
     if (banCheck.banned) {
+      statusCode = 403
       const remaining = banCheck.remaining || 0
       const hours = Math.floor(remaining / 3600)
       const minutes = Math.ceil((remaining % 3600) / 60)
       const timeStr = hours > 0 ? `${hours} 小时 ${minutes} 分钟` : `${minutes} 分钟`
+      await saveRequestLog({
+        ip: clientIP,
+        path: '/api/verify/password',
+        method: 'POST',
+        status: 403,
+        email: email,
+        userAgent: userAgent
+      }, env)
       return errorResponse(
           `您的 IP 已被暂时封禁（剩余 ${timeStr}），请联系管理员申诉解封\n管理员邮箱：feedback@yanyn.cn`,
           403,
@@ -723,29 +842,70 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
       )
     }
 
-    const { email, cap_token } = await request.json() as { email: string; cap_token: string }
+    const { email: reqEmail, cap_token } = await request.json() as { email: string; cap_token: string }
+    email = reqEmail
 
     if (!email || !cap_token) {
+      statusCode = 400
+      await saveRequestLog({
+        ip: clientIP,
+        path: '/api/verify/password',
+        method: 'POST',
+        status: 400,
+        email: email,
+        userAgent: userAgent
+      }, env)
       return errorResponse('参数不完整', 400, request)
     }
 
     const capValid = await verifyCap(cap_token)
     if (!capValid) {
+      statusCode = 400
+      await saveRequestLog({
+        ip: clientIP,
+        path: '/api/verify/password',
+        method: 'POST',
+        status: 400,
+        email: email,
+        userAgent: userAgent
+      }, env)
       return errorResponse('人机验证失败', 400, request)
     }
 
     const now = Date.now()
-    const record = sendRecords.get(email)
+    const rateKey = `${KV_KEY_RATE_PREFIX}${email}`
+    let record = null
+    if (env.KV) {
+      record = await env.KV.get(rateKey, 'json') as { count: number; firstSendTime: number; ip: string } | null
+    }
 
     if (record) {
       if (now - record.firstSendTime < RATE_LIMIT_WINDOW) {
+        statusCode = 429
         const remaining = Math.ceil((RATE_LIMIT_WINDOW - (now - record.firstSendTime)) / 1000)
+        await saveRequestLog({
+          ip: clientIP,
+          path: '/api/verify/password',
+          method: 'POST',
+          status: 429,
+          email: email,
+          userAgent: userAgent
+        }, env)
         return errorResponse(`请等待 ${remaining} 秒后再试`, 429, request)
       }
 
       if (record.count >= MAX_ATTEMPTS) {
+        statusCode = 403
         await banIP(clientIP, '连续5次密码找回失败，触发安全防护机制', env)
         await addToBanList(clientIP, env)
+        await saveRequestLog({
+          ip: clientIP,
+          path: '/api/verify/password',
+          method: 'POST',
+          status: 403,
+          email: email,
+          userAgent: userAgent
+        }, env)
         return errorResponse(
             '您已被暂时封禁（1天），请联系管理员申诉解封\n管理员邮箱：feedback@yanyn.cn',
             403,
@@ -754,12 +914,18 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
       }
 
       if (now - record.firstSendTime >= RATE_LIMIT_WINDOW) {
-        sendRecords.set(email, { count: 1, firstSendTime: now, ip: clientIP })
+        if (env.KV) {
+          await env.KV.put(rateKey, JSON.stringify({ count: 1, firstSendTime: now, ip: clientIP }), { expirationTtl: 120 })
+        }
       } else {
-        sendRecords.set(email, { count: record.count + 1, firstSendTime: record.firstSendTime, ip: clientIP })
+        if (env.KV) {
+          await env.KV.put(rateKey, JSON.stringify({ count: record.count + 1, firstSendTime: record.firstSendTime, ip: clientIP }), { expirationTtl: 120 })
+        }
       }
     } else {
-      sendRecords.set(email, { count: 1, firstSendTime: now, ip: clientIP })
+      if (env.KV) {
+        await env.KV.put(rateKey, JSON.stringify({ count: 1, firstSendTime: now, ip: clientIP }), { expirationTtl: 120 })
+      }
     }
 
     const data = await getDownkey(env)
@@ -767,12 +933,32 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
     const found = passwords.find(p => p.email === email)
 
     if (!found) {
+      statusCode = 404
+      await saveRequestLog({
+        ip: clientIP,
+        path: '/api/verify/password',
+        method: 'POST',
+        status: 404,
+        email: email,
+        userAgent: userAgent
+      }, env)
       return errorResponse('邮箱未注册', 404, request)
     }
 
     await sendPasswordEmail(email, found.password, found.label, env)
 
-    sendRecords.delete(email)
+    if (env.KV) {
+      await env.KV.delete(`${KV_KEY_RATE_PREFIX}${email}`)
+    }
+
+    await saveRequestLog({
+      ip: clientIP,
+      path: '/api/verify/password',
+      method: 'POST',
+      status: 200,
+      email: email,
+      userAgent: userAgent
+    }, env)
 
     return jsonResponse({
       success: true,
@@ -780,6 +966,15 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
     }, 200, request)
 
   } catch (error) {
+    statusCode = 500
+    await saveRequestLog({
+      ip: clientIP,
+      path: '/api/verify/password',
+      method: 'POST',
+      status: 500,
+      email: email,
+      userAgent: userAgent
+    }, env)
     console.error('找回密码错误:', error)
     const errorMessage = error instanceof Error ? error.message : String(error)
     return errorResponse('服务器错误: ' + errorMessage, 500, request)
@@ -956,6 +1151,12 @@ export default {
     }
     if (path === '/api/admin/update-ban' && request.method === 'POST') {
       return handleAdminUpdateBan(request, env)
+    }
+    if (path === '/api/admin/logs' && request.method === 'GET') {
+      return handleGetLogs(request, env)
+    }
+    if (path === '/api/admin/logs/clear' && request.method === 'POST') {
+      return handleClearLogs(request, env)
     }
 
     return errorResponse('API Not Found', 404, request)
