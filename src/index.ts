@@ -876,13 +876,41 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
     const rateKey = `${KV_KEY_RATE_PREFIX}${email}`
     let record = null
     if (env.KV) {
-      record = await env.KV.get(rateKey, 'json') as { count: number; firstSendTime: number; ip: string } | null
+      const raw = await env.KV.get(rateKey)
+      if (raw) {
+        try {
+          record = JSON.parse(raw)
+        } catch {
+          record = null
+        }
+      }
     }
 
+    // ===== 限流检查 =====
     if (record) {
-      if (now - record.firstSendTime < RATE_LIMIT_WINDOW) {
+      const elapsed = now - record.firstSendTime
+      if (elapsed < RATE_LIMIT_WINDOW) {
+        if (record.count >= MAX_ATTEMPTS) {
+          statusCode = 403
+          await banIP(clientIP, '连续5次密码找回失败，触发安全防护机制', env)
+          await addToBanList(clientIP, env)
+          await saveRequestLog({
+            ip: clientIP,
+            path: '/api/verify/password',
+            method: 'POST',
+            status: 403,
+            email: email,
+            userAgent: userAgent
+          }, env)
+          return errorResponse(
+              '您已被暂时封禁（1天），请联系管理员申诉解封\n管理员邮箱：feedback@yanyn.cn',
+              403,
+              request
+          )
+        }
+
+        const remaining = Math.ceil((RATE_LIMIT_WINDOW - elapsed) / 1000)
         statusCode = 429
-        const remaining = Math.ceil((RATE_LIMIT_WINDOW - (now - record.firstSendTime)) / 1000)
         await saveRequestLog({
           ip: clientIP,
           path: '/api/verify/password',
@@ -894,45 +922,42 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
         return errorResponse(`请等待 ${remaining} 秒后再试`, 429, request)
       }
 
-      if (record.count >= MAX_ATTEMPTS) {
-        statusCode = 403
-        await banIP(clientIP, '连续5次密码找回失败，触发安全防护机制', env)
-        await addToBanList(clientIP, env)
-        await saveRequestLog({
-          ip: clientIP,
-          path: '/api/verify/password',
-          method: 'POST',
-          status: 403,
-          email: email,
-          userAgent: userAgent
-        }, env)
-        return errorResponse(
-            '您已被暂时封禁（1天），请联系管理员申诉解封\n管理员邮箱：feedback@yanyn.cn',
-            403,
-            request
-        )
-      }
-
-      if (now - record.firstSendTime >= RATE_LIMIT_WINDOW) {
-        if (env.KV) {
-          await env.KV.put(rateKey, JSON.stringify({ count: 1, firstSendTime: now, ip: clientIP }), { expirationTtl: 120 })
-        }
-      } else {
-        if (env.KV) {
-          await env.KV.put(rateKey, JSON.stringify({ count: record.count + 1, firstSendTime: record.firstSendTime, ip: clientIP }), { expirationTtl: 120 })
-        }
+      if (env.KV) {
+        await env.KV.put(rateKey, JSON.stringify({
+          count: 1,
+          firstSendTime: now,
+          ip: clientIP
+        }), { expirationTtl: 120 })
       }
     } else {
       if (env.KV) {
-        await env.KV.put(rateKey, JSON.stringify({ count: 1, firstSendTime: now, ip: clientIP }), { expirationTtl: 120 })
+        await env.KV.put(rateKey, JSON.stringify({
+          count: 1,
+          firstSendTime: now,
+          ip: clientIP
+        }), { expirationTtl: 120 })
       }
     }
 
+    // ===== 验证邮箱是否存在 =====
     const data = await getDownkey(env)
     const passwords = data.passwords || []
     const found = passwords.find(p => p.email === email)
 
     if (!found) {
+      if (env.KV) {
+        const raw = await env.KV.get(rateKey)
+        if (raw) {
+          try {
+            const current = JSON.parse(raw)
+            await env.KV.put(rateKey, JSON.stringify({
+              count: current.count + 1,
+              firstSendTime: current.firstSendTime,
+              ip: clientIP
+            }), { expirationTtl: 120 })
+          } catch {}
+        }
+      }
       statusCode = 404
       await saveRequestLog({
         ip: clientIP,
@@ -945,10 +970,11 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
       return errorResponse('邮箱未注册', 404, request)
     }
 
+    // ===== 发送邮件 =====
     await sendPasswordEmail(email, found.password, found.label, env)
 
     if (env.KV) {
-      await env.KV.delete(`${KV_KEY_RATE_PREFIX}${email}`)
+      await env.KV.delete(rateKey)
     }
 
     await saveRequestLog({
