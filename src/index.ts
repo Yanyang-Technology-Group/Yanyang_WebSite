@@ -909,7 +909,7 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
 
     const now = Date.now()
     const rateKey = `${KV_KEY_RATE_PREFIX}${email}`
-    let record = null
+    let record: { count: number; firstSendTime: number; lastSendAt: number | null; ip: string } | null = null
     if (env.KV) {
       const raw = await env.KV.get(rateKey)
       if (raw) {
@@ -921,76 +921,71 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
       }
     }
 
-    if (record) {
-      const elapsed = now - record.firstSendTime
-      if (elapsed < RATE_LIMIT_WINDOW) {
-        if (record.count >= MAX_ATTEMPTS) {
-          statusCode = 403
-          await banIP(clientIP, '连续5次密码找回失败，触发安全防护机制', env)
-          await addToBanList(clientIP, env)
-          await saveRequestLog({
-            ip: clientIP,
-            path: '/api/verify/password',
-            method: 'POST',
-            status: 403,
-            email: email,
-            userAgent: userAgent
-          }, env)
-          return errorResponse(
-              '您已被暂时封禁（1天），请联系管理员申诉解封\n管理员邮箱：feedback@yanyn.cn',
-              403,
-              request
-          )
-        }
-
-        const remaining = Math.ceil((RATE_LIMIT_WINDOW - elapsed) / 1000)
-        statusCode = 429
-        await saveRequestLog({
-          ip: clientIP,
-          path: '/api/verify/password',
-          method: 'POST',
-          status: 429,
-          email: email,
-          userAgent: userAgent
-        }, env)
-        return errorResponse(`请等待 ${remaining} 秒后再试`, 429, request)
-      }
-
-      if (env.KV) {
-        await env.KV.put(rateKey, JSON.stringify({
-          count: 1,
-          firstSendTime: now,
-          ip: clientIP
-        }), { expirationTtl: 120 })
-      }
-    } else {
-      if (env.KV) {
-        await env.KV.put(rateKey, JSON.stringify({
-          count: 1,
-          firstSendTime: now,
-          ip: clientIP
-        }), { expirationTtl: 120 })
+    const saveRateRecord = async () => {
+      if (env.KV && record) {
+        await env.KV.put(rateKey, JSON.stringify(record), { expirationTtl: 120 })
       }
     }
+
+    const banAndNotify = async (): Promise<Response> => {
+      statusCode = 403
+      await saveRateRecord()
+      await banIP(clientIP, '连续5次密码找回尝试，触发安全防护机制', env)
+      await addToBanList(clientIP, env)
+      try {
+        await sendBanNotificationEmail(email, env)
+      } catch (notifyError) {
+        console.error('封禁通知邮件发送失败:', notifyError)
+      }
+      await saveRequestLog({
+        ip: clientIP,
+        path: '/api/verify/password',
+        method: 'POST',
+        status: 403,
+        email: email,
+        userAgent: userAgent
+      }, env)
+      return errorResponse(
+          '您已被暂时封禁（1天），请联系管理员申诉解封\n管理员邮箱：feedback@yanyn.cn',
+          403,
+          request
+      )
+    }
+
+    // 每个邮箱 60 秒一个窗口：窗口内每次尝试计数，达到 5 次直接封禁 IP
+    if (!record || now - record.firstSendTime >= RATE_LIMIT_WINDOW) {
+      record = { count: 1, firstSendTime: now, lastSendAt: null, ip: clientIP }
+    } else {
+      record.count += 1
+    }
+
+    if (record.count >= MAX_ATTEMPTS) {
+      return banAndNotify()
+    }
+
+    // 60 秒内已经发送过一次邮件，阻止重复发送
+    if (record.lastSendAt && now - record.lastSendAt < RATE_LIMIT_WINDOW) {
+      const remaining = Math.ceil((RATE_LIMIT_WINDOW - (now - record.lastSendAt)) / 1000)
+      statusCode = 429
+      await saveRateRecord()
+      await saveRequestLog({
+        ip: clientIP,
+        path: '/api/verify/password',
+        method: 'POST',
+        status: 429,
+        email: email,
+        userAgent: userAgent
+      }, env)
+      return errorResponse(`请等待 ${remaining} 秒后再试`, 429, request)
+    }
+
+    await saveRateRecord()
 
     const data = await getDownkey(env)
     const passwords = data.passwords || []
     const found = passwords.find(p => p.email === email)
 
     if (!found) {
-      if (env.KV) {
-        const raw = await env.KV.get(rateKey)
-        if (raw) {
-          try {
-            const current = JSON.parse(raw)
-            await env.KV.put(rateKey, JSON.stringify({
-              count: current.count + 1,
-              firstSendTime: current.firstSendTime,
-              ip: clientIP
-            }), { expirationTtl: 120 })
-          } catch {}
-        }
-      }
       statusCode = 404
       await saveRequestLog({
         ip: clientIP,
@@ -1005,9 +1000,9 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
 
     await sendPasswordEmail(email, found.password, found.label, env)
 
-    if (env.KV) {
-      await env.KV.delete(rateKey)
-    }
+    // 记录本次发送时间，确保同一邮箱 60 秒内最多发送一封邮件
+    record.lastSendAt = now
+    await saveRateRecord()
 
     await saveRequestLog({
       ip: clientIP,
@@ -1143,6 +1138,96 @@ async function sendPasswordEmail(to: string, password: string, label: string, en
   }
 
   console.log(`[测试模式] 密码 ${password} 应该发送到 ${to}`)
+}
+
+async function sendBanNotificationEmail(to: string, env: Env): Promise<void> {
+  const subject = '晏阳城市建设 - 安全提醒'
+  const html = `
+    <div style="font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 0;">
+      <div style="background: linear-gradient(135deg, #3B82F6, #2563EB); padding: 32px 24px; text-align: center; border-radius: 16px 16px 0 0;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 2px;">晏阳城市建设</h1>
+        <p style="color: rgba(255,255,255,0.85); margin: 6px 0 0 0; font-size: 14px; font-weight: 400;">用方块构筑城市与轨道的梦想</p>
+      </div>
+      <div style="background: #ffffff; padding: 32px 28px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #f0f0f0;">
+        <p style="font-size: 15px; color: #1a1a1a; line-height: 1.6; margin: 0 0 6px 0;">您好，</p>
+        <p style="font-size: 15px; color: #333333; line-height: 1.8; margin: 0 0 16px 0;">
+          您的邮箱发送了多封邮件，为了保护您的安全，现已封禁发送该邮件的 IP 地址。
+        </p>
+        <p style="font-size: 14px; color: #888888; line-height: 1.8; margin: 0 0 8px 0;">如果这不是您本人的操作，请忽略此邮件。</p>
+        <p style="font-size: 14px; color: #888888; line-height: 1.8; margin: 0 0 24px 0;">
+          如果您遇到了什么困难，可联系管理员：feedback@yanyn.cn
+        </p>
+        <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;">
+        <p style="font-size: 12px; color: #bbbbbb; text-align: center; margin: 0; letter-spacing: 1px;">Copyright 2025-2026 晏阳技术组</p>
+      </div>
+    </div>
+  `
+
+  if (env.RESEND_TOKEN) {
+    const sendRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${env.RESEND_TOKEN}`
+      },
+      body: JSON.stringify({
+        from: '晏阳城市建设 <reply@yanyn.cn>',
+        to: [to],
+        subject,
+        html
+      })
+    })
+
+    if (!sendRes.ok) {
+      const error = await sendRes.text()
+      throw new Error(`邮件发送失败: ${sendRes.status} ${error}`)
+    }
+    return
+  }
+
+  if (env.CLOUDMAIL_EMAIL && env.CLOUDMAIL_PASSWORD) {
+    const loginRes = await fetch('https://e-mail.yanyn.cn/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: env.CLOUDMAIL_EMAIL,
+        password: env.CLOUDMAIL_PASSWORD
+      })
+    })
+
+    if (!loginRes.ok) {
+      throw new Error(`CloudMail 登录失败: ${loginRes.status}`)
+    }
+
+    const loginData = await loginRes.json() as { token?: string; data?: { token?: string } }
+    const token = loginData.token || loginData.data?.token
+
+    if (!token) {
+      throw new Error('CloudMail 登录失败：未获取到 token')
+    }
+
+    const sendRes = await fetch('https://e-mail.yanyn.cn/api/email/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'authorization': token
+      },
+      body: JSON.stringify({
+        from: 'reply@yanyn.cn',
+        to: to,
+        subject,
+        html
+      })
+    })
+
+    if (!sendRes.ok) {
+      const error = await sendRes.text()
+      throw new Error(`邮件发送失败: ${sendRes.status} ${error}`)
+    }
+    return
+  }
+
+  console.log(`[测试模式] 邮件「${subject}」应该发送到 ${to}`)
 }
 
 export default {
