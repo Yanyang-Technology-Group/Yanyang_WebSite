@@ -18,6 +18,7 @@ export default function Verify() {
 
   const from = location.state?.from || '/download'
   const isPasswordPage = location.pathname === '/verify/password'
+  const isSuccessPage = location.pathname === '/verify/password/success'
 
   useEffect(() => {
     if (isPasswordPage) {
@@ -124,19 +125,61 @@ export default function Verify() {
       const data = await res.json()
 
       if (res.ok && data.success) {
-        setSuccess('密码已发送到您的邮箱，请查收')
-        setError('')
-        setEmail('')
+        navigate('/verify/password/success', { replace: true })
       } else {
         setError(data.message || '发送失败')
+        setLoading(false)
       }
     } catch (err) {
       setError('网络错误，请稍后重试')
-    } finally {
       setLoading(false)
     }
   }
 
+  // ========== 成功页面 ==========
+  if (isSuccessPage) {
+    return (
+        <>
+          <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
+            <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
+              <div className="w-20 h-20 rounded-full bg-green-50 text-green-500 flex items-center justify-center mx-auto mb-6">
+                <CheckCircle size={40} weight="bold" />
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">邮件已发送</h1>
+              <p className="mt-3 text-muted">密码已发送到您的邮箱，请查收</p>
+            </div>
+          </section>
+
+          <section className="bg-bg pb-section">
+            <div className="mx-auto max-w-2xl px-4 sm:px-6">
+              <div className="bg-surface rounded-container border border-border p-8 sm:p-10 text-center">
+                <div className="w-16 h-16 rounded-full bg-primary-light text-primary flex items-center justify-center mx-auto mb-4">
+                  <Envelope size={28} weight="bold" />
+                </div>
+                <h2 className="text-xl font-bold text-fg mb-2">请查收邮件</h2>
+                <p className="text-muted text-sm mb-6">我们已将密码发送到您的邮箱，请登录邮箱查看</p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <button
+                      onClick={() => navigate('/verify')}
+                      className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white font-semibold rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-transform"
+                  >
+                    返回登录
+                  </button>
+                  <button
+                      onClick={() => navigate('/')}
+                      className="inline-flex items-center gap-2 px-6 py-2.5 text-muted hover:text-fg border border-border rounded-btn text-sm hover:bg-surface transition-all"
+                  >
+                    返回首页
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </>
+    )
+  }
+
+  // ========== 找回密码页面 ==========
   if (isPasswordPage) {
     return (
         <>
@@ -200,13 +243,6 @@ export default function Verify() {
                       </p>
                     </div>
 
-                    {success && (
-                        <div className="mb-4 p-3 bg-green-50 text-green-600 text-sm rounded-btn flex items-center gap-2">
-                          <CheckCircle size={16} weight="bold" />
-                          {success}
-                        </div>
-                    )}
-
                     {error && (
                         <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-btn flex items-center gap-2">
                           <XCircle size={16} weight="bold" />
@@ -230,6 +266,7 @@ export default function Verify() {
     )
   }
 
+  // ========== 登录页面 ==========
   return (
       <>
         <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
@@ -249,7 +286,7 @@ export default function Verify() {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-fg">输入密码</h2>
-                    <p className="text-sm text-muted">输入您进入内群的密码</p>
+                    <p className="text-sm text-muted">密码为英文或数字</p>
                   </div>
                 </div>
 

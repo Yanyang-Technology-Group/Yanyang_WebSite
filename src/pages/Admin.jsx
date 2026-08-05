@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Shield, Lock, LockOpen, ArrowClockwise, Clock, XCircle } from '@phosphor-icons/react'
+import { Shield, Lock, LockOpen, ArrowClockwise, Clock, XCircle, List, Trash, Eye } from '@phosphor-icons/react'
 import { API_BASE_URL } from '../config'
 
 function getCookie(name) {
@@ -26,14 +26,19 @@ export default function Admin() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const [bannedList, setBannedList] = useState([])
+    const [logs, setLogs] = useState([])
     const [isLoggedIn, setIsLoggedIn] = useState(false)
     const [message, setMessage] = useState('')
+    const [activeTab, setActiveTab] = useState('banned') // 'banned' | 'logs'
+    const [showLogModal, setShowLogModal] = useState(false)
+    const [selectedLog, setSelectedLog] = useState(null)
 
     useEffect(() => {
         const token = getCookie('admin_token')
         if (token) {
             setIsLoggedIn(true)
             fetchBannedList(token)
+            fetchLogs(token)
         }
     }, [])
 
@@ -55,6 +60,7 @@ export default function Admin() {
                 setCookie('admin_token', data.token, 3600)
                 setIsLoggedIn(true)
                 fetchBannedList(data.token)
+                fetchLogs(data.token)
                 setPassword('')
                 setMessage('登录成功')
             } else {
@@ -80,6 +86,20 @@ export default function Admin() {
             }
         } catch (err) {
             console.error('获取封禁列表失败:', err)
+        }
+    }
+
+    async function fetchLogs(token) {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/logs`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            const data = await res.json()
+            if (res.ok && data.success) {
+                setLogs(data.data || [])
+            }
+        } catch (err) {
+            console.error('获取日志失败:', err)
         }
     }
 
@@ -143,10 +163,37 @@ export default function Admin() {
         }
     }
 
+    async function handleClearLogs() {
+        const token = getCookie('admin_token')
+        if (!token) return handleLogout()
+
+        if (!confirm('确定要清空所有日志吗？')) return
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/logs/clear`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            const data = await res.json()
+            if (res.ok && data.success) {
+                setMessage('日志已清空')
+                fetchLogs(token)
+            } else {
+                setError(data.message || '清空失败')
+            }
+        } catch (err) {
+            setError('网络错误')
+        }
+    }
+
     function handleLogout() {
         removeCookie('admin_token')
         setIsLoggedIn(false)
         setBannedList([])
+        setLogs([])
         setMessage('已退出登录')
     }
 
@@ -155,6 +202,18 @@ export default function Admin() {
         if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟`
         if (seconds < 86400) return `${Math.floor(seconds / 3600)} 小时 ${Math.floor((seconds % 3600) / 60)} 分钟`
         return `${Math.floor(seconds / 86400)} 天 ${Math.floor((seconds % 86400) / 3600)} 小时`
+    }
+
+    function formatTimestamp(ts) {
+        const d = new Date(ts)
+        return d.toLocaleString('zh-CN', { hour12: false })
+    }
+
+    function getStatusColor(status) {
+        if (status >= 200 && status < 300) return 'text-green-600 bg-green-50'
+        if (status >= 400 && status < 500) return 'text-yellow-600 bg-yellow-50'
+        if (status >= 500) return 'text-red-600 bg-red-50'
+        return 'text-gray-600 bg-gray-50'
     }
 
     if (!isLoggedIn) {
@@ -220,11 +279,17 @@ export default function Admin() {
                             <Shield size={24} weight="bold" className="text-primary" />
                             管理后台
                         </h1>
-                        <p className="text-sm text-muted mt-1">管理被封禁的 IP 地址</p>
+                        <p className="text-sm text-muted mt-1">管理被封禁的 IP 地址和查看请求日志</p>
                     </div>
                     <div className="flex gap-3">
                         <button
-                            onClick={() => { const token = getCookie('admin_token'); if (token) fetchBannedList(token) }}
+                            onClick={() => {
+                                const token = getCookie('admin_token')
+                                if (token) {
+                                    if (activeTab === 'banned') fetchBannedList(token)
+                                    else fetchLogs(token)
+                                }
+                            }}
                             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted hover:text-fg border border-border rounded-btn hover:bg-surface transition-all"
                         >
                             <ArrowClockwise size={16} weight="bold" />
@@ -238,6 +303,36 @@ export default function Admin() {
                             退出
                         </button>
                     </div>
+                </div>
+
+                {/* Tab 切换 */}
+                <div className="flex gap-1 mb-6 bg-surface rounded-container border border-border p-1">
+                    <button
+                        onClick={() => setActiveTab('banned')}
+                        className={`flex-1 px-4 py-2 rounded-btn text-sm font-medium transition-all ${
+                            activeTab === 'banned'
+                                ? 'bg-primary text-white'
+                                : 'text-muted hover:text-fg hover:bg-white/50'
+                        }`}
+                    >
+            <span className="flex items-center justify-center gap-2">
+              <Lock size={16} weight="bold" />
+              封禁列表
+            </span>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('logs')}
+                        className={`flex-1 px-4 py-2 rounded-btn text-sm font-medium transition-all ${
+                            activeTab === 'logs'
+                                ? 'bg-primary text-white'
+                                : 'text-muted hover:text-fg hover:bg-white/50'
+                        }`}
+                    >
+            <span className="flex items-center justify-center gap-2">
+              <List size={16} weight="bold" />
+              请求日志
+            </span>
+                    </button>
                 </div>
 
                 {message && (
@@ -254,64 +349,179 @@ export default function Admin() {
                     </div>
                 )}
 
-                <div className="bg-surface rounded-container border border-border overflow-hidden">
-                    <div className="overflow-x-auto">
-                        {bannedList.length === 0 ? (
-                            <div className="text-center py-12">
-                                <div className="w-16 h-16 rounded-full bg-green-50 text-green-500 flex items-center justify-center mx-auto mb-4">
-                                    <Shield size={32} weight="bold" />
+                {/* 封禁列表 Tab */}
+                {activeTab === 'banned' && (
+                    <div className="bg-surface rounded-container border border-border overflow-hidden">
+                        <div className="overflow-x-auto">
+                            {bannedList.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <div className="w-16 h-16 rounded-full bg-green-50 text-green-500 flex items-center justify-center mx-auto mb-4">
+                                        <Shield size={32} weight="bold" />
+                                    </div>
+                                    <p className="text-muted">当前没有被封禁的 IP</p>
                                 </div>
-                                <p className="text-muted">当前没有被封禁的 IP</p>
-                            </div>
-                        ) : (
-                            <table className="w-full text-sm">
-                                <thead className="bg-surface border-b border-border">
-                                <tr>
-                                    <th className="px-4 py-3 text-left font-semibold text-muted">IP 地址</th>
-                                    <th className="px-4 py-3 text-left font-semibold text-muted">封禁原因</th>
-                                    <th className="px-4 py-3 text-left font-semibold text-muted">剩余时间</th>
-                                    <th className="px-4 py-3 text-left font-semibold text-muted">操作</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {bannedList.map((item) => (
-                                    <tr key={item.ip} className="border-b border-border last:border-0 hover:bg-white/50 transition-colors">
-                                        <td className="px-4 py-3 font-mono text-sm">{item.ip}</td>
-                                        <td className="px-4 py-3 text-muted max-w-[200px] truncate">{item.reason || '触发安全防护机制'}</td>
-                                        <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-50 text-red-600 rounded-full text-xs font-medium">
-                          <Clock size={12} weight="bold" />
-                            {formatTime(item.remaining)}
-                        </span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex gap-2 flex-wrap">
-                                                <button
-                                                    onClick={() => handleUnban(item.ip)}
-                                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-btn text-xs font-medium transition-colors"
-                                                >
-                                                    解封
-                                                </button>
-                                                <button
-                                                    onClick={() => handleUpdateBan(item.ip)}
-                                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-btn text-xs font-medium transition-colors"
-                                                >
-                                                    修改时长
-                                                </button>
-                                            </div>
-                                        </td>
+                            ) : (
+                                <table className="w-full text-sm">
+                                    <thead className="bg-surface border-b border-border">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left font-semibold text-muted">IP 地址</th>
+                                        <th className="px-4 py-3 text-left font-semibold text-muted">封禁原因</th>
+                                        <th className="px-4 py-3 text-left font-semibold text-muted">剩余时间</th>
+                                        <th className="px-4 py-3 text-left font-semibold text-muted">操作</th>
                                     </tr>
-                                ))}
-                                </tbody>
-                            </table>
-                        )}
+                                    </thead>
+                                    <tbody>
+                                    {bannedList.map((item) => (
+                                        <tr key={item.ip} className="border-b border-border last:border-0 hover:bg-white/50 transition-colors">
+                                            <td className="px-4 py-3 font-mono text-sm">{item.ip}</td>
+                                            <td className="px-4 py-3 text-muted max-w-[200px] truncate">{item.reason || '触发安全防护机制'}</td>
+                                            <td className="px-4 py-3">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-50 text-red-600 rounded-full text-xs font-medium">
+                            <Clock size={12} weight="bold" />
+                              {formatTime(item.remaining)}
+                          </span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex gap-2 flex-wrap">
+                                                    <button
+                                                        onClick={() => handleUnban(item.ip)}
+                                                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-btn text-xs font-medium transition-colors"
+                                                    >
+                                                        解封
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleUpdateBan(item.ip)}
+                                                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-btn text-xs font-medium transition-colors"
+                                                    >
+                                                        修改时长
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                        <div className="px-4 py-3 border-t border-border text-xs text-muted">
+                            提示：封禁默认持续 1 天，可手动修改时长（单位：分钟）
+                        </div>
+                    </div>
+                )}
+
+                {/* 日志 Tab */}
+                {activeTab === 'logs' && (
+                    <div className="bg-surface rounded-container border border-border overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                            <span className="text-sm text-muted">共 {logs.length} 条记录（仅保留最近 100 条）</span>
+                            <button
+                                onClick={handleClearLogs}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-500 hover:text-red-600 border border-red-200 rounded-btn hover:bg-red-50 transition-all"
+                            >
+                                <Trash size={14} weight="bold" />
+                                清空日志
+                            </button>
+                        </div>
+                        <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                            {logs.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <p className="text-muted">暂无请求日志</p>
+                                </div>
+                            ) : (
+                                <table className="w-full text-sm">
+                                    <thead className="bg-surface sticky top-0 border-b border-border">
+                                    <tr>
+                                        <th className="px-4 py-2.5 text-left font-semibold text-muted">时间</th>
+                                        <th className="px-4 py-2.5 text-left font-semibold text-muted">IP</th>
+                                        <th className="px-4 py-2.5 text-left font-semibold text-muted">邮箱</th>
+                                        <th className="px-4 py-2.5 text-left font-semibold text-muted">状态</th>
+                                        <th className="px-4 py-2.5 text-left font-semibold text-muted">操作</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {logs.map((log) => (
+                                        <tr key={log.id} className="border-b border-border last:border-0 hover:bg-white/50 transition-colors">
+                                            <td className="px-4 py-2.5 text-xs text-muted whitespace-nowrap">{formatTimestamp(log.timestamp)}</td>
+                                            <td className="px-4 py-2.5 font-mono text-xs">{log.ip}</td>
+                                            <td className="px-4 py-2.5 text-xs">{log.email || '-'}</td>
+                                            <td className="px-4 py-2.5">
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(log.status)}`}>
+                            {log.status}
+                          </span>
+                                            </td>
+                                            <td className="px-4 py-2.5">
+                                                <button
+                                                    onClick={() => { setSelectedLog(log); setShowLogModal(true) }}
+                                                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-primary hover:bg-primary-light rounded-btn transition-colors"
+                                                >
+                                                    <Eye size={14} weight="bold" />
+                                                    详情
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* 日志详情弹窗 */}
+            {showLogModal && selectedLog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/40 backdrop-blur-sm" onClick={() => setShowLogModal(false)}>
+                    <div className="bg-white rounded-container max-w-lg w-full p-6 shadow-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-bold text-fg">请求详情</h3>
+                            <button
+                                onClick={() => setShowLogModal(false)}
+                                className="p-1.5 hover:bg-surface rounded-btn transition-colors"
+                            >
+                                <XCircle size={20} weight="bold" className="text-muted" />
+                            </button>
+                        </div>
+                        <div className="space-y-3 text-sm">
+                            <div>
+                                <span className="text-muted">时间：</span>
+                                <span className="text-fg">{formatTimestamp(selectedLog.timestamp)}</span>
+                            </div>
+                            <div>
+                                <span className="text-muted">IP 地址：</span>
+                                <span className="text-fg font-mono">{selectedLog.ip}</span>
+                            </div>
+                            <div>
+                                <span className="text-muted">邮箱：</span>
+                                <span className="text-fg">{selectedLog.email || '-'}</span>
+                            </div>
+                            <div>
+                                <span className="text-muted">路径：</span>
+                                <span className="text-fg font-mono">{selectedLog.path}</span>
+                            </div>
+                            <div>
+                                <span className="text-muted">方法：</span>
+                                <span className="text-fg">{selectedLog.method}</span>
+                            </div>
+                            <div>
+                                <span className="text-muted">状态码：</span>
+                                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedLog.status)}`}>
+                  {selectedLog.status}
+                </span>
+                            </div>
+                            <div>
+                                <span className="text-muted">User-Agent：</span>
+                                <span className="text-fg text-xs break-all">{selectedLog.userAgent || '-'}</span>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setShowLogModal(false)}
+                            className="mt-4 w-full py-2.5 bg-primary text-white font-semibold rounded-btn text-sm hover:bg-primary/90"
+                        >
+                            关闭
+                        </button>
                     </div>
                 </div>
-
-                <div className="mt-4 text-xs text-muted">
-                    <p>提示：封禁默认持续 1 天，可手动修改时长（单位：分钟）</p>
-                </div>
-            </div>
+            )}
         </section>
     )
 }

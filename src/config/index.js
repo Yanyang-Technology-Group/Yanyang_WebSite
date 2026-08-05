@@ -12,6 +12,8 @@ export const API_ENDPOINTS = {
   adminBanned: `${API_BASE_URL}/api/admin/banned`,
   adminUnban: `${API_BASE_URL}/api/admin/unban`,
   adminUpdateBan: `${API_BASE_URL}/api/admin/update-ban`,
+  adminLogs: `${API_BASE_URL}/api/admin/logs`,
+  adminLogsClear: `${API_BASE_URL}/api/admin/logs/clear`,
 }
 
 export const TOKEN_KEY = 'download_token'
