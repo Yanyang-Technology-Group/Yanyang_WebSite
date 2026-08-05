@@ -72,7 +72,6 @@ html[data-theme='dark'] {
     line-height: 1.625;
   }
 
-  button,
   .btn {
     background-color: var(--color-surface);
     color: var(--color-fg);
@@ -83,7 +82,6 @@ html[data-theme='dark'] {
     transition: background-color 0.2s ease;
   }
 
-  button:hover,
   .btn:hover {
     background-color: var(--color-border);
   }
