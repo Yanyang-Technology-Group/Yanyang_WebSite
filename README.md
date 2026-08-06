@@ -34,6 +34,7 @@
 - **滚动入场动画** — IntersectionObserver 驱动渐入效果
 - **完全响应式** — 适配 375px ~ 1440px
 - **品牌主题 404** — 简洁克制的错误页面
+- **双语（zh-cn / en-us）** — 语言文件驱动，页脚箭头一键切换，构建时自动检测未翻译文本
 
 ## 技术栈
 
@@ -52,28 +53,28 @@
 Yanyang_WebSite/
 ├── public/
 │   ├── images/
-│   │   ├── icon.png
-│   │   ├── logo2.png
-│   │   ├── events/
-│   │   │   └── 4yearslogo.png
-│   │   ├── join/
-│   │   │   ├── frp.svg
-│   │   │   ├── cf.png
-│   │   │   └── github.svg
-│   │   └── map/
-│   │       ├── 1.png
-│   │       └── 2.png
+│   │   ├── icon.png / logo.png / logo2.png
+│   │   ├── events/ / join/ / map/ / us/
 │   ├── docs/
 │   │   ├── yanyangchengshijianshefaan.pdf
 │   │   ├── yanyangruanjianxvkejifuwuxieyi.pdf
 │   │   └── yanyangertonggerenxinxibaohuguizejijianhurenxvzhi.docx
 │   └── cap.min.js
+├── scripts/
+│   └── check-i18n.js
 ├── src/
 │   ├── components/
 │   │   ├── Navbar.jsx
 │   │   ├── Footer.jsx
 │   │   ├── ScrollReveal.jsx
 │   │   └── Skeleton.jsx
+│   ├── i18n/
+│   │   ├── locales/
+│   │   │   ├── zh-cn.js
+│   │   │   └── en-us.js
+│   │   ├── index.js
+│   │   ├── locales.js
+│   │   └── LanguageContext.jsx
 │   ├── pages/
 │   │   ├── Home.jsx
 │   │   ├── About.jsx
@@ -82,6 +83,7 @@ Yanyang_WebSite/
 │   │   ├── Map.jsx
 │   │   ├── Download.jsx
 │   │   ├── Verify.jsx
+│   │   ├── Admin.jsx
 │   │   ├── SatelliteMap.jsx
 │   │   ├── RailwayMap.jsx
 │   │   └── Downloads/
@@ -93,7 +95,9 @@ Yanyang_WebSite/
 │   │   ├── 4years.jsx
 │   │   └── 4years.css
 │   ├── hooks/
-│   │   └── useAuth.js
+│   │   ├── useAuth.js
+│   │   ├── useLanguage.js
+│   │   └── useTheme.js
 │   ├── utils/
 │   │   ├── api.js
 │   │   ├── cookie.js
@@ -107,6 +111,7 @@ Yanyang_WebSite/
 ├── package.json
 ├── package-lock.json
 ├── vite.config.js
+├── .env.production
 ├── build.bat
 └── README.md
 ```
