@@ -73,6 +73,7 @@ export default function About() {
       </section>
 
       {/* Partners */}
+      <div className="bg-white h-2" />
       <section className="bg-primary py-section">
         <div className="px-4 sm:px-6">
           <div className="text-center mb-10">
@@ -80,8 +81,8 @@ export default function About() {
             <p className="mt-2 text-sm text-white/70">{t('about.partners.desc')}</p>
           </div>
           <ScrollReveal>
-            <div className="overflow-hidden bg-white w-[75%] mx-auto">
-              <div className="flex gap-8 animate-scroll">
+            <div className="overflow-hidden bg-white w-[90%] mx-auto">
+              <div className="flex gap-12 animate-scroll">
                 {[...PARTNERS, ...PARTNERS].map((p, i) => (
                   <a
                     key={`${p.id}-${i}`}
