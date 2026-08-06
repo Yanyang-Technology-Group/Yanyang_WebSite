@@ -80,7 +80,7 @@ export default function About() {
             <p className="mt-2 text-sm text-muted">{t('about.partners.desc')}</p>
           </div>
           <ScrollReveal>
-            <div className="overflow-hidden">
+            <div className="overflow-hidden bg-white w-[75%] mx-auto">
               <div className="flex gap-8 animate-scroll">
                 {[...PARTNERS, ...PARTNERS].map((p, i) => (
                   <a
