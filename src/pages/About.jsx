@@ -73,11 +73,11 @@ export default function About() {
       </section>
 
       {/* Partners */}
-      <section className="bg-bg py-section">
+      <section className="bg-primary py-section">
         <div className="px-4 sm:px-6">
           <div className="text-center mb-10">
-            <h2 className="text-2xl font-extrabold text-fg">{t('about.partners.title')}</h2>
-            <p className="mt-2 text-sm text-muted">{t('about.partners.desc')}</p>
+            <h2 className="text-2xl font-extrabold text-white">{t('about.partners.title')}</h2>
+            <p className="mt-2 text-sm text-white/70">{t('about.partners.desc')}</p>
           </div>
           <ScrollReveal>
             <div className="overflow-hidden bg-white w-[75%] mx-auto">
