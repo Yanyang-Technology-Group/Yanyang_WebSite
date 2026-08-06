@@ -54,9 +54,9 @@ export default function About() {
       </section>
 
       {/* Transit numbers */}
-      <section className="bg-primary py-section">
+      <section className="bg-bg py-section">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
-          <h2 className="text-2xl font-extrabold text-white">{t('about.data.title')}</h2>
+          <h2 className="text-2xl font-extrabold text-fg">{t('about.data.title')}</h2>
           <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-8">
             {[
               { value: '19', key: 'about.data.i1' },
@@ -64,8 +64,8 @@ export default function About() {
               { value: '20min', key: 'about.data.i3' },
             ].map(({ value, key }) => (
               <div key={key}>
-                <div className="text-3xl sm:text-4xl font-extrabold text-white">{value}</div>
-                <div className="mt-1 text-sm text-white/60">{t(key)}</div>
+                <div className="text-3xl sm:text-4xl font-extrabold text-fg">{value}</div>
+                <div className="mt-1 text-sm text-muted">{t(key)}</div>
               </div>
             ))}
           </div>
@@ -81,7 +81,7 @@ export default function About() {
             <p className="mt-2 text-sm text-white/70">{t('about.partners.desc')}</p>
           </div>
           <ScrollReveal>
-            <div className="overflow-hidden bg-white w-[90%] mx-auto">
+            <div className="overflow-hidden bg-white w-full mx-auto">
               <div className="flex gap-12 animate-scroll">
                 {[...PARTNERS, ...PARTNERS].map((p, i) => (
                   <a
