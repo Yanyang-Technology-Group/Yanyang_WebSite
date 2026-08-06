@@ -234,7 +234,7 @@ export default {
     fpSend: 'Send password to email',
     fpErrCaptcha: 'Please complete the captcha',
     fpErrCaptchaFailed: 'Captcha failed, please refresh the page and try again',
-    captchaFailMarker: 'Captcha failed',
+    captchaFailMarker: 'Captcha failed, please refresh the page and try again',
     fpErrSend: 'Send failed',
     capInitial: 'Verify to continue',
     capVerifying: 'Verifying...',

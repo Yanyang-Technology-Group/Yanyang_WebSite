@@ -232,7 +232,7 @@ export default {
     fpRetry: '{countdown}秒后可重试',
     fpSending: '发送中...',
     fpSend: '发送密码到邮箱',
-    fpErrCaptcha: '请完成人机验证',
+    fpErrCaptcha: '请完成人机验证，如无效请刷新页面后重新尝试',
     fpErrCaptchaFailed: '人机验证失败，请刷新页面后再重新尝试',
     captchaFailMarker: '人机验证失败',
     fpErrSend: '发送失败',
