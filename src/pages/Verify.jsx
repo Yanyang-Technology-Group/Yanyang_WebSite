@@ -9,7 +9,7 @@ import { useLanguageContext } from '../i18n/LanguageContext'
 export default function Verify() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { cleanPath, t } = useLanguageContext()
+  const { cleanPath, locale, t } = useLanguageContext()
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -315,6 +315,10 @@ export default function Verify() {
                             <cap-widget
                                 data-cap-api-endpoint="https://cap.yanyn.cn/api/"
                                 id="cap-widget"
+                                data-cap-i18n-initial-state={t('verify.capInitial')}
+                                data-cap-i18n-verifying-label={t('verify.capVerifying')}
+                                data-cap-i18n-solved-label={t('verify.capSolved')}
+                                data-cap-i18n-error-label={t('verify.capError')}
                             ></cap-widget>
                         ) : (
                             <div className="flex items-center gap-2 text-sm text-muted">
@@ -391,7 +395,7 @@ export default function Verify() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value.replace(/\s/g, ''))}
                         placeholder={t('verify.placeholder')}
-                        className="w-full px-4 py-3 text-center text-2xl tracking-[0.5em] bg-bg border border-border rounded-btn focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                        className={`w-full px-4 py-3 text-center text-2xl bg-bg border border-border rounded-btn focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all ${locale.startsWith('zh') ? 'tracking-[0.5em]' : 'tracking-[0.2em]'}`}
                         autoFocus
                     />
                     <p className="mt-2 text-xs text-muted text-center">{t('verify.hint')}</p>
