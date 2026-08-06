@@ -1,12 +1,16 @@
 import { useEffect } from 'react'
+import { ArrowsLeftRight } from '@phosphor-icons/react'
+import { useLanguageContext } from '../i18n/LanguageContext'
 
 export default function Footer() {
+  const { t, locale, switchLanguage, nextLocale } = useLanguageContext()
+
   useEffect(() => {
     if (__USER_DEBUG__) {
-      console.log('[UserDebug] 版本:', __VERSION__)
-      console.log('[UserDebug] 构建者:', __BUILDER__)
-      console.log('[UserDebug] 构建环境:', __BUILD_ENV__)
-      console.log('[UserDebug] 构建时间:', __BUILD_TIME__)
+      console.log('[UserDebug] Version:', __VERSION__)
+      console.log('[UserDebug] Builder:', __BUILDER__)
+      console.log('[UserDebug] Build env:', __BUILD_ENV__)
+      console.log('[UserDebug] Build time:', __BUILD_TIME__)
     }
   }, [])
 
@@ -14,8 +18,8 @@ export default function Footer() {
     <footer className="relative z-10 bg-footer text-muted">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 flex flex-col items-center gap-6">
         <div className="flex items-center gap-2">
-          <img src="/images/logo2.png" alt="晏阳" className="h-6 w-auto" />
-          <span className="text-white font-semibold text-sm">晏阳城市建设</span>
+          <img src="/images/logo2.png" alt="Yanyang" className="h-6 w-auto" />
+          <span className="text-white font-semibold text-sm">{t('footer.brand')}</span>
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
@@ -25,7 +29,7 @@ export default function Footer() {
             rel="noopener noreferrer"
             className="text-primary hover:text-primary/80 transition-colors underline underline-offset-4"
           >
-            QQ 群 486029013
+            {t('footer.qq')}
           </a>
           <a
             href="mailto:feedback@yanyn.cn"
@@ -39,7 +43,7 @@ export default function Footer() {
             rel="noopener noreferrer"
             className="text-primary hover:text-primary/80 transition-colors underline underline-offset-4"
           >
-            晏阳轨道交通
+            {t('footer.rail')}
           </a>
         </div>
 
@@ -50,7 +54,7 @@ export default function Footer() {
             rel="noopener noreferrer"
             className="hover:text-primary transition-colors"
           >
-            城市建设法案
+            {t('footer.doc1')}
           </a>
           <a
             href="/docs/yanyangruanjianxvkejifuwuxieyi.pdf"
@@ -58,7 +62,7 @@ export default function Footer() {
             rel="noopener noreferrer"
             className="hover:text-primary transition-colors"
           >
-            软件许可及服务协议
+            {t('footer.doc2')}
           </a>
           <a
             href="/docs/yanyangertonggerenxinxibaohuguizejijianhurenxvzhi.docx"
@@ -66,18 +70,27 @@ export default function Footer() {
             rel="noopener noreferrer"
             className="hover:text-primary transition-colors"
           >
-            儿童个人信息保护规则
+            {t('footer.doc3')}
           </a>
         </div>
 
         <hr className="w-full max-w-xs border-border/20" />
 
         <div className="text-center text-xs space-y-2">
-          <p>&copy; 2025-2026 晏阳技术组 版权所有</p>
-          <p>版本 {__VERSION__} · 构建于 {__BUILD_TIME__} (UTC+8) · {__BUILD_ENV__} 环境</p>
+          <p>{t('footer.rights')}</p>
+          <p>{t('footer.version', { version: __VERSION__, buildTime: __BUILD_TIME__, buildEnv: __BUILD_ENV__ })}</p>
           {__USER_DEBUG__ && (
-            <p className="text-red-500">【测试版本】USER DEBUG 模式 · 构建者：{__BUILDER__}</p>
+            <p className="text-red-500">{t('footer.debug', { builder: __BUILDER__ })}</p>
           )}
+          <button
+            onClick={() => switchLanguage(nextLocale)}
+            className="inline-flex items-center gap-1 bg-transparent border-transparent text-muted hover:text-fg transition-colors mx-auto"
+            title={t('footer.switchLang')}
+            aria-label={t('footer.switchLang')}
+          >
+            <ArrowsLeftRight size={14} weight="bold" />
+            <span className="uppercase">{locale}</span>
+          </button>
         </div>
       </div>
     </footer>

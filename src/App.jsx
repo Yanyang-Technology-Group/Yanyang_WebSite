@@ -17,6 +17,8 @@ import Detail from './pages/Downloads/Detail'
 import FourYearsEvent from './Events/4years.jsx'
 import SatelliteMap from './pages/SatelliteMap'
 import RailwayMap from './pages/RailwayMap'
+import { LanguageProvider, useLanguageContext } from './i18n/LanguageContext'
+import { useLanguage } from './hooks/useLanguage'
 
 function ScrollToTop() {
     const location = useLocation()
@@ -27,29 +29,41 @@ function ScrollToTop() {
 }
 
 function NotFound() {
+    const { t } = useLanguageContext()
     return (
         <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
-            <div className="text-8xl font-extrabold text-primary/30 select-none">404</div>
-            <p className="mt-4 text-lg font-medium text-fg">这片区域还没有被建设...</p>
-            <p className="mt-1 text-sm text-muted">你访问的页面不存在，也许它还在规划中</p>
+            <div className="text-8xl font-extrabold text-primary/30 select-none">{t('notfound.code')}</div>
+            <p className="mt-4 text-lg font-medium text-fg">{t('notfound.title')}</p>
+            <p className="mt-1 text-sm text-muted">{t('notfound.desc')}</p>
             <Link
                 to="/"
                 className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-semibold rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-transform"
             >
-                返回首页
+                {t('notfound.back')}
             </Link>
         </div>
     )
 }
 
-export default function App() {
+function AppContent() {
+    const location = useLocation()
+    const lang = useLanguage()
+
+    // 路由按去掉语言后缀后的路径匹配，URL 上保留语言代码
+    const cleanLocation = {
+        ...location,
+        pathname: lang.cleanPath,
+        search: location.search,
+        hash: location.hash,
+    }
+
     return (
-        <BrowserRouter>
+        <LanguageProvider value={lang}>
             <ScrollToTop />
             <div className="min-h-screen flex flex-col bg-bg">
                 <Navbar />
                 <main className="flex-1">
-                    <Routes>
+                    <Routes location={cleanLocation}>
                         <Route path="/" element={<Home />} />
                         <Route path="/about" element={<About />} />
                         <Route path="/join" element={<Join />} />
@@ -75,6 +89,14 @@ export default function App() {
                 </main>
                 <Footer />
             </div>
+        </LanguageProvider>
+    )
+}
+
+export default function App() {
+    return (
+        <BrowserRouter>
+            <AppContent />
         </BrowserRouter>
     )
 }

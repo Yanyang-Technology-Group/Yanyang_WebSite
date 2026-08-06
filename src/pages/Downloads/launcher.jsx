@@ -6,6 +6,7 @@ import ScrollReveal from '../../components/ScrollReveal'
 import { API_BASE_URL, API_ENDPOINTS } from '../../config'
 import { fetchWithAuth } from '../../utils/api'
 import { getToken } from '../../utils/cookie'
+import { useLanguageContext } from '../../i18n/LanguageContext'
 
 const TAG_COLORS = {
   'PCL2': 'bg-blue-100 text-blue-700 border-blue-200',
@@ -27,6 +28,7 @@ const LICENSE_URL_MAP = {
 
 export default function LauncherList() {
   const navigate = useNavigate()
+  const { t } = useLanguageContext()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -51,7 +53,7 @@ export default function LauncherList() {
     } else if (result.status === 401) {
       navigate('/verify', { state: { from: window.location.pathname } })
     } else {
-      setError(result.message || '加载失败，请刷新重试')
+      setError(result.message || t('lists.loadFail'))
     }
     setLoading(false)
   }
@@ -76,11 +78,11 @@ export default function LauncherList() {
         const redirectUrl = `${API_BASE_URL}/api/download/redirect?link=${encodeURIComponent(item.link)}&token=${data.token}&sig=${encodeURIComponent(data.signature)}`
         window.open(redirectUrl, '_blank')
       } else {
-        alert(data.message || '生成下载链接失败')
+        alert(data.message || t('lists.generateFail'))
       }
     } catch (err) {
-      console.error('下载失败:', err)
-      alert('网络错误，请稍后重试')
+      console.error('Download failed:', err)
+      alert(t('common.networkError'))
     } finally {
       setDownloading(null)
     }
@@ -90,7 +92,7 @@ export default function LauncherList() {
     const items = data?.items || []
     const groups = {}
     items.forEach(item => {
-      const tag = item.tag || '其他'
+      const tag = item.tag || t('lists.other')
       if (!groups[tag]) {
         groups[tag] = []
       }
@@ -103,7 +105,7 @@ export default function LauncherList() {
     return (
         <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
           <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
-            <p className="text-muted">加载中...</p>
+            <p className="text-muted">{t('lists.loading')}</p>
           </div>
         </section>
     )
@@ -118,7 +120,7 @@ export default function LauncherList() {
                 onClick={() => window.location.reload()}
                 className="mt-4 px-4 py-2 bg-primary text-white rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-transform"
             >
-              重新加载
+              {t('lists.retry')}
             </button>
           </div>
         </section>
@@ -137,11 +139,11 @@ export default function LauncherList() {
                 className="inline-flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors mb-4"
             >
               <ArrowLeft size={14} />
-              返回资源类型
+              {t('lists.back')}
             </button>
             <div className="text-center">
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">启动器</h1>
-              <p className="mt-2 text-sm text-muted">Minecraft 游戏启动器</p>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">{t('lists.launcherTitle')}</h1>
+              <p className="mt-2 text-sm text-muted">{t('lists.launcherDesc')}</p>
             </div>
           </div>
         </section>
@@ -150,7 +152,7 @@ export default function LauncherList() {
           <div className="mx-auto max-w-3xl px-4 sm:px-6">
             <ScrollReveal>
               {groupNames.length === 0 ? (
-                  <p className="text-center text-muted py-8">暂无启动器</p>
+                  <p className="text-center text-muted py-8">{t('lists.emptyLauncher')}</p>
               ) : (
                   groupNames.map((tag) => (
                       <div key={tag} className="mb-10">
@@ -184,7 +186,7 @@ export default function LauncherList() {
                                             rel="noopener noreferrer"
                                             className="text-xs text-primary hover:underline"
                                         >
-                                          许可证：{LICENSE_MAP[item.tag] || '未知'}
+                                          {t('lists.license', { license: LICENSE_MAP[item.tag] || t('lists.unknown') })}
                                         </a>
                                       </div>
                                     </div>
@@ -194,7 +196,7 @@ export default function LauncherList() {
                                       disabled={downloading === item.id}
                                       className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-btn hover:bg-primary/90 active:scale-[0.97] transition-all disabled:opacity-50"
                                   >
-                                    {downloading === item.id ? '生成中...' : '下载'}
+                                    {downloading === item.id ? t('lists.generating') : t('lists.download')}
                                     <ArrowRight size={16} weight="bold" />
                                   </button>
                                 </div>

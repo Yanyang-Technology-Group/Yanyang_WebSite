@@ -1,23 +1,25 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { House, ArrowLeft, ArrowRight, MapPin } from '@phosphor-icons/react'
+import { useLanguageContext } from '../i18n/LanguageContext'
 
 const MAPS = [
   {
     id: 1,
-    name: '卫星地图',
+    nameKey: 'map.sat',
     image: '/images/map/1.png',
     path: '/maps/backend-iframe/satellite'
   },
   {
     id: 2,
-    name: '线路图',
+    nameKey: 'map.rail',
     image: '/images/map/2.png',
     path: '/maps/backend-iframe/railway'
   }
 ]
 
 export default function Map() {
+  const { t } = useLanguageContext()
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [bumpDirection, setBumpDirection] = useState(null)
@@ -67,10 +69,10 @@ export default function Map() {
         <div className="text-center mb-6">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 mb-3 text-xs font-medium text-primary bg-primary-light rounded-full">
             <MapPin size={12} weight="bold" />
-            地图
+            {t('map.label')}
           </span>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">晏阳地图</h1>
-          <p className="mt-2 text-muted text-sm">实时查看晏阳城市建设服务器的地图</p>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">{t('map.title')}</h1>
+          <p className="mt-2 text-muted text-sm">{t('map.desc')}</p>
         </div>
 
         <div className="flex justify-center mb-16">
@@ -79,7 +81,7 @@ export default function Map() {
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted hover:text-fg border border-border rounded-btn hover:bg-surface transition-all"
           >
             <House size={16} weight="bold" />
-            返回首页
+            {t('map.back')}
           </Link>
         </div>
 
@@ -101,7 +103,7 @@ export default function Map() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                   <div className="absolute bottom-8 left-8 z-10 text-white">
                     <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold" style={{ fontFamily: '"Source Han Sans SC", "Noto Sans SC", sans-serif' }}>
-                      {map.name}
+                      {t(map.nameKey)}
                     </h2>
                   </div>
                   <div className="absolute bottom-8 right-8 z-10">
@@ -110,7 +112,7 @@ export default function Map() {
                       className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-all shadow-lg"
                     >
                       <MapPin size={16} weight="bold" />
-                      立即前往
+                      {t('map.go')}
                     </Link>
                   </div>
                 </div>

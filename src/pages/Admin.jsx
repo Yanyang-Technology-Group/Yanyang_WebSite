@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Shield, Lock, LockOpen, ArrowClockwise, Clock, XCircle, List, Trash, Eye } from '@phosphor-icons/react'
 import { API_BASE_URL } from '../config'
+import { useLanguageContext } from '../i18n/LanguageContext'
 
 function getCookie(name) {
     const value = `; ${document.cookie}`
@@ -22,6 +23,7 @@ function removeCookie(name) {
 
 export default function Admin() {
     const navigate = useNavigate()
+    const { t } = useLanguageContext()
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
@@ -62,12 +64,12 @@ export default function Admin() {
                 fetchBannedList(data.token)
                 fetchLogs(data.token)
                 setPassword('')
-                setMessage('登录成功')
+                setMessage(t('admin.loginSuccess'))
             } else {
-                setError(data.message || '登录失败')
+                setError(data.message || t('admin.loginFail'))
             }
         } catch (err) {
-            setError('网络错误，请稍后重试')
+            setError(t('admin.networkError'))
         } finally {
             setLoading(false)
         }
@@ -85,7 +87,7 @@ export default function Admin() {
                 handleLogout()
             }
         } catch (err) {
-            console.error('获取封禁列表失败:', err)
+            console.error('Failed to fetch banned list:', err)
         }
     }
 
@@ -99,7 +101,7 @@ export default function Admin() {
                 setLogs(data.data || [])
             }
         } catch (err) {
-            console.error('获取日志失败:', err)
+            console.error('Failed to fetch logs:', err)
         }
     }
 
@@ -107,7 +109,7 @@ export default function Admin() {
         const token = getCookie('admin_token')
         if (!token) return handleLogout()
 
-        if (!confirm(`确定要解封 ${ip} 吗？`)) return
+        if (!confirm(t('admin.unbanConfirm', { ip }))) return
 
         try {
             const res = await fetch(`${API_BASE_URL}/api/admin/unban`, {
@@ -120,13 +122,13 @@ export default function Admin() {
             })
             const data = await res.json()
             if (res.ok && data.success) {
-                setMessage(`IP ${ip} 已解封`)
+                setMessage(t('admin.unbanDone', { ip }))
                 fetchBannedList(token)
             } else {
-                setError(data.message || '解封失败')
+                setError(data.message || t('admin.unbanFail'))
             }
         } catch (err) {
-            setError('网络错误')
+            setError(t('admin.networkError'))
         }
     }
 
@@ -134,11 +136,11 @@ export default function Admin() {
         const token = getCookie('admin_token')
         if (!token) return handleLogout()
 
-        const mins = prompt(`请输入 ${ip} 的封禁时长（分钟）：`, '1440')
+        const mins = prompt(t('admin.updatePrompt', { ip }), '1440')
         if (mins === null) return
         const minsNum = parseInt(mins)
         if (isNaN(minsNum) || minsNum < 1) {
-            setError('请输入有效的分钟数（>= 1）')
+            setError(t('admin.updateInvalid'))
             return
         }
 
@@ -153,13 +155,13 @@ export default function Admin() {
             })
             const data = await res.json()
             if (res.ok && data.success) {
-                setMessage(`IP ${ip} 封禁时间已更新为 ${minsNum} 分钟`)
+                setMessage(t('admin.updateDone', { ip, mins: minsNum }))
                 fetchBannedList(token)
             } else {
-                setError(data.message || '更新失败')
+                setError(data.message || t('admin.updateFail'))
             }
         } catch (err) {
-            setError('网络错误')
+            setError(t('admin.networkError'))
         }
     }
 
@@ -167,7 +169,7 @@ export default function Admin() {
         const token = getCookie('admin_token')
         if (!token) return handleLogout()
 
-        if (!confirm('确定要清空所有日志吗？')) return
+        if (!confirm(t('admin.clearConfirm'))) return
 
         try {
             const res = await fetch(`${API_BASE_URL}/api/admin/logs/clear`, {
@@ -179,13 +181,13 @@ export default function Admin() {
             })
             const data = await res.json()
             if (res.ok && data.success) {
-                setMessage('日志已清空')
+                setMessage(t('admin.clearDone'))
                 fetchLogs(token)
             } else {
-                setError(data.message || '清空失败')
+                setError(data.message || t('admin.clearFail'))
             }
         } catch (err) {
-            setError('网络错误')
+            setError(t('admin.networkError'))
         }
     }
 
@@ -194,14 +196,14 @@ export default function Admin() {
         setIsLoggedIn(false)
         setBannedList([])
         setLogs([])
-        setMessage('已退出登录')
+        setMessage(t('admin.logoutDone'))
     }
 
-    function formatTime(seconds) {
-        if (seconds < 60) return `${seconds} 秒`
-        if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟`
-        if (seconds < 86400) return `${Math.floor(seconds / 3600)} 小时 ${Math.floor((seconds % 3600) / 60)} 分钟`
-        return `${Math.floor(seconds / 86400)} 天 ${Math.floor((seconds % 86400) / 3600)} 小时`
+    function formatTime(seconds, t) {
+        if (seconds < 60) return t('admin.timeSeconds', { s: seconds })
+        if (seconds < 3600) return t('admin.timeMinutes', { m: Math.floor(seconds / 60) })
+        if (seconds < 86400) return t('admin.timeHours', { h: Math.floor(seconds / 3600), m: Math.floor((seconds % 3600) / 60) })
+        return t('admin.timeDays', { d: Math.floor(seconds / 86400), h: Math.floor((seconds % 86400) / 3600) })
     }
 
     function formatTimestamp(ts) {
@@ -224,8 +226,8 @@ export default function Admin() {
                         <div className="w-16 h-16 rounded-full bg-primary-light text-primary flex items-center justify-center mx-auto mb-4">
                             <Shield size={32} weight="bold" />
                         </div>
-                        <h1 className="text-2xl font-bold text-fg">管理员登录</h1>
-                        <p className="text-sm text-muted mt-1">请输入管理员密码</p>
+                        <h1 className="text-2xl font-bold text-fg">{t('admin.loginTitle')}</h1>
+                        <p className="text-sm text-muted mt-1">{t('admin.loginDesc')}</p>
                     </div>
 
                     <div className="bg-surface rounded-container border border-border p-8">
@@ -235,7 +237,7 @@ export default function Admin() {
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="请输入管理员密码"
+                                    placeholder={t('admin.passwordPlaceholder')}
                                     className="w-full px-4 py-3 bg-bg border border-border rounded-btn focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-center"
                                     autoFocus
                                     required
@@ -261,7 +263,7 @@ export default function Admin() {
                                 disabled={loading || !password}
                                 className="w-full py-3 bg-primary text-white font-semibold rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {loading ? '登录中...' : '登录管理后台'}
+                                {loading ? t('admin.loggingIn') : t('admin.loginBtn')}
                             </button>
                         </form>
                     </div>
@@ -277,9 +279,9 @@ export default function Admin() {
                     <div>
                         <h1 className="text-2xl font-bold text-fg flex items-center gap-3">
                             <Shield size={24} weight="bold" className="text-primary" />
-                            管理后台
+                            {t('admin.title')}
                         </h1>
-                        <p className="text-sm text-muted mt-1">管理被封禁的 IP 地址和查看请求日志</p>
+                        <p className="text-sm text-muted mt-1">{t('admin.subtitle')}</p>
                     </div>
                     <div className="flex gap-3">
                         <button
@@ -293,19 +295,19 @@ export default function Admin() {
                             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted hover:text-fg border border-border rounded-btn hover:bg-surface transition-all"
                         >
                             <ArrowClockwise size={16} weight="bold" />
-                            刷新
+                            {t('admin.refresh')}
                         </button>
                         <button
                             onClick={handleLogout}
                             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-500 hover:text-red-600 border border-red-200 rounded-btn hover:bg-red-50 transition-all"
                         >
                             <LockOpen size={16} weight="bold" />
-                            退出
+                            {t('admin.logout')}
                         </button>
                     </div>
                 </div>
 
-                {/* Tab 切换 */}
+                {/* Tabs */}
                 <div className="flex gap-1 mb-6 bg-surface rounded-container border border-border p-1">
                     <button
                         onClick={() => setActiveTab('banned')}
@@ -317,7 +319,7 @@ export default function Admin() {
                     >
             <span className="flex items-center justify-center gap-2">
               <Lock size={16} weight="bold" />
-              封禁列表
+              {t('admin.bannedTab')}
             </span>
                     </button>
                     <button
@@ -330,7 +332,7 @@ export default function Admin() {
                     >
             <span className="flex items-center justify-center gap-2">
               <List size={16} weight="bold" />
-              请求日志
+              {t('admin.logsTab')}
             </span>
                     </button>
                 </div>
@@ -349,7 +351,7 @@ export default function Admin() {
                     </div>
                 )}
 
-                {/* 封禁列表 Tab */}
+                {/* Banned list tab */}
                 {activeTab === 'banned' && (
                     <div className="bg-surface rounded-container border border-border overflow-hidden">
                         <div className="overflow-x-auto">
@@ -358,27 +360,27 @@ export default function Admin() {
                                     <div className="w-16 h-16 rounded-full bg-green-50 text-green-500 flex items-center justify-center mx-auto mb-4">
                                         <Shield size={32} weight="bold" />
                                     </div>
-                                    <p className="text-muted">当前没有被封禁的 IP</p>
+                                    <p className="text-muted">{t('admin.emptyBanned')}</p>
                                 </div>
                             ) : (
                                 <table className="w-full text-sm">
                                     <thead className="bg-surface border-b border-border">
                                     <tr>
-                                        <th className="px-4 py-3 text-left font-semibold text-muted">IP 地址</th>
-                                        <th className="px-4 py-3 text-left font-semibold text-muted">封禁原因</th>
-                                        <th className="px-4 py-3 text-left font-semibold text-muted">剩余时间</th>
-                                        <th className="px-4 py-3 text-left font-semibold text-muted">操作</th>
+                                        <th className="px-4 py-3 text-left font-semibold text-muted">{t('admin.ip')}</th>
+                                        <th className="px-4 py-3 text-left font-semibold text-muted">{t('admin.reason')}</th>
+                                        <th className="px-4 py-3 text-left font-semibold text-muted">{t('admin.remaining')}</th>
+                                        <th className="px-4 py-3 text-left font-semibold text-muted">{t('admin.actions')}</th>
                                     </tr>
                                     </thead>
                                     <tbody>
                                     {bannedList.map((item) => (
                                         <tr key={item.ip} className="border-b border-border last:border-0 hover:bg-bg/50 transition-colors">
                                             <td className="px-4 py-3 font-mono text-sm">{item.ip}</td>
-                                            <td className="px-4 py-3 text-muted max-w-[200px] truncate">{item.reason || '触发安全防护机制'}</td>
+                                            <td className="px-4 py-3 text-muted max-w-[200px] truncate">{item.reason || t('admin.defaultReason')}</td>
                                             <td className="px-4 py-3">
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-50 text-red-600 rounded-full text-xs font-medium">
                             <Clock size={12} weight="bold" />
-                              {formatTime(item.remaining)}
+                              {formatTime(item.remaining, t)}
                           </span>
                                             </td>
                                             <td className="px-4 py-3">
@@ -387,13 +389,13 @@ export default function Admin() {
                                                         onClick={() => handleUnban(item.ip)}
                                                         className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-btn text-xs font-medium transition-colors"
                                                     >
-                                                        解封
+                                                        {t('admin.unban')}
                                                     </button>
                                                     <button
                                                         onClick={() => handleUpdateBan(item.ip)}
                                                         className="inline-flex items-center gap-1 px-3 py-1.5 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-btn text-xs font-medium transition-colors"
                                                     >
-                                                        修改时长
+                                                        {t('admin.updateBan')}
                                                     </button>
                                                 </div>
                                             </td>
@@ -404,38 +406,38 @@ export default function Admin() {
                             )}
                         </div>
                         <div className="px-4 py-3 border-t border-border text-xs text-muted">
-                            提示：封禁默认持续 1 天，可手动修改时长（单位：分钟）
+                            {t('admin.hint')}
                         </div>
                     </div>
                 )}
 
-                {/* 日志 Tab */}
+                {/* Logs tab */}
                 {activeTab === 'logs' && (
                     <div className="bg-surface rounded-container border border-border overflow-hidden">
                         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                            <span className="text-sm text-muted">共 {logs.length} 条记录（仅保留最近 100 条）</span>
+                            <span className="text-sm text-muted">{t('admin.logsCount', { count: logs.length })}</span>
                             <button
                                 onClick={handleClearLogs}
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-500 hover:text-red-600 border border-red-200 rounded-btn hover:bg-red-50 transition-all"
                             >
                                 <Trash size={14} weight="bold" />
-                                清空日志
+                                {t('admin.clearLogs')}
                             </button>
                         </div>
                         <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
                             {logs.length === 0 ? (
                                 <div className="text-center py-12">
-                                    <p className="text-muted">暂无请求日志</p>
+                                    <p className="text-muted">{t('admin.emptyLogs')}</p>
                                 </div>
                             ) : (
                                 <table className="w-full text-sm">
                                     <thead className="bg-surface sticky top-0 border-b border-border">
                                     <tr>
-                                        <th className="px-4 py-2.5 text-left font-semibold text-muted">时间</th>
+                                        <th className="px-4 py-2.5 text-left font-semibold text-muted">{t('admin.time')}</th>
                                         <th className="px-4 py-2.5 text-left font-semibold text-muted">IP</th>
-                                        <th className="px-4 py-2.5 text-left font-semibold text-muted">邮箱</th>
-                                        <th className="px-4 py-2.5 text-left font-semibold text-muted">状态</th>
-                                        <th className="px-4 py-2.5 text-left font-semibold text-muted">操作</th>
+                                        <th className="px-4 py-2.5 text-left font-semibold text-muted">{t('admin.email')}</th>
+                                        <th className="px-4 py-2.5 text-left font-semibold text-muted">{t('admin.status')}</th>
+                                        <th className="px-4 py-2.5 text-left font-semibold text-muted">{t('admin.actions')}</th>
                                     </tr>
                                     </thead>
                                     <tbody>
@@ -455,7 +457,7 @@ export default function Admin() {
                                                     className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-primary hover:bg-primary-light rounded-btn transition-colors"
                                                 >
                                                     <Eye size={14} weight="bold" />
-                                                    详情
+                                                    {t('admin.details')}
                                                 </button>
                                             </td>
                                         </tr>
@@ -468,12 +470,12 @@ export default function Admin() {
                 )}
             </div>
 
-            {/* 日志详情弹窗 */}
+            {/* Log detail modal */}
             {showLogModal && selectedLog && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/40 backdrop-blur-sm" onClick={() => setShowLogModal(false)}>
                     <div className="bg-bg rounded-container max-w-lg w-full p-6 shadow-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-bold text-fg">请求详情</h3>
+                            <h3 className="text-lg font-bold text-fg">{t('admin.detailTitle')}</h3>
                             <button
                                 onClick={() => setShowLogModal(false)}
                                 className="p-1.5 hover:bg-surface rounded-btn transition-colors"
@@ -483,33 +485,33 @@ export default function Admin() {
                         </div>
                         <div className="space-y-3 text-sm">
                             <div>
-                                <span className="text-muted">时间：</span>
+                                <span className="text-muted">{t('admin.time')}：</span>
                                 <span className="text-fg">{formatTimestamp(selectedLog.timestamp)}</span>
                             </div>
                             <div>
-                                <span className="text-muted">IP 地址：</span>
+                                <span className="text-muted">{t('admin.ip')}：</span>
                                 <span className="text-fg font-mono">{selectedLog.ip}</span>
                             </div>
                             <div>
-                                <span className="text-muted">邮箱：</span>
+                                <span className="text-muted">{t('admin.email')}：</span>
                                 <span className="text-fg">{selectedLog.email || '-'}</span>
                             </div>
                             <div>
-                                <span className="text-muted">路径：</span>
+                                <span className="text-muted">{t('admin.path')}：</span>
                                 <span className="text-fg font-mono">{selectedLog.path}</span>
                             </div>
                             <div>
-                                <span className="text-muted">方法：</span>
+                                <span className="text-muted">{t('admin.method')}：</span>
                                 <span className="text-fg">{selectedLog.method}</span>
                             </div>
                             <div>
-                                <span className="text-muted">状态码：</span>
+                                <span className="text-muted">{t('admin.statusCode')}：</span>
                                 <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedLog.status)}`}>
                   {selectedLog.status}
                 </span>
                             </div>
                             <div>
-                                <span className="text-muted">User-Agent：</span>
+                                <span className="text-muted">{t('admin.userAgent')}：</span>
                                 <span className="text-fg text-xs break-all">{selectedLog.userAgent || '-'}</span>
                             </div>
                         </div>
@@ -517,7 +519,7 @@ export default function Admin() {
                             onClick={() => setShowLogModal(false)}
                             className="mt-4 w-full py-2.5 bg-primary text-white font-semibold rounded-btn text-sm hover:bg-primary/90"
                         >
-                            关闭
+                            {t('admin.close')}
                         </button>
                     </div>
                 </div>

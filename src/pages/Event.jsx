@@ -1,27 +1,29 @@
 import { useNavigate } from 'react-router-dom'
 import { Calendar } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
+import { useLanguageContext } from '../i18n/LanguageContext'
 
 const EVENTS = [
   {
-    date: '2026 年 7 月 16 日',
-    title: '晏阳 4 周年庆典',
-    desc: '庆祝晏阳成立 4 周年，开展公开参观及游戏活动。',
-    tag: '已结束',
+    dateKey: 'event.date',
+    titleKey: 'event.itemTitle',
+    descKey: 'event.itemDesc',
+    tagKey: 'event.tag',
     link: '/events/official/minecraft/4years',
   },
 ]
 
 export default function Event() {
   const navigate = useNavigate()
+  const { t } = useLanguageContext()
 
   return (
     <>
       <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">活动与动态</h1>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">{t('event.title')}</h1>
           <p className="mt-3 text-muted">
-            晏阳城市建设的最新动态、版本更新与社群活动
+            {t('event.desc')}
           </p>
         </div>
       </section>
@@ -38,18 +40,18 @@ export default function Event() {
                 >
                   <div className="bg-primary px-6 py-3 flex items-center gap-2 text-white text-sm font-medium">
                     <Calendar size={16} weight="bold" />
-                    {event.date}
+                    {t(event.dateKey)}
                   </div>
                   <div className="p-6">
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <h3 className="text-lg font-bold text-fg group-hover:text-primary transition-colors">
-                          {event.title}
+                          {t(event.titleKey)}
                         </h3>
-                        <p className="mt-2 text-sm text-muted leading-relaxed">{event.desc}</p>
+                        <p className="mt-2 text-sm text-muted leading-relaxed">{t(event.descKey)}</p>
                       </div>
                       <span className="flex-shrink-0 px-2.5 py-1 text-xs font-medium bg-amber-50 text-amber-700 rounded-full">
-                        {event.tag}
+                        {t(event.tagKey)}
                       </span>
                     </div>
                   </div>

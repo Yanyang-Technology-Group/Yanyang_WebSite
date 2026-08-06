@@ -1,6 +1,20 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { execSync } from 'node:child_process'
+
+function i18nCheckPlugin() {
+  return {
+    name: 'yanyang-i18n-check',
+    buildStart() {
+      try {
+        execSync('node scripts/check-i18n.js', { stdio: 'inherit' })
+      } catch {
+        throw new Error('[i18n] 翻译检查未通过，已中止 dev/build。')
+      }
+    },
+  }
+}
 
 async function getCommitCountFromGitHub(retries = 10) {
   for (let i = 0; i < retries; i++) {
@@ -111,7 +125,7 @@ export default defineConfig(async ({ mode, command }) => {
 
   return {
     base: '/',
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), i18nCheckPlugin()],
     define: {
       __USER_DEBUG__: isUserDebug,
       __VERSION__: JSON.stringify(version),

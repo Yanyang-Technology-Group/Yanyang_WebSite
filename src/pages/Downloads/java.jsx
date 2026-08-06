@@ -6,9 +6,11 @@ import ScrollReveal from '../../components/ScrollReveal'
 import { API_ENDPOINTS } from '../../config'
 import { fetchWithAuth } from '../../utils/api'
 import { getToken } from '../../utils/cookie'
+import { useLanguageContext } from '../../i18n/LanguageContext'
 
 export default function JavaList() {
   const navigate = useNavigate()
+  const { t } = useLanguageContext()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -32,7 +34,7 @@ export default function JavaList() {
     } else if (result.status === 401) {
       navigate('/verify', { state: { from: window.location.pathname } })
     } else {
-      setError(result.message || '加载失败，请刷新重试')
+      setError(result.message || t('lists.loadFail'))
     }
     setLoading(false)
   }
@@ -41,7 +43,7 @@ export default function JavaList() {
     return (
         <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
           <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
-            <p className="text-muted">加载中...</p>
+            <p className="text-muted">{t('lists.loading')}</p>
           </div>
         </section>
     )
@@ -56,7 +58,7 @@ export default function JavaList() {
                 onClick={() => window.location.reload()}
                 className="mt-4 px-4 py-2 bg-primary text-white rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-transform"
             >
-              重新加载
+              {t('lists.retry')}
             </button>
           </div>
         </section>
@@ -75,11 +77,11 @@ export default function JavaList() {
                 className="inline-flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors mb-4"
             >
               <ArrowLeft size={14} />
-              返回资源类型
+              {t('lists.back')}
             </button>
             <div className="text-center">
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">JDK</h1>
-              {tag && <p className="mt-2 text-sm text-muted">当前版本：{tag}</p>}
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">{t('lists.javaTitle')}</h1>
+              {tag && <p className="mt-2 text-sm text-muted">{t('lists.currentVersion', { tag })}</p>}
             </div>
           </div>
         </section>
@@ -88,7 +90,7 @@ export default function JavaList() {
           <div className="mx-auto max-w-3xl px-4 sm:px-6">
             <ScrollReveal>
               {items.length === 0 ? (
-                  <p className="text-center text-muted py-8">暂无 JDK</p>
+                  <p className="text-center text-muted py-8">{t('lists.emptyJava')}</p>
               ) : (
                   <div className="grid gap-6">
                     {items.map((item) => (
@@ -120,7 +122,7 @@ export default function JavaList() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2 text-primary group-hover:translate-x-1 transition-transform">
-                              <span className="text-sm font-medium">查看详情</span>
+                              <span className="text-sm font-medium">{t('lists.viewDetails')}</span>
                               <ArrowRight size={18} weight="bold" />
                             </div>
                           </div>

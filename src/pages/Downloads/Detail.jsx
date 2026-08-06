@@ -6,6 +6,7 @@ import ScrollReveal from '../../components/ScrollReveal'
 import { API_BASE_URL, API_ENDPOINTS } from '../../config'
 import { fetchWithAuth } from '../../utils/api'
 import { getToken } from '../../utils/cookie'
+import { useLanguageContext } from '../../i18n/LanguageContext'
 
 function isExpired(expiryDate) {
     if (!expiryDate) return false
@@ -17,24 +18,24 @@ const CONFIG = {
         icon: Package,
         endpoint: API_ENDPOINTS.modpacks,
         backPath: '/downloads/modpack',
-        backLabel: '返回整合包列表',
-        title: '整合包',
+        backLabelKey: 'lists.backModpack',
+        titleKey: 'lists.modpackTitle',
         iconBg: 'bg-blue-500',
     },
     java: {
         icon: Coffee,
         endpoint: API_ENDPOINTS.java,
         backPath: '/downloads/java',
-        backLabel: '返回 JDK 列表',
-        title: 'JDK',
+        backLabelKey: 'lists.backJava',
+        titleKey: 'lists.javaTitle',
         iconBg: 'bg-orange-500',
     },
     launcher: {
         icon: Rocket,
         endpoint: API_ENDPOINTS.launchers,
         backPath: '/downloads/launcher',
-        backLabel: '返回启动器列表',
-        title: '启动器',
+        backLabelKey: 'lists.backLauncher',
+        titleKey: 'lists.launcherTitle',
         iconBg: 'bg-purple-500',
     }
 }
@@ -48,8 +49,9 @@ const TYPE_MAP = {
 export default function Detail() {
     const navigate = useNavigate()
     const location = useLocation()
+    const { cleanPath, t } = useLanguageContext()
     const { id } = useParams()
-    const type = TYPE_MAP[location.pathname.split('/')[2]]
+    const type = TYPE_MAP[cleanPath.split('/')[2]]
     const config = CONFIG[type]
     const Icon = config?.icon
 
@@ -82,7 +84,7 @@ export default function Detail() {
         } else if (result.status === 401) {
             navigate('/verify', { state: { from: window.location.pathname } })
         } else {
-            setError(result.message || '加载失败，请刷新重试')
+            setError(result.message || t('lists.loadFail'))
         }
         setLoading(false)
     }
@@ -120,11 +122,11 @@ export default function Detail() {
                     document.body.removeChild(a)
                 }
             } else {
-                alert(data.message || '生成下载链接失败')
+                alert(data.message || t('lists.generateFail'))
             }
         } catch (err) {
-            console.error('下载失败:', err)
-            alert('网络错误，请稍后重试')
+            console.error('Download failed:', err)
+            alert(t('common.networkError'))
         } finally {
             setDownloading(null)
         }
@@ -134,7 +136,7 @@ export default function Detail() {
         return (
             <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
                 <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
-                    <p className="text-muted">加载中...</p>
+                    <p className="text-muted">{t('lists.loading')}</p>
                 </div>
             </section>
         )
@@ -149,7 +151,7 @@ export default function Detail() {
                         onClick={() => window.location.reload()}
                         className="mt-4 px-4 py-2 bg-primary text-white rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-transform"
                     >
-                        重新加载
+                        {t('lists.retry')}
                     </button>
                 </div>
             </section>
@@ -165,9 +167,9 @@ export default function Detail() {
                         className="inline-flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors mb-4"
                     >
                         <ArrowLeft size={14} />
-                        {config.backLabel}
+                        {t(config.backLabelKey)}
                     </button>
-                    <p className="text-muted">项目不存在</p>
+                    <p className="text-muted">{t('lists.notFound')}</p>
                 </div>
             </section>
         )
@@ -186,7 +188,7 @@ export default function Detail() {
                         className="inline-flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors mb-4"
                     >
                         <ArrowLeft size={14} />
-                        {config.backLabel}
+                        {t(config.backLabelKey)}
                     </button>
                     <div className="text-center">
                         <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">{item.name}</h1>
@@ -204,10 +206,10 @@ export default function Detail() {
                 <div className="mx-auto max-w-2xl px-4 sm:px-6">
                     <ScrollReveal>
                         <div className="bg-surface rounded-container border border-border p-6 sm:p-8">
-                            <h2 className="text-lg font-bold text-fg mb-4">下载</h2>
+                            <h2 className="text-lg font-bold text-fg mb-4">{t('lists.dl')}</h2>
 
                             {downloads.length === 0 ? (
-                                <p className="text-center text-muted py-8">暂无下载链接</p>
+                                <p className="text-center text-muted py-8">{t('lists.noLinks')}</p>
                             ) : (
                                 <div className="space-y-3">
                                     {downloads.map((dl, index) => {
@@ -228,12 +230,12 @@ export default function Detail() {
                                                             {expired && (
                                                                 <span className="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-600 rounded-full flex items-center gap-1">
                                   <Warning size={12} weight="bold" />
-                                  已过期
+                                  {t('lists.expired')}
                                 </span>
                                                             )}
                                                             {dl.expiry && !expired && (
                                                                 <span className="px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700 rounded-full">
-                                  有效期至 {dl.expiry}
+                                  {t('lists.validUntil', { expiry: dl.expiry })}
                                 </span>
                                                             )}
                                                         </div>
@@ -243,7 +245,7 @@ export default function Detail() {
                                                         {expired ? (
                                                             <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-surface text-muted text-sm font-medium rounded-btn cursor-not-allowed">
                                 <Download size={16} weight="bold" />
-                                已过期
+                                {t('lists.expired')}
                               </span>
                                                         ) : (
                                                             <button
@@ -252,7 +254,7 @@ export default function Detail() {
                                                                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-medium rounded-btn hover:bg-primary/90 disabled:opacity-50 active:scale-[0.97] transition-transform"
                                                             >
                                                                 <Download size={16} weight="bold" />
-                                                                {downloading === dl.name ? '生成中...' : '下载'}
+                                                                {downloading === dl.name ? t('lists.generating') : t('lists.download')}
                                                             </button>
                                                         )}
                                                     </div>

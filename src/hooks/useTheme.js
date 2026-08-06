@@ -29,7 +29,7 @@ export function useTheme() {
     if (root) {
       root.classList.add('page-theme-fall')
     }
-    // 页面坠到底部时切换主题，随后弹回
+    // Switch theme after the page falls, then bounce back
     window.setTimeout(() => {
       setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
     }, 200)

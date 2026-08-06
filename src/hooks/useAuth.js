@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getToken, removeToken } from '../utils/cookie'
 
-// 简单的 JWT 解码（不验证签名，只检查过期时间）
+// Simple JWT decode (no signature verification, only expiry check)
 function decodeJWT(token) {
   try {
     const parts = token.split('.')

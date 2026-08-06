@@ -1,19 +1,20 @@
 import { useState } from 'react'
 import { ChatTeardropText, Article, Play, Desktop, Gear, User, Envelope, Cpu, DeviceMobileCamera, HardDrives, WifiHigh } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
+import { useLanguageContext } from '../i18n/LanguageContext'
 
-function copyToClipboard(text, label) {
+function copyToClipboard(text, label, t) {
   navigator.clipboard.writeText(text).then(
     () => {
       const el = document.createElement('div')
-      el.textContent = `已复制${label}: ${text}`
+      el.textContent = t('join.copied', { label, text })
       el.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 bg-footer text-white text-sm px-4 py-2 rounded-btn shadow-none z-50'
       document.body.appendChild(el)
       setTimeout(() => el.remove(), 2000)
     },
     () => {
       const el = document.createElement('div')
-      el.textContent = '复制失败，请手动复制'
+      el.textContent = t('join.copyFail')
       el.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 bg-footer text-white text-sm px-4 py-2 rounded-btn shadow-none z-50'
       document.body.appendChild(el)
       setTimeout(() => el.remove(), 2000)
@@ -22,14 +23,15 @@ function copyToClipboard(text, label) {
 }
 
 export default function Join() {
+  const { t } = useLanguageContext()
   return (
     <>
       {/* Hero */}
       <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">加入晏阳</h1>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">{t('join.hero.title')}</h1>
           <p className="mt-3 text-muted">
-            在 Minecraft 里亲手搭建梦想都市，与志同道合的伙伴一起创造属于你的城市传奇。
+            {t('join.hero.desc')}
           </p>
         </div>
       </section>
@@ -40,28 +42,10 @@ export default function Join() {
           <ScrollReveal>
             <div className="flex flex-col sm:flex-row items-stretch gap-4">
               {[
-                {
-                  step: 1,
-                  icon: ChatTeardropText,
-                  title: '加入 QQ 群',
-                  desc: '通过下方按钮加入 QQ 交流群，与管理员取得联系。',
-                  highlight: true,
-                },
-                {
-                  step: 2,
-                  icon: Article,
-                  title: '提交申请',
-                  desc: '在群内阅读入服须知，按要求填写入服申请表。',
-                  highlight: false,
-                },
-                {
-                  step: 3,
-                  icon: Play,
-                  title: '开始创作',
-                  desc: '审核通过后即可进入服务器，开启你的城市建设之旅。',
-                  highlight: false,
-                },
-              ].map(({ step, icon: Icon, title, desc, highlight }) => (
+                { step: 1, icon: ChatTeardropText, titleKey: 'join.s1.title', descKey: 'join.s1.desc', highlight: true },
+                { step: 2, icon: Article, titleKey: 'join.s2.title', descKey: 'join.s2.desc', highlight: false },
+                { step: 3, icon: Play, titleKey: 'join.s3.title', descKey: 'join.s3.desc', highlight: false },
+              ].map(({ step, icon: Icon, titleKey, descKey, highlight }) => (
                 <div
                   key={step}
                   className={`flex-1 p-6 rounded-container border text-center ${
@@ -78,10 +62,10 @@ export default function Join() {
                     <Icon size={24} weight="bold" />
                   </div>
                   <h3 className={`text-lg font-bold ${highlight ? 'text-white' : 'text-fg'} mb-2`}>
-                    {step}. {title}
+                    {step}. {t(titleKey)}
                   </h3>
                   <p className={`text-sm leading-relaxed ${highlight ? 'text-white/70' : 'text-muted'}`}>
-                    {desc}
+                    {t(descKey)}
                   </p>
                 </div>
               ))}
@@ -96,7 +80,7 @@ export default function Join() {
               className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-semibold rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-transform"
             >
               <ChatTeardropText size={18} weight="bold" />
-              加入 QQ 群聊
+              {t('join.qqBtn')}
             </a>
           </div>
         </div>
@@ -106,24 +90,24 @@ export default function Join() {
       <section className="bg-surface py-section">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
           <ScrollReveal delay={80}>
-            <h2 className="text-xl font-bold text-fg mb-6">服务器信息</h2>
+            <h2 className="text-xl font-bold text-fg mb-6">{t('join.server.title')}</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
-                { icon: Desktop, label: '游戏版本', value: 'Java 1.20.1' },
-                { icon: Gear, label: '核心框架', value: 'Fabric + MTR 4' },
-                { icon: User, label: 'QQ 群号', value: '486029013', copyable: true },
-                { icon: Envelope, label: '反馈邮箱', value: 'feedback@yanyn.cn', copyable: true },
-              ].map(({ icon: Icon, label, value, copyable }) => (
+                { icon: Desktop, labelKey: 'join.server.game', value: 'Java 1.20.1' },
+                { icon: Gear, labelKey: 'join.server.core', value: 'Fabric + MTR 4' },
+                { icon: User, labelKey: 'join.server.qq', value: '486029013', copyable: true },
+                { icon: Envelope, labelKey: 'join.server.email', value: 'feedback@yanyn.cn', copyable: true },
+              ].map(({ icon: Icon, labelKey, value, copyable }) => (
                 <div
-                  key={label}
+                  key={labelKey}
                   className={`bg-bg rounded-container p-4 border border-border ${
                     copyable ? 'cursor-pointer hover:border-primary/30 active:scale-[0.97] transition-all' : ''
                   }`}
-                  onClick={() => copyable && copyToClipboard(value, label)}
-                  title={copyable ? `点击复制${label}` : undefined}
+                  onClick={() => copyable && copyToClipboard(value, t(labelKey), t)}
+                  title={copyable ? t('join.copyTip', { label: t(labelKey) }) : undefined}
                 >
                   <Icon size={20} weight="bold" className="text-primary mb-2" />
-                  <div className="text-xs text-muted mb-1">{label}</div>
+                  <div className="text-xs text-muted mb-1">{t(labelKey)}</div>
                   <div className="text-sm font-semibold text-fg">{value}</div>
                 </div>
               ))}
@@ -131,17 +115,17 @@ export default function Join() {
           </ScrollReveal>
 
           <ScrollReveal delay={160}>
-            <h2 className="text-xl font-bold text-fg mt-8 mb-6">硬件配置</h2>
+            <h2 className="text-xl font-bold text-fg mt-8 mb-6">{t('join.hw.title')}</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
-                { icon: Cpu, label: '处理器', value: 'E5-2698B V3 16C32T' },
-                { icon: DeviceMobileCamera, label: '内存', value: '32GB DDR3 1866MHz' },
-                { icon: HardDrives, label: '存储', value: '512GB NVMe SSD' },
-                { icon: WifiHigh, label: '网络', value: '1000M↓ / 80M↑' },
-              ].map(({ icon: Icon, label, value }) => (
-                <div key={label} className="bg-bg rounded-container p-4 border border-border">
+                { icon: Cpu, labelKey: 'join.hw.cpu', value: 'E5-2698B V3 16C32T' },
+                { icon: DeviceMobileCamera, labelKey: 'join.hw.ram', value: '32GB DDR3 1866MHz' },
+                { icon: HardDrives, labelKey: 'join.hw.disk', value: '512GB NVMe SSD' },
+                { icon: WifiHigh, labelKey: 'join.hw.net', value: '1000M↓ / 80M↑' },
+              ].map(({ icon: Icon, labelKey, value }) => (
+                <div key={labelKey} className="bg-bg rounded-container p-4 border border-border">
                   <Icon size={20} weight="bold" className="text-primary mb-2" />
-                  <div className="text-xs text-muted mb-1">{label}</div>
+                  <div className="text-xs text-muted mb-1">{t(labelKey)}</div>
                   <div className="text-sm font-semibold text-fg">{value}</div>
                 </div>
               ))}
@@ -149,23 +133,23 @@ export default function Join() {
           </ScrollReveal>
 
           <ScrollReveal delay={120}>
-            <h2 className="text-xl font-bold text-fg mt-8 mb-6">技术服务</h2>
+            <h2 className="text-xl font-bold text-fg mt-8 mb-6">{t('join.tech.title')}</h2>
             <div className="flex flex-wrap items-center gap-8">
               <a href="https://www.passnat.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-surface rounded-container hover:bg-bg transition-colors">
                 <img src="/images/join/frp.svg" alt="FRP" className="h-8 w-auto" />
                 <span className="text-sm font-medium">
                   <span className=" font-bold text-base">PassNAT</span>
                   <span className="text-muted mx-2"> </span>
-                  <span className="text-fg">FRP 内网穿透</span>
+                  <span className="text-fg">{t('join.tech.frp')}</span>
                 </span>
               </a>
               <a href="https://www.cloudflare-cn.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-surface rounded-container hover:bg-bg transition-colors">
                 <img src="/images/join/cf.png" alt="CDN" className="h-8 w-auto" />
-                <span className="text-sm font-medium text-fg">CDN/DNS/网页部署</span>
+                <span className="text-sm font-medium text-fg">{t('join.tech.cdn')}</span>
               </a>
               <a href="https://github.com/Yanyang-Technology-Group/Yanyang_WebSite" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-surface rounded-container hover:bg-bg transition-colors">
                 <img src="/images/join/github.svg" alt="CDN" className="h-8 w-auto" />
-                <span className="text-sm font-medium text-fg">网页源码 (遵循GPL-V3协议)</span>
+                <span className="text-sm font-medium text-fg">{t('join.tech.source')}</span>
               </a>
             </div>
           </ScrollReveal>
@@ -176,15 +160,15 @@ export default function Join() {
       <section className="bg-bg py-section">
         <div className="mx-auto max-w-3xl px-4 sm:px-6">
           <ScrollReveal delay={240}>
-            <h2 className="text-xl font-bold text-fg mb-6">常见问题</h2>
+            <h2 className="text-xl font-bold text-fg mb-6">{t('join.faq.title')}</h2>
             <div className="divide-y divide-border border border-border rounded-container bg-bg">
               {[
-                { q: '需要正版 Minecraft 才能加入吗？', a: '不需要，服务器支持离线登录，没有正版也可以加入游玩。' },
-                { q: '对建筑水平有要求吗？', a: '没有硬性要求！无论你是建筑大佬还是新手，只要热爱城市建设，都欢迎加入。社群内有经验丰富的玩家可以提供指导。' },
-                { q: '服务器有哪些规则？', a: '主要包括：禁止使用外挂/熊服、尊重他人建筑作品、遵守城市规划布局等。详细规则将在 QQ 群内公布。' },
-                { q: '审核需要多长时间？', a: '通常管理员会在 24 小时内处理你的入服申请，高峰期可能稍有延迟。' },
-              ].map(({ q, a }) => (
-                <FAQItem key={q} question={q} answer={a} />
+                { qKey: 'join.faq.q1', aKey: 'join.faq.a1' },
+                { qKey: 'join.faq.q2', aKey: 'join.faq.a2' },
+                { qKey: 'join.faq.q3', aKey: 'join.faq.a3' },
+                { qKey: 'join.faq.q4', aKey: 'join.faq.a4' },
+              ].map(({ qKey, aKey }) => (
+                <FAQItem key={qKey} question={t(qKey)} answer={t(aKey)} />
               ))}
             </div>
           </ScrollReveal>

@@ -4,10 +4,12 @@ import { Lock, XCircle, Eye, Envelope, ArrowLeft, CheckCircle } from '@phosphor-
 import ScrollReveal from '../components/ScrollReveal'
 import { API_ENDPOINTS, TOKEN_EXPIRY } from '../config'
 import { setToken } from '../utils/cookie'
+import { useLanguageContext } from '../i18n/LanguageContext'
 
 export default function Verify() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { cleanPath, t } = useLanguageContext()
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -17,9 +19,9 @@ export default function Verify() {
   const [countdown, setCountdown] = useState(0)
 
   const from = location.state?.from || '/download'
-  const isPasswordPage = location.pathname === '/verify/password'
-  const isSuccessPage = location.pathname === '/verify/password/success'
-  const isErrorPage = location.pathname === '/verify/password/error'
+  const isPasswordPage = cleanPath === '/verify/password'
+  const isSuccessPage = cleanPath === '/verify/password/success'
+  const isErrorPage = cleanPath === '/verify/password/error'
 
   useEffect(() => {
     if (isPasswordPage) {
@@ -39,7 +41,7 @@ export default function Verify() {
         setTimeout(() => clearInterval(checkInterval), 10000)
       }
       script.onerror = () => {
-        console.error('Cap 加载失败')
+        console.error('Cap failed to load')
       }
       document.body.appendChild(script)
     }
@@ -80,13 +82,13 @@ export default function Verify() {
 
       if (res.ok && data.success) {
         setToken(data.token, TOKEN_EXPIRY)
-        localStorage.setItem('user_label', data.label || '用户')
+        localStorage.setItem('user_label', data.label || t('common.user'))
         navigate(from, { replace: true })
       } else {
-        setError(data.message || '密码错误，请重试')
+        setError(data.message || t('verify.errWrong'))
       }
     } catch (err) {
-      setError('网络错误，请稍后重试')
+      setError(t('verify.errNetwork'))
     } finally {
       setLoading(false)
     }
@@ -107,13 +109,13 @@ export default function Verify() {
 
       if (res.ok && data.success) {
         setToken(data.token, TOKEN_EXPIRY)
-        localStorage.setItem('user_label', '游客')
+        localStorage.setItem('user_label', t('common.guest'))
         navigate(from, { replace: true })
       } else {
-        setError('游客登录失败，请稍后重试')
+        setError(t('verify.errGuest'))
       }
     } catch (err) {
-      setError('网络错误，请稍后重试')
+      setError(t('verify.errNetwork'))
     } finally {
       setLoading(false)
     }
@@ -125,7 +127,7 @@ export default function Verify() {
     setLoading(true)
 
     if (!capToken) {
-      setError('请完成人机验证')
+      setError(t('verify.fpErrCaptcha'))
       setLoading(false)
       return
     }
@@ -149,14 +151,14 @@ export default function Verify() {
         return
       }
 
-      if (res.status === 400 && data.message && data.message.includes('人机验证失败')) {
-        setError('人机验证失败，请刷新页面后再重新尝试')
+      if (res.status === 400 && data.message && data.message.includes(t('verify.captchaFailMarker'))) {
+        setError(t('verify.fpErrCaptchaFailed'))
         setLoading(false)
         return
       }
 
       if (res.status === 429) {
-        const match = data.message.match(/(\d+)\s*秒/)
+        const match = data.message.match(/(\d+)/)
         let seconds = 60
         if (match) {
           seconds = parseInt(match[1])
@@ -168,15 +170,15 @@ export default function Verify() {
         return
       }
 
-      setError(data.message || '发送失败')
+      setError(data.message || t('verify.fpErrSend'))
     } catch (err) {
-      setError('网络错误，请稍后重试')
+      setError(t('verify.errNetwork'))
     } finally {
       setLoading(false)
     }
   }
 
-  // ========== 错误页面 ==========
+  // ========== Error page ==========
   if (isErrorPage) {
     return (
         <>
@@ -185,8 +187,8 @@ export default function Verify() {
               <div className="w-20 h-20 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-6">
                 <XCircle size={40} weight="bold" />
               </div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">操作受限</h1>
-              <p className="mt-3 text-muted">您触发了安全防护机制</p>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">{t('verify.errorTitle')}</h1>
+              <p className="mt-3 text-muted">{t('verify.errorDesc')}</p>
             </div>
           </section>
 
@@ -196,21 +198,21 @@ export default function Verify() {
                 <div className="w-16 h-16 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-4">
                   <Lock size={28} weight="bold" />
                 </div>
-                <h2 className="text-xl font-bold text-fg mb-2">您的操作已被限制</h2>
-                <p className="text-muted text-sm mb-2">由于多次密码找回失败，您的 IP 已被暂时封禁。</p>
-                <p className="text-muted text-sm mb-6">如需解封，请联系管理员申诉。</p>
+                <h2 className="text-xl font-bold text-fg mb-2">{t('verify.errorCardTitle')}</h2>
+                <p className="text-muted text-sm mb-2">{t('verify.errorCardDesc1')}</p>
+                <p className="text-muted text-sm mb-6">{t('verify.errorCardDesc2')}</p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                   <button
                       onClick={() => navigate('/verify')}
                       className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white font-semibold rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-transform"
                   >
-                    返回登录
+                    {t('verify.backLogin')}
                   </button>
                   <button
                       onClick={() => navigate('/')}
                       className="inline-flex items-center gap-2 px-6 py-2.5 text-muted hover:text-fg border border-border rounded-btn text-sm hover:bg-surface transition-all"
                   >
-                    返回首页
+                    {t('verify.backHome')}
                   </button>
                 </div>
               </div>
@@ -220,7 +222,7 @@ export default function Verify() {
     )
   }
 
-  // ========== 成功页面 ==========
+  // ========== Success page ==========
   if (isSuccessPage) {
     return (
         <>
@@ -229,8 +231,8 @@ export default function Verify() {
               <div className="w-20 h-20 rounded-full bg-green-50 text-green-500 flex items-center justify-center mx-auto mb-6">
                 <CheckCircle size={40} weight="bold" />
               </div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">邮件已发送</h1>
-              <p className="mt-3 text-muted">密码已发送到您的邮箱，请查收</p>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">{t('verify.successTitle')}</h1>
+              <p className="mt-3 text-muted">{t('verify.successDesc')}</p>
             </div>
           </section>
 
@@ -240,20 +242,20 @@ export default function Verify() {
                 <div className="w-16 h-16 rounded-full bg-primary-light text-primary flex items-center justify-center mx-auto mb-4">
                   <Envelope size={28} weight="bold" />
                 </div>
-                <h2 className="text-xl font-bold text-fg mb-2">请查收邮件</h2>
-                <p className="text-muted text-sm mb-6">我们已将密码发送到您的邮箱，请登录邮箱查看</p>
+                <h2 className="text-xl font-bold text-fg mb-2">{t('verify.successCardTitle')}</h2>
+                <p className="text-muted text-sm mb-6">{t('verify.successCardDesc')}</p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                   <button
                       onClick={() => navigate('/verify')}
                       className="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white font-semibold rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-transform"
                   >
-                    返回登录
+                    {t('verify.backLogin')}
                   </button>
                   <button
                       onClick={() => navigate('/')}
                       className="inline-flex items-center gap-2 px-6 py-2.5 text-muted hover:text-fg border border-border rounded-btn text-sm hover:bg-surface transition-all"
                   >
-                    返回首页
+                    {t('verify.backHome')}
                   </button>
                 </div>
               </div>
@@ -263,7 +265,7 @@ export default function Verify() {
     )
   }
 
-  // ========== 找回密码页面 ==========
+  // ========== Recover password page ==========
   if (isPasswordPage) {
     return (
         <>
@@ -274,10 +276,10 @@ export default function Verify() {
                   className="inline-flex items-center gap-1 text-sm text-muted hover:text-fg transition-colors mb-4"
               >
                 <ArrowLeft size={14} />
-                返回登录
+                {t('verify.backLogin')}
               </button>
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">找回密码</h1>
-              <p className="mt-3 text-muted">验证邮箱后，密码将发送到您的邮箱</p>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">{t('verify.fpTitle')}</h1>
+              <p className="mt-3 text-muted">{t('verify.fpDesc')}</p>
             </div>
           </section>
 
@@ -291,8 +293,8 @@ export default function Verify() {
                         <Envelope size={24} weight="bold" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold text-fg">输入邮箱</h2>
-                        <p className="text-sm text-muted">请输入您注册时绑定的邮箱</p>
+                        <h2 className="text-xl font-bold text-fg">{t('verify.fpCardTitle')}</h2>
+                        <p className="text-sm text-muted">{t('verify.fpCardDesc')}</p>
                       </div>
                     </div>
 
@@ -301,7 +303,7 @@ export default function Verify() {
                           type="email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value.trim())}
-                          placeholder="请输入QQ邮箱"
+                          placeholder={t('verify.fpPlaceholder')}
                           className="w-full px-4 py-3 bg-bg border border-border rounded-btn focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                           required
                       />
@@ -317,20 +319,20 @@ export default function Verify() {
                         ) : (
                             <div className="flex items-center gap-2 text-sm text-muted">
                               <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
-                              加载验证中...
+                              {t('verify.fpLoadingCap')}
                             </div>
                         )}
                       </div>
                       <input type="hidden" name="cap-response" />
                       <p className="text-xs text-muted text-center mt-2">
-                        如长时间未加载，请刷新页面
+                        {t('verify.fpCapHint')}
                       </p>
                     </div>
 
                     {countdown > 0 ? (
                         <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-btn flex items-center gap-2">
                           <XCircle size={16} weight="bold" />
-                          请等待 {countdown} 秒后再试
+                          {t('verify.fpWait', { countdown })}
                         </div>
                     ) : error && (
                         <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-btn flex items-center gap-2">
@@ -344,7 +346,7 @@ export default function Verify() {
                         disabled={loading || !email || countdown > 0}
                         className="w-full py-3 bg-primary text-white font-semibold rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {countdown > 0 ? `${countdown}秒后可重试` : loading ? '发送中...' : '发送密码到邮箱'}
+                      {countdown > 0 ? t('verify.fpRetry', { countdown }) : loading ? t('verify.fpSending') : t('verify.fpSend')}
                     </button>
                   </form>
                 </div>
@@ -355,13 +357,13 @@ export default function Verify() {
     )
   }
 
-  // ========== 登录页面 ==========
+  // ========== Login page ==========
   return (
       <>
         <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
           <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">验证访问</h1>
-            <p className="mt-3 text-muted">请输入密码以继续访问</p>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">{t('verify.title')}</h1>
+            <p className="mt-3 text-muted">{t('verify.desc')}</p>
           </div>
         </section>
 
@@ -374,8 +376,8 @@ export default function Verify() {
                     <Lock size={24} weight="bold" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-fg">输入密码</h2>
-                    <p className="text-sm text-muted">密码为英文或数字</p>
+                    <h2 className="text-xl font-bold text-fg">{t('verify.cardTitle')}</h2>
+                    <p className="text-sm text-muted">{t('verify.cardDesc')}</p>
                   </div>
                 </div>
 
@@ -383,14 +385,16 @@ export default function Verify() {
                   <div className="mb-4">
                     <input
                         type="password"
+                        name="password"
+                        autoComplete="current-password"
                         maxLength="20"
                         value={password}
                         onChange={(e) => setPassword(e.target.value.replace(/\s/g, ''))}
-                        placeholder="请输入密码"
+                        placeholder={t('verify.placeholder')}
                         className="w-full px-4 py-3 text-center text-2xl tracking-[0.5em] bg-bg border border-border rounded-btn focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                         autoFocus
                     />
-                    <p className="mt-2 text-xs text-muted text-center">密码为英文或数字，1-20位</p>
+                    <p className="mt-2 text-xs text-muted text-center">{t('verify.hint')}</p>
                   </div>
 
                   {error && (
@@ -405,7 +409,7 @@ export default function Verify() {
                       disabled={loading || password.length < 1}
                       className="w-full py-3 bg-primary text-white font-semibold rounded-btn text-sm hover:bg-primary/90 active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {loading ? '验证中...' : '验证访问'}
+                    {loading ? t('verify.submitting') : t('verify.submit')}
                   </button>
                 </form>
 
@@ -416,13 +420,13 @@ export default function Verify() {
                       className="text-sm text-muted hover:text-primary transition-colors flex items-center gap-1.5"
                   >
                     <Eye size={14} weight="regular" />
-                    游客想预览？
+                    {t('verify.guest')}
                   </button>
                   <button
                       onClick={() => navigate('/verify/password')}
                       className="text-sm text-muted hover:text-primary transition-colors"
                   >
-                    忘记密码？
+                    {t('verify.forgot')}
                   </button>
                 </div>
               </div>
