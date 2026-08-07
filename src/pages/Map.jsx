@@ -8,13 +8,13 @@ const MAPS = [
     id: 1,
     nameKey: 'map.sat',
     image: '/images/map/1.png',
-    path: '/maps/backend-iframe/satellite'
+    path: '/maps/satellite'
   },
   {
     id: 2,
     nameKey: 'map.rail',
     image: '/images/map/2.png',
-    path: '/maps/backend-iframe/railway'
+    path: '/maps/railway'
   }
 ]
 
