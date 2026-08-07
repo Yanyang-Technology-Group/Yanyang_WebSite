@@ -82,8 +82,8 @@ function AppContent() {
                         <Route path="/verify/password/success" element={<Verify />} />
                         <Route path="/verify/password/error" element={<Verify />} />
                         <Route path="/backend/api/admin" element={<Admin />} />
-                        <Route path="/maps/backend-iframe/satellite" element={<SatelliteMap />} />
-                        <Route path="/maps/backend-iframe/railway" element={<RailwayMap />} />
+                        <Route path="/maps/satellite" element={<SatelliteMap />} />
+                        <Route path="/maps/railway" element={<RailwayMap />} />
                         <Route path="*" element={<NotFound />} />
                     </Routes>
                 </main>
