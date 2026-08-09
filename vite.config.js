@@ -2,6 +2,9 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { execSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import fs from 'node:fs'
+import path from 'node:path'
 
 function i18nCheckPlugin() {
   return {
@@ -12,6 +15,30 @@ function i18nCheckPlugin() {
       } catch {
         throw new Error('[i18n] 翻译检查未通过，已中止 dev/build。')
       }
+    },
+  }
+}
+
+// 给 index.html 里引用的本地资源注入 SRI（integrity），并去掉打包产物中的许可注释
+function sriPlugin() {
+  return {
+    name: 'inject-sri',
+    writeBundle(outputOptions) {
+      const outDir = outputOptions.dir
+      const htmlPath = path.join(outDir, 'index.html')
+      if (!fs.existsSync(htmlPath)) return
+      let html = fs.readFileSync(htmlPath, 'utf8')
+      const addIntegrity = (attr) => {
+        html = html.replace(new RegExp(`${attr}="(/(?:assets|fonts|theme-init)[^"]*)"`, 'g'), (match, url) => {
+          const file = path.join(outDir, url)
+          if (!fs.existsSync(file)) return match
+          const hash = createHash('sha384').update(fs.readFileSync(file)).digest('base64')
+          return `${attr}="${url}" integrity="sha384-${hash}" crossorigin="anonymous"`
+        })
+      }
+      addIntegrity('src')
+      addIntegrity('href')
+      fs.writeFileSync(htmlPath, html)
     },
   }
 }
@@ -125,7 +152,7 @@ export default defineConfig(async ({ mode, command }) => {
 
   return {
     base: '/',
-    plugins: [react(), tailwindcss(), i18nCheckPlugin()],
+    plugins: [react(), tailwindcss(), i18nCheckPlugin(), sriPlugin()],
     define: {
       __USER_DEBUG__: isUserDebug,
       __VERSION__: JSON.stringify(version),
@@ -140,6 +167,7 @@ export default defineConfig(async ({ mode, command }) => {
       cssCodeSplit: false,
       sourcemap: false,
       minify: 'esbuild',
+      esbuild: { legalComments: 'none' },
       rollupOptions: {
         output: {
           manualChunks: {
