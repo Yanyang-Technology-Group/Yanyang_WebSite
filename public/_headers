@@ -5,7 +5,7 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://backend.www.yanyn.cn https://api.github.com https://cap.yanyn.cn; frame-src https://backend.www.yanyn.cn https://map.yanyn.cn https://umap.yanyn.cn; worker-src 'self' blob: https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' https://www.yanyn.cn
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://backend.www.yanyn.cn https://api.github.com https://cap.yanyn.cn https://cdn.jsdelivr.net; frame-src https://backend.www.yanyn.cn https://map.yanyn.cn https://umap.yanyn.cn; worker-src 'self' blob: https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' https://www.yanyn.cn
   Cache-Control: no-cache
 
 /assets/*
