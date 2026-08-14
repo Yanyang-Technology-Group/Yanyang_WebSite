@@ -65,15 +65,22 @@ async function lookupGeoByIP(ip: string): Promise<GeoInfo | null> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 5000)
   try {
-    const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/?lang=zh`, {
+    // ip-api.com 免费版仅支持 http，但省市定位更准，且 lang=zh-CN 直接返回中文地名
+    const res = await fetch(`http://ip-api.com/json/${encodeURIComponent(ip)}?lang=zh-CN&fields=status,countryCode,regionName,city,timezone`, {
       headers: { 'User-Agent': 'yanyang-backend' },
       signal: controller.signal
     })
     if (!res.ok) return null
-    const data = await res.json() as Record<string, unknown> & { error?: boolean }
-    if (data.error) return null
-    const country = typeof data.country_name === 'string' ? data.country_name : undefined
-    const region = typeof data.region === 'string' ? data.region : undefined
+    const data = await res.json() as {
+      status?: string
+      countryCode?: string
+      regionName?: string
+      city?: string
+      timezone?: string
+    }
+    if (data.status !== 'success') return null
+    const country = typeof data.countryCode === 'string' ? data.countryCode : undefined
+    const region = typeof data.regionName === 'string' ? data.regionName : undefined
     const city = typeof data.city === 'string' ? data.city : undefined
     const timezone = typeof data.timezone === 'string' ? data.timezone : undefined
     if (!country && !region && !city) return null
@@ -86,9 +93,9 @@ async function lookupGeoByIP(ip: string): Promise<GeoInfo | null> {
 }
 
 async function getGeoInfo(request: Request, ip: string): Promise<GeoInfo> {
-  const cfGeo = getCfGeo(request)
-  if (cfGeo) return cfGeo
-  return (await lookupGeoByIP(ip)) || {}
+  const ipGeo = await lookupGeoByIP(ip)
+  if (ipGeo) return ipGeo
+  return getCfGeo(request) || {}
 }
 
 function countryName(code: string): string {
@@ -1502,7 +1509,7 @@ async function sendLoginNotificationEmail(
             <span style="font-size: 14px; color: #1a1a1a; font-weight: 600;">${escapeHtml(info.location)}</span>
           </div>
         </div>
-        <p style="font-size: 14px; color: #888888; line-height: 1.8; margin: 0 0 8px 0;">如果这不是您本人的操作，请立即联系管理员：feedback@yanyn.cn</p>
+        <p style="font-size: 14px; color: #888888; line-height: 1.8; margin: 0 0 8px 0;">如果这不是您本人的操作，请立即联系管理员。</p>
         <p style="font-size: 14px; color: #888888; line-height: 1.8; margin: 0 0 24px 0;">如果不再需要登录提醒，请联系管理员关闭此功能。</p>
         <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;">
         <p style="font-size: 12px; color: #bbbbbb; text-align: center; margin: 0; letter-spacing: 1px;">Copyright 2025-2026 晏阳技术组</p>
