@@ -225,7 +225,7 @@ export default {
     fpDesc: 'After verifying your email, the password will be sent to your mailbox',
     fpCardTitle: 'Enter your email',
     fpCardDesc: 'Enter the email you registered with',
-    fpPlaceholder: 'Enter your QQ email',
+    fpPlaceholder: 'Enter your email',
     fpLoadingCap: 'Loading verification...',
     fpCapHint: 'If it takes too long, please refresh the page',
     fpWait: 'Please wait {countdown} seconds and try again',
