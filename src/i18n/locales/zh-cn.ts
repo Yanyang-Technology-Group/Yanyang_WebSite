@@ -225,7 +225,7 @@ export default {
     fpDesc: '验证邮箱后，密码将发送到您的邮箱',
     fpCardTitle: '输入邮箱',
     fpCardDesc: '请输入您注册时绑定的邮箱',
-    fpPlaceholder: '请输入QQ邮箱',
+    fpPlaceholder: '请输入邮箱',
     fpLoadingCap: '加载验证中...',
     fpCapHint: '如长时间未加载，请刷新页面',
     fpWait: '请等待 {countdown} 秒后再试',
