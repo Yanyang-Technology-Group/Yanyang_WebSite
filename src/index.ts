@@ -60,31 +60,80 @@ function getCfGeo(request: Request): GeoInfo | null {
   return { country, region, city, timezone }
 }
 
+interface IpwLocationData {
+  ip?: string
+  bilibili?: { country?: string; administrative_area?: string; city?: string; isp?: string }
+  geocn?: { administrative_area?: string; city?: string; district?: string; isp?: string }
+  ip2region?: string
+  qqwry?: { country?: string; administrative_area?: string; city?: string; isp?: string }
+  maxmind_city?: { country?: string; administrative_area?: string; city?: string }
+  dbip_city?: { country?: string; administrative_area?: string; city?: string }
+}
+
+// 中国大陆精度：bilibili > geocn > ip2region > qqwry > maxmind；境外：maxmind/dbip 更准
+function pickBestGeo(data: IpwLocationData): GeoInfo | null {
+  const nonEmpty = (v: unknown): v is string => typeof v === 'string' && v.trim() !== ''
+
+  // 中国大陆：GeoCN 最精确（省市区县），境外无此数据
+  const geocn = data.geocn
+  if (geocn && (nonEmpty(geocn.administrative_area) || nonEmpty(geocn.city) || nonEmpty(geocn.district))) {
+    const parts = [geocn.administrative_area, geocn.city, geocn.district].filter(nonEmpty)
+    return { country: '中国', region: parts[0], city: parts.slice(1).join('') }
+  }
+
+  // 境外：MaxMind 更准
+  const maxmind = data.maxmind_city
+  if (maxmind && (nonEmpty(maxmind.administrative_area) || nonEmpty(maxmind.city))) {
+    return { country: maxmind.country, region: maxmind.administrative_area, city: maxmind.city }
+  }
+
+  // 兜底：bilibili（country/省 偶尔是域名或 ISP 名称如 114DNS.COM，此时不采用）
+  const bilibili = data.bilibili
+  if (bilibili && (nonEmpty(bilibili.administrative_area) || nonEmpty(bilibili.city))) {
+    const suspicious = [bilibili.country, bilibili.administrative_area].some(
+      v => typeof v === 'string' && /\./.test(v)
+    )
+    if (!suspicious) {
+      return { country: bilibili.country, region: bilibili.administrative_area, city: bilibili.city }
+    }
+  }
+
+  if (nonEmpty(data.ip2region)) {
+    const parts = data.ip2region.split('|').map(s => s.trim()).filter(Boolean)
+    return {
+      country: parts[0] || undefined,
+      region: parts[1] || undefined,
+      city: parts[2] || undefined
+    }
+  }
+
+  const qqwry = data.qqwry
+  if (qqwry && (nonEmpty(qqwry.administrative_area) || nonEmpty(qqwry.city))) {
+    return { country: qqwry.country, region: qqwry.administrative_area, city: qqwry.city }
+  }
+
+  const dbip = data.dbip_city
+  if (dbip && (nonEmpty(dbip.administrative_area) || nonEmpty(dbip.city))) {
+    return { country: dbip.country, region: dbip.administrative_area, city: dbip.city }
+  }
+
+  return null
+}
+
 async function lookupGeoByIP(ip: string): Promise<GeoInfo | null> {
   if (ip === 'unknown' || ip === '127.0.0.1' || ip === '::1' || ip === 'localhost') return null
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 5000)
   try {
-    // ip-api.com 免费版仅支持 http，但省市定位更准，且 lang=zh-CN 直接返回中文地名
-    const res = await fetch(`http://ip-api.com/json/${encodeURIComponent(ip)}?lang=zh-CN&fields=status,countryCode,regionName,city,timezone`, {
+    // ipw 多数据源 IP 归属地查询（bilibili/geocn/ip2region/qqwry/maxmind）
+    const res = await fetch(`https://ipw.wsmdn.top/middleware/cn-jiangsu/location/${encodeURIComponent(ip)}`, {
       headers: { 'User-Agent': 'yanyang-backend' },
       signal: controller.signal
     })
     if (!res.ok) return null
-    const data = await res.json() as {
-      status?: string
-      countryCode?: string
-      regionName?: string
-      city?: string
-      timezone?: string
-    }
-    if (data.status !== 'success') return null
-    const country = typeof data.countryCode === 'string' ? data.countryCode : undefined
-    const region = typeof data.regionName === 'string' ? data.regionName : undefined
-    const city = typeof data.city === 'string' ? data.city : undefined
-    const timezone = typeof data.timezone === 'string' ? data.timezone : undefined
-    if (!country && !region && !city) return null
-    return { country, region, city, timezone }
+    const data = await res.json() as IpwLocationData
+    if (typeof data.ip !== 'string') return null
+    return pickBestGeo(data)
   } catch {
     return null
   } finally {
@@ -107,7 +156,8 @@ function formatLocation(geo: GeoInfo): string {
   if (geo.country) parts.push(countryName(geo.country))
   if (geo.region) parts.push(geo.region)
   if (geo.city) parts.push(geo.city)
-  return parts.length ? parts.join(' ') : '未知'
+  const cleaned = parts.filter(p => p && p.trim() !== '' && p.trim() !== '0')
+  return cleaned.length ? cleaned.join(' ') : '未知'
 }
 
 function escapeHtml(value: string): string {
