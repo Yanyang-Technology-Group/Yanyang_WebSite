@@ -72,5 +72,6 @@ export interface Env {
     CLOUDMAIL_PASSWORD: string;
     ONE_TIME_SECRET: string;
     RESEND_TOKEN?: string;
+    LOGIN_NOTIFY_EMAIL?: string;
     KV?: KVNamespace;
 }

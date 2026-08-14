@@ -23,6 +23,105 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+interface GeoInfo {
+  country?: string
+  region?: string
+  city?: string
+  timezone?: string
+}
+
+const COUNTRY_NAMES_ZH: Record<string, string> = {
+  CN: '中国', HK: '中国香港', MO: '中国澳门', TW: '中国台湾',
+  JP: '日本', KR: '韩国', KP: '朝鲜', MN: '蒙古',
+  US: '美国', CA: '加拿大', MX: '墨西哥', BR: '巴西', AR: '阿根廷', CL: '智利',
+  GB: '英国', IE: '爱尔兰', FR: '法国', DE: '德国', NL: '荷兰', BE: '比利时',
+  CH: '瑞士', AT: '奥地利', IT: '意大利', ES: '西班牙', PT: '葡萄牙', GR: '希腊',
+  SE: '瑞典', NO: '挪威', DK: '丹麦', FI: '芬兰', PL: '波兰', CZ: '捷克',
+  HU: '匈牙利', RO: '罗马尼亚', UA: '乌克兰', RU: '俄罗斯', TR: '土耳其',
+  AU: '澳大利亚', NZ: '新西兰', SG: '新加坡', MY: '马来西亚', TH: '泰国',
+  VN: '越南', PH: '菲律宾', IN: '印度', ID: '印度尼西亚', PK: '巴基斯坦',
+  SA: '沙特阿拉伯', AE: '阿联酋', IL: '以色列', EG: '埃及', ZA: '南非', KZ: '哈萨克斯坦'
+}
+
+function getClientIP(request: Request): string {
+  return request.headers.get('CF-Connecting-IP') ||
+      request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ||
+      'unknown'
+}
+
+function getCfGeo(request: Request): GeoInfo | null {
+  const cf = (request as Request & { cf?: Record<string, unknown> }).cf
+  if (!cf) return null
+  const country = typeof cf.country === 'string' ? cf.country : undefined
+  const region = typeof cf.region === 'string' ? cf.region : undefined
+  const city = typeof cf.city === 'string' ? cf.city : undefined
+  const timezone = typeof cf.timezone === 'string' ? cf.timezone : undefined
+  if (!country && !region && !city) return null
+  return { country, region, city, timezone }
+}
+
+async function lookupGeoByIP(ip: string): Promise<GeoInfo | null> {
+  if (ip === 'unknown' || ip === '127.0.0.1' || ip === '::1' || ip === 'localhost') return null
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 5000)
+  try {
+    const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/?lang=zh`, {
+      headers: { 'User-Agent': 'yanyang-backend' },
+      signal: controller.signal
+    })
+    if (!res.ok) return null
+    const data = await res.json() as Record<string, unknown> & { error?: boolean }
+    if (data.error) return null
+    const country = typeof data.country_name === 'string' ? data.country_name : undefined
+    const region = typeof data.region === 'string' ? data.region : undefined
+    const city = typeof data.city === 'string' ? data.city : undefined
+    const timezone = typeof data.timezone === 'string' ? data.timezone : undefined
+    if (!country && !region && !city) return null
+    return { country, region, city, timezone }
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+async function getGeoInfo(request: Request, ip: string): Promise<GeoInfo> {
+  const cfGeo = getCfGeo(request)
+  if (cfGeo) return cfGeo
+  return (await lookupGeoByIP(ip)) || {}
+}
+
+function countryName(code: string): string {
+  return COUNTRY_NAMES_ZH[code] || code
+}
+
+function formatLocation(geo: GeoInfo): string {
+  const parts: string[] = []
+  if (geo.country) parts.push(countryName(geo.country))
+  if (geo.region) parts.push(geo.region)
+  if (geo.city) parts.push(geo.city)
+  return parts.length ? parts.join(' ') : '未知'
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (ch) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch] || ch
+  )
+}
+
+function formatLoginTime(date: Date): string {
+  return date.toLocaleString('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+}
+
 interface RequestLog {
   id: string
   timestamp: number
@@ -309,7 +408,7 @@ async function verifyAdmin(password: string, env: Env): Promise<boolean> {
   }
 }
 
-async function handleAdminLogin(request: Request, env: Env): Promise<Response> {
+async function handleAdminLogin(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   try {
     const { password } = await request.json() as { password: string }
     if (!password) {
@@ -326,6 +425,8 @@ async function handleAdminLogin(request: Request, env: Env): Promise<Response> {
       exp: Date.now() + 3600000,
       iat: Date.now()
     }, env.JWT_SECRET)
+
+    scheduleLoginNotification(request, env.LOGIN_NOTIFY_EMAIL || env.CLOUDMAIL_EMAIL, env, ctx)
 
     return jsonResponse({ success: true, token }, 200, request)
   } catch (error) {
@@ -478,7 +579,7 @@ async function handleHealth(request: Request): Promise<Response> {
   }, 200, request)
 }
 
-async function handleVerify(request: Request, env: Env): Promise<Response> {
+async function handleVerify(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   try {
     console.log('=== 开始验证 ===')
     console.log('GITHUB_TOKEN 是否存在:', !!env.GITHUB_TOKEN)
@@ -531,6 +632,8 @@ async function handleVerify(request: Request, env: Env): Promise<Response> {
       ...launchers,
       items: filterByType(launchers.items || [], passwordInfo.type)
     }
+
+    scheduleLoginNotification(request, passwordInfo.email, env, ctx)
 
     return jsonResponse({
       success: true,
@@ -924,9 +1027,7 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
   let statusCode = 200
 
   try {
-    clientIP = request.headers.get('CF-Connecting-IP') ||
-        request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ||
-        'unknown'
+    clientIP = getClientIP(request)
     userAgent = request.headers.get('User-Agent') || ''
 
     const banCheck = await isIPBanned(clientIP, env)
@@ -1304,8 +1405,143 @@ async function sendBanNotificationEmail(to: string, env: Env): Promise<void> {
   console.log(`[测试模式] 邮件「${subject}」应该发送到 ${to}`)
 }
 
+async function sendEmail(to: string, subject: string, html: string, env: Env): Promise<void> {
+  if (env.RESEND_TOKEN) {
+    const sendRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${env.RESEND_TOKEN}`
+      },
+      body: JSON.stringify({
+        from: '晏阳城市建设 <reply@yanyn.cn>',
+        to: [to],
+        subject,
+        html
+      })
+    })
+
+    if (!sendRes.ok) {
+      const error = await sendRes.text()
+      throw new Error(`邮件发送失败: ${sendRes.status} ${error}`)
+    }
+    return
+  }
+
+  if (env.CLOUDMAIL_EMAIL && env.CLOUDMAIL_PASSWORD) {
+    const loginRes = await fetch('https://e-mail.yanyn.cn/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: env.CLOUDMAIL_EMAIL,
+        password: env.CLOUDMAIL_PASSWORD
+      })
+    })
+
+    if (!loginRes.ok) {
+      throw new Error(`CloudMail 登录失败: ${loginRes.status}`)
+    }
+
+    const loginData = await loginRes.json() as { token?: string; data?: { token?: string } }
+    const token = loginData.token || loginData.data?.token
+
+    if (!token) {
+      throw new Error('CloudMail 登录失败：未获取到 token')
+    }
+
+    const sendRes = await fetch('https://e-mail.yanyn.cn/api/email/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'authorization': token
+      },
+      body: JSON.stringify({
+        from: 'reply@yanyn.cn',
+        to: to,
+        subject,
+        html
+      })
+    })
+
+    if (!sendRes.ok) {
+      const error = await sendRes.text()
+      throw new Error(`邮件发送失败: ${sendRes.status} ${error}`)
+    }
+    return
+  }
+
+  console.log(`[测试模式] 邮件「${subject}」应该发送到 ${to}`)
+}
+
+async function sendLoginNotificationEmail(
+  to: string,
+  info: { ip: string; location: string; time: string },
+  env: Env
+): Promise<void> {
+  const subject = '晏阳城市建设 - 登录提醒'
+  const html = `
+    <div style="font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 0;">
+      <div style="background: linear-gradient(135deg, #3B82F6, #2563EB); padding: 32px 24px; text-align: center; border-radius: 16px 16px 0 0;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 2px;">晏阳城市建设</h1>
+        <p style="color: rgba(255,255,255,0.85); margin: 6px 0 0 0; font-size: 14px; font-weight: 400;">用方块构筑城市与轨道的梦想</p>
+      </div>
+      <div style="background: #ffffff; padding: 32px 28px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #f0f0f0;">
+        <p style="font-size: 15px; color: #1a1a1a; line-height: 1.6; margin: 0 0 6px 0;">您好，</p>
+        <p style="font-size: 15px; color: #333333; line-height: 1.8; margin: 0 0 24px 0;">您的账号刚刚登录了晏阳城市建设网站，本次登录信息如下：</p>
+        <div style="background: #f8faff; border: 2px dashed #dbeafe; border-radius: 12px; padding: 4px 20px; margin-bottom: 28px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eef2ff;">
+            <span style="font-size: 13px; color: #888888; letter-spacing: 1px;">登录时间</span>
+            <span style="font-size: 14px; color: #1a1a1a; font-weight: 600;">${escapeHtml(info.time)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eef2ff;">
+            <span style="font-size: 13px; color: #888888; letter-spacing: 1px;">IP 地址</span>
+            <span style="font-size: 14px; color: #1a1a1a; font-weight: 600; font-family: 'Courier New', monospace;">${escapeHtml(info.ip)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0;">
+            <span style="font-size: 13px; color: #888888; letter-spacing: 1px;">真实地址</span>
+            <span style="font-size: 14px; color: #1a1a1a; font-weight: 600;">${escapeHtml(info.location)}</span>
+          </div>
+        </div>
+        <p style="font-size: 14px; color: #888888; line-height: 1.8; margin: 0 0 8px 0;">如果这不是您本人的操作，请立即联系管理员：feedback@yanyn.cn</p>
+        <p style="font-size: 14px; color: #888888; line-height: 1.8; margin: 0 0 24px 0;">如果不再需要登录提醒，请联系管理员关闭此功能。</p>
+        <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;">
+        <p style="font-size: 12px; color: #bbbbbb; text-align: center; margin: 0; letter-spacing: 1px;">Copyright 2025-2026 晏阳技术组</p>
+      </div>
+    </div>
+  `
+  await sendEmail(to, subject, html, env)
+}
+
+function scheduleLoginNotification(
+  request: Request,
+  to: string | undefined,
+  env: Env,
+  ctx: ExecutionContext
+): void {
+  if (!to) return
+  ctx.waitUntil(
+    (async () => {
+      try {
+        const clientIP = getClientIP(request)
+        const geo = await getGeoInfo(request, clientIP)
+        await sendLoginNotificationEmail(
+          to,
+          {
+            ip: clientIP,
+            location: formatLocation(geo),
+            time: formatLoginTime(new Date())
+          },
+          env
+        )
+      } catch (error) {
+        console.error('登录提醒邮件发送失败:', error)
+      }
+    })()
+  )
+}
+
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url)
     const path = url.pathname
 
@@ -1318,7 +1554,7 @@ export default {
     }
 
     if (path === '/api/verify' && request.method === 'POST') {
-      return handleVerify(request, env)
+      return handleVerify(request, env, ctx)
     }
 
     if (path === '/api/verify/password' && request.method === 'POST') {
@@ -1358,7 +1594,7 @@ export default {
     }
 
     if (path === '/api/admin/login' && request.method === 'POST') {
-      return handleAdminLogin(request, env)
+      return handleAdminLogin(request, env, ctx)
     }
     if (path === '/api/admin/banned' && request.method === 'GET') {
       return handleGetBannedList(request, env)
