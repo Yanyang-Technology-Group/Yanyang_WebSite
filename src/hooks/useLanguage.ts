@@ -1,13 +1,15 @@
 import { useCallback, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { DEFAULT_LOCALE, LOCALES, detectLocale, isLocaleCode, canonicalLocale } from '../i18n/locales'
+import { DEFAULT_LOCALE, LOCALES, detectLocale, isLocaleCode, canonicalLocale, type Locale } from '../i18n/locales'
 
 const STORAGE_KEY = 'yanyang_lang'
 
-function readStoredLocale() {
+function readStoredLocale(): Locale | null {
   try {
     const v = localStorage.getItem(STORAGE_KEY)
-    return v && LOCALES.includes(canonicalLocale(v)) ? canonicalLocale(v) : null
+    if (!v) return null
+    const canonical = canonicalLocale(v)
+    return LOCALES.includes(canonical) ? canonical : null
   } catch {
     return null
   }
@@ -19,8 +21,8 @@ export function useLanguage() {
 
   const segments = location.pathname.split('/').filter(Boolean)
   const first = segments[0]
-  const urlLocale = isLocaleCode(first) ? canonicalLocale(first) : null
-  const locale = urlLocale || readStoredLocale() || detectLocale()
+  const urlLocale: Locale | null = first && isLocaleCode(first) ? canonicalLocale(first) : null
+  const locale: Locale = urlLocale || readStoredLocale() || detectLocale()
   const cleanPath = urlLocale
     ? '/' + segments.slice(1).join('/')
     : location.pathname
@@ -43,7 +45,7 @@ export function useLanguage() {
   }, [])
 
   const switchLanguage = useCallback(
-    (next) => {
+    (next: Locale) => {
       try {
         localStorage.setItem(STORAGE_KEY, next)
       } catch {}

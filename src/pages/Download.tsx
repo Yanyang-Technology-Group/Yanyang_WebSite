@@ -1,13 +1,15 @@
-// pages/Download.jsx
+// pages/Download.tsx
 import { useNavigate } from 'react-router-dom'
 import { Package, Coffee, Rocket, ArrowRight, ArrowCounterClockwise } from '@phosphor-icons/react'
+import type { Icon } from '@phosphor-icons/react'
 import { useState, useEffect } from 'react'
 import ScrollReveal from '../components/ScrollReveal'
 import { useAuth } from '../hooks/useAuth'
 import { removeToken } from '../utils/cookie'
 import { useLanguageContext } from '../i18n/LanguageContext'
+import type { TFunction } from '../i18n'
 
-const TYPES = [
+const TYPES: { id: string; nameKey: string; icon: Icon; descriptionKey: string; color: string; path: string }[] = [
   {
     id: 'modpack',
     nameKey: 'download.t1.name',
@@ -34,7 +36,7 @@ const TYPES = [
   },
 ]
 
-function getGreeting(t) {
+function getGreeting(t: TFunction) {
   const hour = new Date().getHours()
   if (hour >= 5 && hour <= 10) return t('download.greeting.morning')
   if (hour >= 11 && hour <= 12) return t('download.greeting.noon')
@@ -44,7 +46,7 @@ function getGreeting(t) {
   return t('download.greeting.late')
 }
 
-function getRandomPhrase(t) {
+function getRandomPhrase(t: TFunction) {
   const hour = new Date().getHours()
   let group = 'm'
   if (hour >= 11 && hour <= 12) group = 'n'

@@ -40,6 +40,7 @@
 
 | 层 | 选型 |
 |---|---|
+| 语言 | TypeScript |
 | 框架 | React 19 |
 | 构建 | Vite 7 |
 | 路由 | React Router v7 |
@@ -61,56 +62,60 @@ Yanyang_WebSite/
 │   │   └── yanyangertonggerenxinxibaohuguizejijianhurenxvzhi.docx
 │   └── cap.min.js
 ├── scripts/
-│   └── check-i18n.js
+│   ├── check-i18n.ts
+│   └── copy-cap.mjs
 ├── src/
 │   ├── components/
-│   │   ├── Navbar.jsx
-│   │   ├── Footer.jsx
-│   │   ├── ScrollReveal.jsx
-│   │   └── Skeleton.jsx
+│   │   ├── Navbar.tsx
+│   │   ├── Footer.tsx
+│   │   ├── ScrollReveal.tsx
+│   │   └── Skeleton.tsx
 │   ├── i18n/
 │   │   ├── locales/
-│   │   │   ├── zh-cn.js
-│   │   │   └── en-us.js
-│   │   ├── index.js
-│   │   ├── locales.js
-│   │   └── LanguageContext.jsx
+│   │   │   ├── zh-cn.ts
+│   │   │   └── en-us.ts
+│   │   ├── index.ts
+│   │   ├── locales.ts
+│   │   └── LanguageContext.tsx
 │   ├── pages/
-│   │   ├── Home.jsx
-│   │   ├── About.jsx
-│   │   ├── Join.jsx
-│   │   ├── Event.jsx
-│   │   ├── Map.jsx
-│   │   ├── Download.jsx
-│   │   ├── Verify.jsx
-│   │   ├── Admin.jsx
-│   │   ├── SatelliteMap.jsx
-│   │   ├── RailwayMap.jsx
+│   │   ├── Home.tsx
+│   │   ├── About.tsx
+│   │   ├── Join.tsx
+│   │   ├── Event.tsx
+│   │   ├── Map.tsx
+│   │   ├── Download.tsx
+│   │   ├── Verify.tsx
+│   │   ├── Admin.tsx
+│   │   ├── SatelliteMap.tsx
+│   │   ├── RailwayMap.tsx
 │   │   └── Downloads/
-│   │       ├── modpack.jsx
-│   │       ├── java.jsx
-│   │       ├── launcher.jsx
-│   │       └── Detail.jsx
+│   │       ├── modpack.tsx
+│   │       ├── java.tsx
+│   │       ├── launcher.tsx
+│   │       └── Detail.tsx
 │   ├── Events/
-│   │   ├── 4years.jsx
+│   │   ├── 4years.tsx
 │   │   └── 4years.css
 │   ├── hooks/
-│   │   ├── useAuth.js
-│   │   ├── useLanguage.js
-│   │   └── useTheme.js
+│   │   ├── useAuth.ts
+│   │   ├── useLanguage.ts
+│   │   └── useTheme.ts
 │   ├── utils/
-│   │   ├── api.js
-│   │   ├── cookie.js
-│   │   └── version.js
+│   │   ├── api.ts
+│   │   ├── cookie.ts
+│   │   └── version.ts
 │   ├── config/
-│   │   └── index.js
-│   ├── App.jsx
+│   │   └── index.ts
+│   ├── types.ts
+│   ├── vite-env.d.ts
+│   ├── App.tsx
 │   ├── index.css
-│   └── main.jsx
+│   └── main.tsx
 ├── index.html
 ├── package.json
 ├── package-lock.json
-├── vite.config.js
+├── tsconfig.json
+├── vite.config.ts
 ├── .env.production
 ├── build.bat
 └── README.md

@@ -18,9 +18,9 @@ export function getBuilder() {
   return __BUILDER__ || ''
 }
 
-let cachedVersion = null
+let cachedVersion: string | null = null
 
-export function getVersionWithCache() {
+export function getVersionWithCache(): Promise<string> {
   if (cachedVersion) {
     return Promise.resolve(cachedVersion)
   }
@@ -30,7 +30,7 @@ export function getVersionWithCache() {
   return Promise.resolve(version)
 }
 
-async function getCommitCountFromGitHub() {
+async function getCommitCountFromGitHub(): Promise<number> {
   try {
     const response = await fetch(
       'https://api.github.com/repos/Yanyang-Technology-Group/Yanyang_WebSite/commits?per_page=1',
@@ -56,7 +56,7 @@ async function getCommitCountFromGitHub() {
   }
 }
 
-export async function getVersionFromGitHub() {
+export async function getVersionFromGitHub(): Promise<string> {
   const buildDate = __BUILD_DATE__ || (() => {
     const now = new Date()
     return `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`
@@ -66,10 +66,10 @@ export async function getVersionFromGitHub() {
   return `${buildDate}.${commitCount}`
 }
 
-let cachedVersionFromGitHub = null
-let cachedPromise = null
+let cachedVersionFromGitHub: string | null = null
+let cachedPromise: Promise<string> | null = null
 
-export function getVersionFromGitHubWithCache() {
+export function getVersionFromGitHubWithCache(): Promise<string> {
   if (cachedVersionFromGitHub) {
     return Promise.resolve(cachedVersionFromGitHub)
   }

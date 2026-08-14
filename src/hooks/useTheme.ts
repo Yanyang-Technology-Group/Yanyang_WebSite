@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 
 const THEME_KEY = 'yanyang_theme'
 
-function getSystemTheme() {
+type Theme = 'dark' | 'light'
+
+function getSystemTheme(): Theme {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
-function getInitialTheme() {
+function getInitialTheme(): Theme {
   try {
     const stored = localStorage.getItem(THEME_KEY)
     if (stored === 'dark' || stored === 'light') return stored
@@ -15,7 +17,7 @@ function getInitialTheme() {
 }
 
 export function useTheme() {
-  const [theme, setTheme] = useState(getInitialTheme)
+  const [theme, setTheme] = useState<Theme>(getInitialTheme)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)

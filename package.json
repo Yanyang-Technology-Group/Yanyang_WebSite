@@ -5,14 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && cp public/cap.min.js dist/",
-    "build:user": "cross-env VERSION=1.0.0 BUILDER=Admin BUILD_ENV=production vite build && cp public/cap.min.js dist/",
-    "build:userdebug": "cross-env VERSION=1.0.0 BUILDER=Admin BUILD_ENV=userdebug vite build --mode userdebug && cp public/cap.min.js dist/",
+    "build": "vite build && node scripts/copy-cap.mjs",
+    "build:user": "cross-env VERSION=1.0.0 BUILDER=Admin BUILD_ENV=production vite build && node scripts/copy-cap.mjs",
+    "build:userdebug": "cross-env VERSION=1.0.0 BUILDER=Admin BUILD_ENV=userdebug vite build --mode userdebug && node scripts/copy-cap.mjs",
+    "typecheck": "tsc --noEmit",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^5.1.4",
     "cross-env": "^10.1.0",
+    "typescript": "^7.0.2",
     "vite": "^7.2.4"
   },
   "dependencies": {

@@ -1,12 +1,14 @@
-export const LOCALES = ['zh-cn', 'en-us']
-export const DEFAULT_LOCALE = 'zh-cn'
+export type Locale = 'zh-cn' | 'en-us'
 
-export function normalizeLocale(value) {
+export const LOCALES: Locale[] = ['zh-cn', 'en-us']
+export const DEFAULT_LOCALE: Locale = 'zh-cn'
+
+export function normalizeLocale(value: string): string {
   return String(value || '').toLowerCase().replace(/-/g, '_')
 }
 
 // 只支持 zh-cn / en-us，其余回退默认（中文），不强制英文
-export function canonicalLocale(value) {
+export function canonicalLocale(value: string): Locale {
   const norm = normalizeLocale(value)
   if (norm === 'zh' || norm === 'zh_cn') return 'zh-cn'
   if (norm.startsWith('en')) return 'en-us'
@@ -14,13 +16,13 @@ export function canonicalLocale(value) {
   return DEFAULT_LOCALE
 }
 
-export function isLocaleCode(value) {
+export function isLocaleCode(value: string): boolean {
   const norm = normalizeLocale(value)
   return /^[a-z]{2}$/.test(norm) || /^[a-z]{2}_[a-z]{2}$/.test(norm)
 }
 
 // 根据浏览器语言识别：zh-* → zh-cn，en-* → en-us，其余回退中文
-export function detectLocale() {
+export function detectLocale(): Locale {
   const lang = normalizeLocale(navigator.language || 'zh-CN')
   return isLocaleCode(lang) ? canonicalLocale(lang) : DEFAULT_LOCALE
 }

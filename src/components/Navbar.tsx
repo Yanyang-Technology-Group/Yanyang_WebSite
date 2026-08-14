@@ -4,7 +4,7 @@ import { List, X, Sun, Moon } from '@phosphor-icons/react'
 import { useTheme } from '../hooks/useTheme'
 import { useLanguageContext } from '../i18n/LanguageContext'
 
-const NAV_ITEMS = [
+const NAV_ITEMS: { path: string; key: string }[] = [
   { path: '/', key: 'nav.home' },
   { path: '/about', key: 'nav.about' },
   { path: '/join', key: 'nav.join' },
@@ -23,7 +23,7 @@ export default function Navbar() {
     setMobileOpen(false)
   }, [location.pathname])
 
-  const linkClass = (path) =>
+  const linkClass = (path: string) =>
     `relative px-3 py-1.5 text-sm font-medium transition-colors after:absolute after:bottom-0 after:left-3 after:right-3 after:h-0.5 after:rounded-full after:bg-primary after:scale-x-0 after:transition-transform after:origin-center ${
       cleanPath === path
         ? 'text-primary after:scale-x-100'

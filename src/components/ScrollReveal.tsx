@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 
 export function useScrollReveal(threshold = 0.12) {
-  const ref = useRef(null)
+  const ref = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const el = ref.current
@@ -24,7 +24,7 @@ export function useScrollReveal(threshold = 0.12) {
   return ref
 }
 
-export default function ScrollReveal({ children, className = '', delay = 0 }) {
+export default function ScrollReveal({ children, className = '', delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
   const ref = useScrollReveal()
 
   return (

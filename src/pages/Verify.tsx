@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Lock, XCircle, Eye, Envelope, ArrowLeft, CheckCircle } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
@@ -30,10 +30,10 @@ export default function Verify() {
       script.onload = () => {
         setCapLoaded(true)
         const checkInterval = setInterval(() => {
-          const widget = document.querySelector('cap-widget')
+          const widget = document.querySelector<HTMLElement & { token?: string }>('cap-widget')
           if (widget && widget.token) {
             setCapToken(widget.token)
-            const input = document.querySelector('[name="cap-response"]')
+            const input = document.querySelector<HTMLInputElement>('[name="cap-response"]')
             if (input) input.value = widget.token
             clearInterval(checkInterval)
           }
@@ -66,7 +66,7 @@ export default function Verify() {
     }
   }, [countdown])
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError('')
     setLoading(true)
@@ -121,7 +121,7 @@ export default function Verify() {
     }
   }
 
-  async function handleFindPassword(e) {
+  async function handleFindPassword(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError('')
     setLoading(true)
@@ -391,7 +391,7 @@ export default function Verify() {
                         type="password"
                         name="password"
                         autoComplete="current-password"
-                        maxLength="20"
+                        maxLength={20}
                         value={password}
                         onChange={(e) => setPassword(e.target.value.replace(/\s/g, ''))}
                         placeholder={t('verify.placeholder')}

@@ -1,4 +1,4 @@
-// pages/Downloads/Detail.jsx
+// pages/Downloads/Detail.tsx
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { Package, Coffee, Rocket, ArrowLeft, Download, Warning } from '@phosphor-icons/react'
@@ -7,13 +7,16 @@ import { API_BASE_URL, API_ENDPOINTS } from '../../config'
 import { fetchWithAuth } from '../../utils/api'
 import { getToken } from '../../utils/cookie'
 import { useLanguageContext } from '../../i18n/LanguageContext'
+import type { DownloadItem, DownloadListData, DownloadableItem, DownloadTypeConfig } from '../../types'
 
-function isExpired(expiryDate) {
+function isExpired(expiryDate?: string): boolean {
     if (!expiryDate) return false
     return new Date(expiryDate) < new Date()
 }
 
-const CONFIG = {
+type DetailType = 'modpack' | 'java' | 'launcher'
+
+const CONFIG: Record<DetailType, DownloadTypeConfig> = {
     modpack: {
         icon: Package,
         endpoint: API_ENDPOINTS.modpacks,
@@ -40,7 +43,7 @@ const CONFIG = {
     }
 }
 
-const TYPE_MAP = {
+const TYPE_MAP: Record<string, DetailType> = {
     modpacks: 'modpack',
     javas: 'java',
     launchers: 'launcher',
@@ -51,14 +54,14 @@ export default function Detail() {
     const location = useLocation()
     const { cleanPath, t } = useLanguageContext()
     const { id } = useParams()
-    const type = TYPE_MAP[cleanPath.split('/')[2]]
+    const type = TYPE_MAP[cleanPath.split('/')[2] || '']
     const config = CONFIG[type]
     const Icon = config?.icon
 
-    const [item, setItem] = useState(null)
+    const [item, setItem] = useState<DownloadableItem | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
-    const [downloading, setDownloading] = useState(null)
+    const [downloading, setDownloading] = useState<string | null>(null)
 
     useEffect(() => {
         if (!config) {
@@ -73,13 +76,13 @@ export default function Detail() {
         fetchData(token)
     }, [id, type])
 
-    async function fetchData(token) {
+    async function fetchData(token: string) {
         setLoading(true)
         setError('')
-        const result = await fetchWithAuth(config.endpoint, token)
+        const result = await fetchWithAuth<DownloadListData>(config.endpoint, token)
 
         if (result.success) {
-            const found = result.data?.items?.find(i => i.id === id)
+            const found = result.data?.items?.find((i) => i.id === id)
             setItem(found || null)
         } else if (result.status === 401) {
             navigate('/verify', { state: { from: window.location.pathname } })
@@ -89,7 +92,7 @@ export default function Detail() {
         setLoading(false)
     }
 
-    async function handleDownload(dl) {
+    async function handleDownload(dl: DownloadItem) {
         const token = getToken()
         if (!token) {
             navigate('/verify', { state: { from: window.location.pathname } })

@@ -1,23 +1,45 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Shield, Lock, LockOpen, ArrowClockwise, Clock, XCircle, List, Trash, Eye } from '@phosphor-icons/react'
 import { API_BASE_URL } from '../config'
 import { useLanguageContext } from '../i18n/LanguageContext'
+import type { TFunction } from '../i18n'
 
-function getCookie(name) {
+interface BannedItem {
+  ip: string
+  banTime: number
+  reason: string
+  remaining: number
+}
+
+interface RequestLogItem {
+  id: string
+  timestamp: number
+  ip: string
+  path: string
+  method: string
+  status: number
+  email?: string
+  userAgent?: string
+}
+
+function getCookie(name: string): string | null {
     const value = `; ${document.cookie}`
     const parts = value.split(`; ${name}=`)
-    if (parts.length === 2) return parts.pop().split(';').shift()
+    if (parts.length === 2) {
+        const result = parts.pop()?.split(';').shift()
+        return result || null
+    }
     return null
 }
 
-function setCookie(name, value, maxAge = 3600) {
+function setCookie(name: string, value: string, maxAge = 3600): void {
     const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost'
     const secureFlag = isSecure ? '; Secure' : ''
     document.cookie = `${name}=${value}; path=/; max-age=${maxAge}; SameSite=Lax${secureFlag}`
 }
 
-function removeCookie(name) {
+function removeCookie(name: string): void {
     document.cookie = `${name}=; path=/; max-age=0`
 }
 
@@ -27,13 +49,13 @@ export default function Admin() {
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
-    const [bannedList, setBannedList] = useState([])
-    const [logs, setLogs] = useState([])
+    const [bannedList, setBannedList] = useState<BannedItem[]>([])
+    const [logs, setLogs] = useState<RequestLogItem[]>([])
     const [isLoggedIn, setIsLoggedIn] = useState(false)
     const [message, setMessage] = useState('')
     const [activeTab, setActiveTab] = useState('banned') // 'banned' | 'logs'
     const [showLogModal, setShowLogModal] = useState(false)
-    const [selectedLog, setSelectedLog] = useState(null)
+    const [selectedLog, setSelectedLog] = useState<RequestLogItem | null>(null)
 
     useEffect(() => {
         const token = getCookie('admin_token')
@@ -44,7 +66,7 @@ export default function Admin() {
         }
     }, [])
 
-    async function handleLogin(e) {
+    async function handleLogin(e: FormEvent<HTMLFormElement>) {
         e.preventDefault()
         setLoading(true)
         setError('')
@@ -75,7 +97,7 @@ export default function Admin() {
         }
     }
 
-    async function fetchBannedList(token) {
+    async function fetchBannedList(token: string) {
         try {
             const res = await fetch(`${API_BASE_URL}/api/admin/banned`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -91,7 +113,7 @@ export default function Admin() {
         }
     }
 
-    async function fetchLogs(token) {
+    async function fetchLogs(token: string) {
         try {
             const res = await fetch(`${API_BASE_URL}/api/admin/logs`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -105,7 +127,7 @@ export default function Admin() {
         }
     }
 
-    async function handleUnban(ip) {
+    async function handleUnban(ip: string) {
         const token = getCookie('admin_token')
         if (!token) return handleLogout()
 
@@ -132,7 +154,7 @@ export default function Admin() {
         }
     }
 
-    async function handleUpdateBan(ip) {
+    async function handleUpdateBan(ip: string) {
         const token = getCookie('admin_token')
         if (!token) return handleLogout()
 
@@ -199,19 +221,19 @@ export default function Admin() {
         setMessage(t('admin.logoutDone'))
     }
 
-    function formatTime(seconds, t) {
+    function formatTime(seconds: number, t: TFunction) {
         if (seconds < 60) return t('admin.timeSeconds', { s: seconds })
         if (seconds < 3600) return t('admin.timeMinutes', { m: Math.floor(seconds / 60) })
         if (seconds < 86400) return t('admin.timeHours', { h: Math.floor(seconds / 3600), m: Math.floor((seconds % 3600) / 60) })
         return t('admin.timeDays', { d: Math.floor(seconds / 86400), h: Math.floor((seconds % 86400) / 3600) })
     }
 
-    function formatTimestamp(ts) {
+    function formatTimestamp(ts: number) {
         const d = new Date(ts)
         return d.toLocaleString('zh-CN', { hour12: false })
     }
 
-    function getStatusColor(status) {
+    function getStatusColor(status: number) {
         if (status >= 200 && status < 300) return 'text-green-600 bg-green-50'
         if (status >= 400 && status < 500) return 'text-yellow-600 bg-yellow-50'
         if (status >= 500) return 'text-red-600 bg-red-50'

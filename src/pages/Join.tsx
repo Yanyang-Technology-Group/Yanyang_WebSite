@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { ChatTeardropText, Article, Play, Desktop, Gear, User, Envelope, Cpu, DeviceMobileCamera, HardDrives, WifiHigh } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
 import { useLanguageContext } from '../i18n/LanguageContext'
+import type { TFunction } from '../i18n'
 
-function copyToClipboard(text, label, t) {
+function copyToClipboard(text: string, label: string, t: TFunction) {
   navigator.clipboard.writeText(text).then(
     () => {
       const el = document.createElement('div')
@@ -178,7 +179,7 @@ export default function Join() {
   )
 }
 
-function FAQItem({ question, answer }) {
+function FAQItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false)
 
   return (

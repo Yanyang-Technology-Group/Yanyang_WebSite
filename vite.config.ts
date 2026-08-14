@@ -1,35 +1,33 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin, type UserConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { execSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+import { checkI18n } from './scripts/check-i18n'
 
-function i18nCheckPlugin() {
+function i18nCheckPlugin(): Plugin {
   return {
     name: 'yanyang-i18n-check',
     buildStart() {
-      try {
-        execSync('node scripts/check-i18n.js', { stdio: 'inherit' })
-      } catch {
-        throw new Error('[i18n] 翻译检查未通过，已中止 dev/build。')
-      }
+      checkI18n()
     },
   }
 }
 
 // 给 index.html 里引用的本地资源注入 SRI（integrity），并去掉打包产物中的许可注释
-function sriPlugin() {
+function sriPlugin(): Plugin {
   return {
     name: 'inject-sri',
-    writeBundle(outputOptions) {
+    writeBundle(outputOptions: { dir?: string }) {
       const outDir = outputOptions.dir
+      if (!outDir) return
       const htmlPath = path.join(outDir, 'index.html')
       if (!fs.existsSync(htmlPath)) return
       let html = fs.readFileSync(htmlPath, 'utf8')
-      const addIntegrity = (attr) => {
-        html = html.replace(new RegExp(`${attr}="(/(?:assets|fonts|theme-init)[^"]*)"`, 'g'), (match, url) => {
+      const addIntegrity = (attr: string) => {
+        html = html.replace(new RegExp(`${attr}="(/(?:assets|fonts|theme-init)[^"]*)"`, 'g'), (match: string, url: string) => {
           const file = path.join(outDir, url)
           if (!fs.existsSync(file)) return match
           const hash = createHash('sha384').update(fs.readFileSync(file)).digest('base64')
@@ -74,7 +72,7 @@ async function getCommitCountFromGitHub(retries = 10) {
 
       return '0'
     } catch (error) {
-      console.warn(`[GitHub API] 第 ${i + 1} 次失败:`, error.message)
+      console.warn(`[GitHub API] 第 ${i + 1} 次失败:`, error instanceof Error ? error.message : String(error))
       if (i < retries - 1) {
         await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)))
       }
@@ -85,7 +83,7 @@ async function getCommitCountFromGitHub(retries = 10) {
   return null
 }
 
-export default defineConfig(async ({ mode, command }) => {
+export default defineConfig(async ({ mode, command }): Promise<UserConfig> => {
   const isUserDebug = mode === 'userdebug'
 
   const now = new Date()
@@ -153,6 +151,7 @@ export default defineConfig(async ({ mode, command }) => {
   return {
     base: '/',
     plugins: [react(), tailwindcss(), i18nCheckPlugin(), sriPlugin()],
+    esbuild: { legalComments: 'none' },
     define: {
       __USER_DEBUG__: isUserDebug,
       __VERSION__: JSON.stringify(version),
@@ -167,7 +166,6 @@ export default defineConfig(async ({ mode, command }) => {
       cssCodeSplit: false,
       sourcemap: false,
       minify: 'esbuild',
-      esbuild: { legalComments: 'none' },
       rollupOptions: {
         output: {
           manualChunks: {
@@ -176,16 +174,17 @@ export default defineConfig(async ({ mode, command }) => {
           },
           chunkFileNames: 'assets/[name]-[hash].js',
           entryFileNames: 'assets/[name]-[hash].js',
-          assetFileNames: (assetInfo) => {
-            const info = assetInfo.name.split('.')
+          assetFileNames: (assetInfo: { name?: string }) => {
+            const name = assetInfo.name || ''
+            const info = name.split('.')
             const ext = info[info.length - 1]
-            if (/\.(png|jpe?g|gif|svg|webp|ico|avif)$/.test(assetInfo.name)) {
+            if (/\.(png|jpe?g|gif|svg|webp|ico|avif)$/.test(name)) {
               return 'assets/[name]-[hash].[ext]'
             }
-            if (/\.(css)$/.test(assetInfo.name)) {
+            if (/\.(css)$/.test(name)) {
               return 'assets/[name]-[hash].[ext]'
             }
-            if (/\.(woff2?|eot|ttf|otf)$/.test(assetInfo.name)) {
+            if (/\.(woff2?|eot|ttf|otf)$/.test(name)) {
               return 'assets/[name]-[hash].[ext]'
             }
             return 'assets/[name]-[hash].[ext]'

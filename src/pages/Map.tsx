@@ -22,7 +22,7 @@ export default function Map() {
   const { t } = useLanguageContext()
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
-  const [bumpDirection, setBumpDirection] = useState(null)
+  const [bumpDirection, setBumpDirection] = useState<'left' | 'right' | null>(null)
 
   const currentMap = MAPS[currentIndex]
 

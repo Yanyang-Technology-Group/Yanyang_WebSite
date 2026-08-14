@@ -1,4 +1,4 @@
-// pages/Downloads/launcher.jsx
+// pages/Downloads/launcher.tsx
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Rocket, ArrowLeft, ArrowRight, FileText } from '@phosphor-icons/react'
@@ -7,20 +7,21 @@ import { API_BASE_URL, API_ENDPOINTS } from '../../config'
 import { fetchWithAuth } from '../../utils/api'
 import { getToken } from '../../utils/cookie'
 import { useLanguageContext } from '../../i18n/LanguageContext'
+import type { DownloadListData, DownloadableItem } from '../../types'
 
-const TAG_COLORS = {
+const TAG_COLORS: Record<string, string> = {
   'PCL2': 'bg-blue-100 text-blue-700 border-blue-200',
   'PCLCE': 'bg-purple-100 text-purple-700 border-purple-200',
   'HMCL': 'bg-green-100 text-green-700 border-green-200'
 }
 
-const LICENSE_MAP = {
+const LICENSE_MAP: Record<string, string> = {
   'PCL2': 'PCL LICENSE',
   'PCLCE': 'Apache-2.0',
   'HMCL': 'GPL-3.0'
 }
 
-const LICENSE_URL_MAP = {
+const LICENSE_URL_MAP: Record<string, string> = {
   'PCL2': 'https://github.com/Meloong-Git/PCL/blob/main/LICENCE',
   'PCLCE': 'https://github.com/PCL-Community/PCL-CE/blob/dev/LICENSE',
   'HMCL': 'https://github.com/HMCL-dev/HMCL/blob/main/LICENSE'
@@ -29,10 +30,10 @@ const LICENSE_URL_MAP = {
 export default function LauncherList() {
   const navigate = useNavigate()
   const { t } = useLanguageContext()
-  const [data, setData] = useState(null)
+  const [data, setData] = useState<DownloadListData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [downloading, setDownloading] = useState(null)
+  const [downloading, setDownloading] = useState<string | null>(null)
 
   useEffect(() => {
     const token = getToken()
@@ -43,13 +44,13 @@ export default function LauncherList() {
     fetchData(token)
   }, [])
 
-  async function fetchData(token) {
+  async function fetchData(token: string) {
     setLoading(true)
     setError('')
-    const result = await fetchWithAuth(API_ENDPOINTS.launchers, token)
+    const result = await fetchWithAuth<DownloadListData>(API_ENDPOINTS.launchers, token)
 
     if (result.success) {
-      setData(result.data)
+      setData(result.data || null)
     } else if (result.status === 401) {
       navigate('/verify', { state: { from: window.location.pathname } })
     } else {
@@ -58,7 +59,7 @@ export default function LauncherList() {
     setLoading(false)
   }
 
-  async function handleDownload(item) {
+  async function handleDownload(item: DownloadableItem) {
     const token = getToken()
     if (!token) {
       navigate('/verify', { state: { from: window.location.pathname } })
@@ -75,7 +76,7 @@ export default function LauncherList() {
       const data = await res.json()
 
       if (data.success) {
-        const redirectUrl = `${API_BASE_URL}/api/download/redirect?link=${encodeURIComponent(item.link)}&token=${data.token}&sig=${encodeURIComponent(data.signature)}`
+        const redirectUrl = `${API_BASE_URL}/api/download/redirect?link=${encodeURIComponent(item.link || '')}&token=${data.token}&sig=${encodeURIComponent(data.signature)}`
         window.open(redirectUrl, '_blank')
       } else {
         alert(data.message || t('lists.generateFail'))
@@ -88,10 +89,10 @@ export default function LauncherList() {
     }
   }
 
-  function getGroups() {
+  function getGroups(): Record<string, DownloadableItem[]> {
     const items = data?.items || []
-    const groups = {}
-    items.forEach(item => {
+    const groups: Record<string, DownloadableItem[]> = {}
+    items.forEach((item: DownloadableItem) => {
       const tag = item.tag || t('lists.other')
       if (!groups[tag]) {
         groups[tag] = []

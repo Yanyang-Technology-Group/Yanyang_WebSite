@@ -1,7 +1,19 @@
-// utils/api.js
+// utils/api.ts
 import { removeToken } from './cookie'
 
-export async function fetchWithAuth(endpoint, token, options = {}) {
+export interface ApiResult<T = unknown> {
+  success: boolean
+  status: number
+  message?: string
+  data?: T
+  [key: string]: unknown
+}
+
+export async function fetchWithAuth<T = unknown>(
+  endpoint: string,
+  token: string,
+  options: RequestInit = {}
+): Promise<ApiResult<T>> {
     try {
         const response = await fetch(endpoint, {
             ...options,
@@ -25,8 +37,8 @@ export async function fetchWithAuth(endpoint, token, options = {}) {
             }
         }
 
-        const data = await response.json()
-        return { success: true, ...data }
+        const data = (await response.json()) as T
+        return { success: true, ...(data as object) } as ApiResult<T>
     } catch (error) {
         return { success: false, status: 0, message: '网络错误，请检查网络连接后重试' }
     }

@@ -1,17 +1,18 @@
-// pages/Downloads/java.jsx
+// pages/Downloads/modpack.tsx
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Coffee, ArrowLeft, ArrowRight } from '@phosphor-icons/react'
+import { Package, ArrowLeft, ArrowRight } from '@phosphor-icons/react'
 import ScrollReveal from '../../components/ScrollReveal'
 import { API_ENDPOINTS } from '../../config'
 import { fetchWithAuth } from '../../utils/api'
 import { getToken } from '../../utils/cookie'
 import { useLanguageContext } from '../../i18n/LanguageContext'
+import type { DownloadListData } from '../../types'
 
-export default function JavaList() {
+export default function ModpackList() {
   const navigate = useNavigate()
   const { t } = useLanguageContext()
-  const [data, setData] = useState(null)
+  const [data, setData] = useState<DownloadListData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -24,13 +25,13 @@ export default function JavaList() {
     fetchData(token)
   }, [])
 
-  async function fetchData(token) {
+  async function fetchData(token: string) {
     setLoading(true)
     setError('')
-    const result = await fetchWithAuth(API_ENDPOINTS.java, token)
+    const result = await fetchWithAuth<DownloadListData>(API_ENDPOINTS.modpacks, token)
 
     if (result.success) {
-      setData(result.data)
+      setData(result.data || null)
     } else if (result.status === 401) {
       navigate('/verify', { state: { from: window.location.pathname } })
     } else {
@@ -80,7 +81,7 @@ export default function JavaList() {
               {t('lists.back')}
             </button>
             <div className="text-center">
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">{t('lists.javaTitle')}</h1>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">{t('lists.modpackTitle')}</h1>
               {tag && <p className="mt-2 text-sm text-muted">{t('lists.currentVersion', { tag })}</p>}
             </div>
           </div>
@@ -90,19 +91,19 @@ export default function JavaList() {
           <div className="mx-auto max-w-3xl px-4 sm:px-6">
             <ScrollReveal>
               {items.length === 0 ? (
-                  <p className="text-center text-muted py-8">{t('lists.emptyJava')}</p>
+                  <p className="text-center text-muted py-8">{t('lists.emptyModpack')}</p>
               ) : (
                   <div className="grid gap-6">
                     {items.map((item) => (
                         <div
                             key={item.id}
-                            onClick={() => navigate(`/downloads/javas/${item.id}`)}
+                            onClick={() => navigate(`/downloads/modpacks/${item.id}`)}
                             className="bg-surface rounded-container border border-border p-6 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
                         >
                           <div className="flex items-center justify-between flex-wrap gap-3">
                             <div className="flex items-center gap-4">
                               <div className="w-12 h-12 rounded-full bg-primary-light text-primary flex items-center justify-center flex-shrink-0">
-                                <Coffee size={24} weight="bold" />
+                                <Package size={24} weight="bold" />
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
