@@ -207,6 +207,33 @@ export default function Server() {
                     </dd>
                   </div>
                 </dl>
+                {stats.services && stats.services.length > 0 && (
+                  <div className="mt-6 border-t border-border pt-5">
+                    <h3 className="text-sm font-semibold text-fg mb-3">{t('server.services')}</h3>
+                    <div className="flex flex-wrap gap-3">
+                      {stats.services.map(service => (
+                        <div
+                          key={service.session}
+                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-btn border text-sm ${
+                            service.running
+                              ? 'bg-green-50 text-green-700 border-green-200'
+                              : 'bg-red-50 text-red-600 border-red-200'
+                          }`}
+                        >
+                          <span
+                            className={`w-2 h-2 rounded-full ${
+                              service.running ? 'bg-green-500' : 'bg-red-500'
+                            }`}
+                          />
+                          <span className="font-medium">{service.name}</span>
+                          <span className="text-xs opacity-80">
+                            {service.running ? t('server.running') : t('server.stopped')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </ScrollReveal>
           )}

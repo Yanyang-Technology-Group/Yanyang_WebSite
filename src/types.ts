@@ -55,4 +55,9 @@ export interface ServerStats {
     used?: number
     percent?: number
   } | null
+  services?: {
+    name: string
+    session: string
+    running: boolean
+  }[]
 }

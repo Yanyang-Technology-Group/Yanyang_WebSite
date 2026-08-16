@@ -34,6 +34,9 @@ export default {
     days: '天',
     hours: '小时',
     minutes: '分钟',
+    services: '服务状态',
+    running: '运行中',
+    stopped: '已停止',
   },
   home: {
     hero: {

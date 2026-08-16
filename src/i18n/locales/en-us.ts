@@ -34,6 +34,9 @@ export default {
     days: 'd',
     hours: 'h',
     minutes: 'm',
+    services: 'Services',
+    running: 'Running',
+    stopped: 'Stopped',
   },
   home: {
     hero: {
