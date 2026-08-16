@@ -35,8 +35,8 @@ export default {
     hours: 'h',
     minutes: 'm',
     services: 'Services',
-    running: 'Running',
-    stopped: 'Stopped',
+    running: 'Normal',
+    stopped: 'Abnormal',
   },
   home: {
     hero: {
