@@ -71,7 +71,7 @@ function AppContent() {
                         <Route path="/event" element={<Event />} />
                         <Route path="/events/official/minecraft/4years" element={<FourYearsEvent />} />
                         <Route path="/map" element={<Map />} />
-                        <Route path="/server" element={<Server />} />
+                        <Route path="/state" element={<Server />} />
                         <Route path="/download" element={<DownloadPage />} />
                         <Route path="/downloads/modpack" element={<ModpackList />} />
                         <Route path="/downloads/java" element={<JavaList />} />
