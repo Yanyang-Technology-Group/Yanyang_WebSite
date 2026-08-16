@@ -33,9 +33,10 @@ interface StatCardProps {
   percent: number | null
   detail: string
   color: string
+  animated?: boolean
 }
 
-function StatCard({ icon: Icon, title, percent, detail, color }: StatCardProps) {
+function StatCard({ icon: Icon, title, percent, detail, color, animated = true }: StatCardProps) {
   const width = Math.min(100, Math.max(0, percent ?? 0))
   return (
     <div className="bg-surface rounded-container border border-border p-6">
@@ -50,7 +51,7 @@ function StatCard({ icon: Icon, title, percent, detail, color }: StatCardProps) 
       </div>
       <div className="h-2.5 w-full rounded-full bg-border/40 overflow-hidden">
         <div
-          className="h-full rounded-full bg-primary transition-all duration-500"
+          className={`h-full rounded-full bg-primary ${animated ? 'transition-all duration-500' : ''}`}
           style={{ width: `${width}%` }}
         />
       </div>
@@ -66,25 +67,30 @@ export default function Server() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [lastUpdate, setLastUpdate] = useState<number | null>(null)
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (auto: boolean) => {
     setLoading(true)
     try {
       const res = await fetch(`${API_BASE_URL}/api/server/stats`)
       const data = await res.json() as StatsResponse
       if (data.success && data.data) {
         setStats(data.data)
+        setAutoRefresh(auto)
         setConfigured(true)
         setError('')
         setLastUpdate(Date.now())
       } else if (data.configured === false) {
+        setAutoRefresh(auto)
         setConfigured(false)
         setError('')
       } else {
+        setAutoRefresh(auto)
         setConfigured(true)
         setError(data.message || t('server.offline'))
       }
     } catch {
+      setAutoRefresh(auto)
       setConfigured(true)
       setError(t('server.offline'))
     } finally {
@@ -93,8 +99,8 @@ export default function Server() {
   }, [t])
 
   useEffect(() => {
-    fetchStats()
-    const timer = setInterval(fetchStats, REFRESH_INTERVAL)
+    fetchStats(true)
+    const timer = setInterval(() => fetchStats(true), REFRESH_INTERVAL)
     return () => clearInterval(timer)
   }, [fetchStats])
 
@@ -112,7 +118,7 @@ export default function Server() {
           </div>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
             <button
-              onClick={fetchStats}
+              onClick={() => fetchStats(false)}
               disabled={loading}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted hover:text-fg border border-border rounded-btn hover:bg-surface transition-all disabled:opacity-50"
             >
@@ -161,6 +167,7 @@ export default function Server() {
                     .filter(Boolean)
                     .join(' · ') : 'Null'}
                   color="bg-blue-500"
+                  animated={!autoRefresh}
                 />
                 <StatCard
                   icon={Memory}
@@ -172,6 +179,7 @@ export default function Server() {
                       : 'Null'
                   }
                   color="bg-orange-500"
+                  animated={!autoRefresh}
                 />
                 <StatCard
                   icon={HardDrives}
@@ -183,6 +191,7 @@ export default function Server() {
                       : 'Null'
                   }
                   color="bg-purple-500"
+                  animated={!autoRefresh}
                 />
               </div>
 
