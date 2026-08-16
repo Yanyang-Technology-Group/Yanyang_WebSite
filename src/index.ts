@@ -639,15 +639,6 @@ async function handleHealth(request: Request): Promise<Response> {
 
 async function handleServerStats(request: Request, env: Env): Promise<Response> {
   try {
-    const token = getTokenFromRequest(request)
-    if (!token) {
-      return errorResponse('未授权', 401, request)
-    }
-    const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
-    if (!decoded) {
-      return errorResponse('未授权', 401, request)
-    }
-
     const data = await getServerStats(env)
     return jsonResponse({ success: true, configured: true, data }, 200, request)
   } catch (error) {
