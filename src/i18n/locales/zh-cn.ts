@@ -1,5 +1,5 @@
 export default {
-  nav: { home: '首页', about: '关于', join: '加入', event: '活动', map: '地图', download: '下载', brand: '晏阳城市建设', openMenu: '打开菜单', closeMenu: '关闭菜单' },
+  nav: { home: '首页', about: '关于', join: '加入', event: '活动', map: '地图', server: '服务器状态', download: '下载', brand: '晏阳城市建设', openMenu: '打开菜单', closeMenu: '关闭菜单' },
   footer: {
     brand: '晏阳城市建设',
     qq: 'QQ 群 486029013',
@@ -13,6 +13,28 @@ export default {
     switchLang: '切换语言',
   },
   common: { loading: '加载中...', retry: '重新加载', backHome: '返回首页', networkError: '网络错误，请稍后重试', user: '用户', guest: '游客', switchToDark: '切换到深色模式', switchToLight: '切换到浅色模式' },
+  server: {
+    title: '服务器状态',
+    desc: '实时查看服务器 CPU、内存与硬盘占用情况',
+    loading: '正在获取服务器数据…',
+    cpu: 'CPU',
+    memory: '内存',
+    disk: '硬盘',
+    cores: '核心',
+    gb: 'GB',
+    hostname: '主机名',
+    platform: '系统',
+    uptime: '运行时间',
+    load: '负载',
+    lastUpdate: '更新于',
+    refresh: '刷新',
+    offline: '服务器暂时无法获取状态，请稍后重试',
+    notConfigured: '服务器状态数据源未配置，请联系管理员开启。',
+    unknown: '未知',
+    days: '天',
+    hours: '小时',
+    minutes: '分钟',
+  },
   home: {
     hero: {
       title: '晏阳城市建设',

@@ -88,6 +88,7 @@ Yanyang_WebSite/
 │   │   ├── Admin.tsx
 │   │   ├── SatelliteMap.tsx
 │   │   ├── RailwayMap.tsx
+│   │   ├── Server.tsx
 │   │   └── Downloads/
 │   │       ├── modpack.tsx
 │   │       ├── java.tsx

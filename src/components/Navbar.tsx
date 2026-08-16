@@ -10,6 +10,7 @@ const NAV_ITEMS: { path: string; key: string }[] = [
   { path: '/join', key: 'nav.join' },
   { path: '/event', key: 'nav.event' },
   { path: '/map', key: 'nav.map' },
+  { path: '/server', key: 'nav.server' },
   { path: '/download', key: 'nav.download' },
 ]
 

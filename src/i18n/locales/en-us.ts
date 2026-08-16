@@ -1,5 +1,5 @@
 export default {
-  nav: { home: 'Home', about: 'About', join: 'Join', event: 'Events', map: 'Map', download: 'Downloads', brand: 'Yanyang Urban Construction', openMenu: 'Open menu', closeMenu: 'Close menu' },
+  nav: { home: 'Home', about: 'About', join: 'Join', event: 'Events', map: 'Map', server: 'Server', download: 'Downloads', brand: 'Yanyang Urban Construction', openMenu: 'Open menu', closeMenu: 'Close menu' },
   footer: {
     brand: 'Yanyang Urban Construction',
     qq: 'QQ Group 486029013',
@@ -13,6 +13,28 @@ export default {
     switchLang: 'Switch language',
   },
   common: { loading: 'Loading...', retry: 'Reload', backHome: 'Back to Home', networkError: 'Network error, please try again later', user: 'User', guest: 'Guest', switchToDark: 'Switch to dark mode', switchToLight: 'Switch to light mode' },
+  server: {
+    title: 'Server Status',
+    desc: 'Real-time CPU, memory and disk usage of the server',
+    loading: 'Fetching server data…',
+    cpu: 'CPU',
+    memory: 'Memory',
+    disk: 'Disk',
+    cores: 'cores',
+    gb: 'GB',
+    hostname: 'Hostname',
+    platform: 'OS',
+    uptime: 'Uptime',
+    load: 'Load',
+    lastUpdate: 'Updated',
+    refresh: 'Refresh',
+    offline: 'Unable to fetch server status, please try again later',
+    notConfigured: 'The server status data source is not configured. Please contact the administrator.',
+    unknown: 'Unknown',
+    days: 'd',
+    hours: 'h',
+    minutes: 'm',
+  },
   home: {
     hero: {
       title: 'Yanyang Urban Construction',

@@ -17,6 +17,7 @@ import Detail from './pages/Downloads/Detail'
 import FourYearsEvent from './Events/4years'
 import SatelliteMap from './pages/SatelliteMap'
 import RailwayMap from './pages/RailwayMap'
+import Server from './pages/Server'
 import { LanguageProvider, useLanguageContext } from './i18n/LanguageContext'
 import { useLanguage } from './hooks/useLanguage'
 
@@ -70,6 +71,7 @@ function AppContent() {
                         <Route path="/event" element={<Event />} />
                         <Route path="/events/official/minecraft/4years" element={<FourYearsEvent />} />
                         <Route path="/map" element={<Map />} />
+                        <Route path="/server" element={<Server />} />
                         <Route path="/download" element={<DownloadPage />} />
                         <Route path="/downloads/modpack" element={<ModpackList />} />
                         <Route path="/downloads/java" element={<JavaList />} />
