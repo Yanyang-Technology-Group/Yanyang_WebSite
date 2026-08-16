@@ -14,7 +14,7 @@ interface StatsResponse {
   message?: string
 }
 
-const REFRESH_INTERVAL = 15000
+const REFRESH_INTERVAL = 5000
 
 function formatGb(bytes: number): string {
   return (bytes / 2 ** 30).toFixed(1)
@@ -30,13 +30,13 @@ function formatUptime(seconds: number, t: TFunction): string {
 interface StatCardProps {
   icon: Icon
   title: string
-  percent: number
+  percent: number | null
   detail: string
   color: string
 }
 
 function StatCard({ icon: Icon, title, percent, detail, color }: StatCardProps) {
-  const width = Math.min(100, Math.max(0, percent))
+  const width = Math.min(100, Math.max(0, percent ?? 0))
   return (
     <div className="bg-surface rounded-container border border-border p-6">
       <div className="flex items-center gap-3 mb-4">
@@ -44,7 +44,9 @@ function StatCard({ icon: Icon, title, percent, detail, color }: StatCardProps) 
           <Icon size={20} weight="bold" />
         </div>
         <h3 className="text-base font-semibold text-fg">{title}</h3>
-        <span className="ml-auto text-2xl font-extrabold text-fg">{percent.toFixed(1)}%</span>
+        <span className="ml-auto text-2xl font-extrabold text-fg">
+          {percent != null ? `${percent.toFixed(1)}%` : 'Null'}
+        </span>
       </div>
       <div className="h-2.5 w-full rounded-full bg-border/40 overflow-hidden">
         <div
@@ -142,43 +144,43 @@ export default function Server() {
             </div>
           )}
 
-          {configured && !error && !stats && loading && (
+          {loading && !stats && (
             <div className="text-center py-12">
               <p className="text-muted">{t('server.loading')}</p>
             </div>
           )}
 
-          {configured && !error && stats && (
+          {!loading && (
             <ScrollReveal>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <StatCard
                   icon={Cpu}
                   title={t('server.cpu')}
-                  percent={cpu?.usagePercent ?? 0}
-                  detail={[cpu?.model, cpu?.cores != null ? `${cpu.cores} ${t('server.cores')}` : '']
+                  percent={cpu?.usagePercent != null ? cpu.usagePercent : null}
+                  detail={stats ? [cpu?.model, cpu?.cores != null ? `${cpu.cores} ${t('server.cores')}` : '']
                     .filter(Boolean)
-                    .join(' · ')}
+                    .join(' · ') : 'Null'}
                   color="bg-blue-500"
                 />
                 <StatCard
                   icon={Memory}
                   title={t('server.memory')}
-                  percent={memory?.percent ?? 0}
+                  percent={memory?.percent != null ? memory.percent : null}
                   detail={
-                    memory && memory.total != null
+                    stats && memory && memory.total != null
                       ? `${formatGb(memory.used ?? 0)} / ${formatGb(memory.total)} ${t('server.gb')}`
-                      : t('server.unknown')
+                      : 'Null'
                   }
                   color="bg-orange-500"
                 />
                 <StatCard
                   icon={HardDrives}
                   title={t('server.disk')}
-                  percent={disk?.percent ?? 0}
+                  percent={disk?.percent != null ? disk.percent : null}
                   detail={
-                    disk && disk.total != null
+                    stats && disk && disk.total != null
                       ? `${formatGb(disk.used ?? 0)} / ${formatGb(disk.total)} ${t('server.gb')}`
-                      : t('server.unknown')
+                      : 'Null'
                   }
                   color="bg-purple-500"
                 />
@@ -188,26 +190,26 @@ export default function Server() {
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   <div>
                     <dt className="text-xs text-muted mb-1">{t('server.hostname')}</dt>
-                    <dd className="font-mono text-fg">{stats.hostname || t('server.unknown')}</dd>
+                    <dd className="font-mono text-fg">{stats?.hostname || 'Null'}</dd>
                   </div>
                   <div>
                     <dt className="text-xs text-muted mb-1">{t('server.platform')}</dt>
-                    <dd className="text-fg">{stats.platform || t('server.unknown')}</dd>
+                    <dd className="text-fg">{stats?.platform || 'Null'}</dd>
                   </div>
                   <div>
                     <dt className="text-xs text-muted mb-1">{t('server.uptime')}</dt>
                     <dd className="text-fg">
-                      {stats.uptime != null ? formatUptime(stats.uptime, t) : t('server.unknown')}
+                      {stats?.uptime != null ? formatUptime(stats.uptime, t) : 'Null'}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-xs text-muted mb-1">{t('server.load')}</dt>
                     <dd className="font-mono text-fg">
-                      {stats.load && stats.load.length ? stats.load.map(v => v.toFixed(2)).join(' / ') : t('server.unknown')}
+                      {stats?.load && stats.load.length ? stats.load.map(v => v.toFixed(2)).join(' / ') : 'Null'}
                     </dd>
                   </div>
                 </dl>
-                {stats.services && stats.services.length > 0 && (
+                {stats?.services && stats.services.length > 0 && (
                   <div className="mt-6 border-t border-border pt-5">
                     <h3 className="text-sm font-semibold text-fg mb-3">{t('server.services')}</h3>
                     <div className="divide-y divide-border border border-border rounded-btn overflow-hidden">
@@ -230,6 +232,14 @@ export default function Server() {
                           </span>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+                {stats && (!stats.services || stats.services.length === 0) && (
+                  <div className="mt-6 border-t border-border pt-5">
+                    <h3 className="text-sm font-semibold text-fg mb-3">{t('server.services')}</h3>
+                    <div className="px-4 py-3 bg-surface border border-border rounded-btn text-sm text-muted">
+                      Null
                     </div>
                   </div>
                 )}
