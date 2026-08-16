@@ -2,6 +2,7 @@ import { corsHeaders, jsonResponse, errorResponse } from './utils/response.js'
 import { getDownkey, getModpacks, getJava, getLaunchers, verifyPassword } from './services/github.js'
 import { simpleJWT, verifySimpleJWT } from './services/jwt.js'
 import { Env, PasswordEntry, DownloadItem } from './types'
+import { getServerStats, PanelNotConfiguredError } from './services/panel.js'
 
 const TOKEN_EXPIRY = 3600000
 
@@ -634,6 +635,38 @@ async function handleHealth(request: Request): Promise<Response> {
     domain: 'backend.www.yanyn.cn',
     version: '1.0.0'
   }, 200, request)
+}
+
+async function handleServerStats(request: Request, env: Env): Promise<Response> {
+  try {
+    const token = getTokenFromRequest(request)
+    if (!token) {
+      return errorResponse('未授权', 401, request)
+    }
+    const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
+    if (!decoded) {
+      return errorResponse('未授权', 401, request)
+    }
+
+    const data = await getServerStats(env)
+    return jsonResponse({ success: true, configured: true, data }, 200, request)
+  } catch (error) {
+    if (error instanceof PanelNotConfiguredError) {
+      return jsonResponse({
+        success: true,
+        configured: false,
+        data: null,
+        message: error.message
+      }, 200, request)
+    }
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return jsonResponse({
+      success: false,
+      configured: true,
+      data: null,
+      message: '获取服务器状态失败: ' + errorMessage
+    }, 200, request)
+  }
 }
 
 async function handleVerify(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -1608,6 +1641,10 @@ export default {
 
     if (path === '/api/health') {
       return handleHealth(request)
+    }
+
+    if (path === '/api/server/stats') {
+      return handleServerStats(request, env)
     }
 
     if (path === '/api/verify' && request.method === 'POST') {

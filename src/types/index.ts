@@ -63,6 +63,36 @@ export interface LauncherData {
     items: LauncherItem[];
 }
 
+export interface ServerStats {
+    timestamp?: string;
+    hostname?: string;
+    platform?: string;
+    uptime?: number;
+    load?: number[];
+    cpu?: {
+        cores?: number;
+        model?: string;
+        usagePercent?: number;
+    };
+    memory?: {
+        total?: number;
+        used?: number;
+        percent?: number;
+    };
+    disk?: {
+        total?: number;
+        used?: number;
+        percent?: number;
+    } | null;
+}
+
+export interface PanelConfig {
+    address: string;
+    username: string;
+    password: string;
+    entrance?: string;
+}
+
 export interface Env {
     GITHUB_TOKEN: string;
     REPO_OWNER: string;
