@@ -1,8 +1,7 @@
 import { corsHeaders, jsonResponse, errorResponse } from './utils/response.js'
 import { getDownkey, getModpacks, getJava, getLaunchers, verifyPassword } from './services/github.js'
 import { simpleJWT, verifySimpleJWT } from './services/jwt.js'
-import { Env, PasswordEntry, DownloadItem } from './types'
-import { getServerStats, PanelNotConfiguredError } from './services/panel.js'
+import { Env, PasswordEntry, DownloadItem, ServerStats } from './types'
 
 const TOKEN_EXPIRY = 3600000
 
@@ -16,6 +15,9 @@ const KV_KEY_BAN_LIST = 'ban:list'
 const KV_KEY_RATE_PREFIX = 'rate:'
 const KV_KEY_LOG_PREFIX = 'log:'
 const KV_KEY_LOG_LIST = 'log:list'
+const KV_KEY_SERVER_STATS = 'server-stats:latest'
+const SERVER_STATS_TTL = 120
+const STATS_INGEST_PATH = '/api/server/stats/ingest'
 const ALLOWED_MAP_ORIGINS = ['umap.odn.cc', 'ymap.odn.cc', '103.40.14.23']
 const MAP_PROXY_PREFIX = '/api/map/proxy'
 const MAP_TARGET_COOKIE = 'map_target'
@@ -638,25 +640,44 @@ async function handleHealth(request: Request): Promise<Response> {
 }
 
 async function handleServerStats(request: Request, env: Env): Promise<Response> {
-  try {
-    const data = await getServerStats(env)
-    return jsonResponse({ success: true, configured: true, data }, 200, request)
-  } catch (error) {
-    if (error instanceof PanelNotConfiguredError) {
-      return jsonResponse({
-        success: true,
-        configured: false,
-        data: null,
-        message: error.message
-      }, 200, request)
-    }
-    const errorMessage = error instanceof Error ? error.message : String(error)
+  const data = env.KV ? await env.KV.get(KV_KEY_SERVER_STATS, 'json') as ServerStats | null : null
+  if (!data) {
     return jsonResponse({
-      success: false,
-      configured: true,
+      success: true,
+      configured: false,
       data: null,
-      message: '获取服务器状态失败: ' + errorMessage
+      message: '服务器尚未上报数据，请检查服务器上的采集脚本是否在运行'
     }, 200, request)
+  }
+  return jsonResponse({ success: true, configured: true, data }, 200, request)
+}
+
+async function handleServerStatsIngest(request: Request, env: Env): Promise<Response> {
+  if (request.method !== 'POST') {
+    return errorResponse('仅支持 POST', 405, request)
+  }
+  const provided = request.headers.get('X-Stats-Token') || ''
+  const expected = env.STATS_INGEST_TOKEN || ''
+  if (!expected || provided !== expected) {
+    return errorResponse('未授权', 401, request)
+  }
+  if (!env.KV) {
+    return errorResponse('KV 存储未配置', 500, request)
+  }
+  try {
+    const body = await request.json() as ServerStats
+    if (typeof body.hostname !== 'string' || !body.hostname) {
+      return errorResponse('缺少 hostname 字段', 400, request)
+    }
+    const payload: ServerStats = {
+      ...body,
+      timestamp: body.timestamp || new Date().toISOString()
+    }
+    await env.KV.put(KV_KEY_SERVER_STATS, JSON.stringify(payload), { expirationTtl: SERVER_STATS_TTL })
+    return jsonResponse({ success: true, message: 'ok' }, 200, request)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return errorResponse('上报失败: ' + errorMessage, 400, request)
   }
 }
 
@@ -1636,6 +1657,9 @@ export default {
 
     if (path === '/api/server/stats') {
       return handleServerStats(request, env)
+    }
+    if (path === STATS_INGEST_PATH) {
+      return handleServerStatsIngest(request, env)
     }
 
     if (path === '/api/verify' && request.method === 'POST') {

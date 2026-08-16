@@ -12,7 +12,7 @@ export function corsHeaders(request: Request): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': isAllowed ? origin : 'https://www.yanyn.cn',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Stats-Token',
     'Access-Control-Allow-Credentials': isAllowed ? 'true' : 'false',
     'Access-Control-Max-Age': '86400'
   }

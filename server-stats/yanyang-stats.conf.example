@@ -1,0 +1,11 @@
+# 上报地址（默认已是线上地址，一般不用改）
+STATS_URL=https://backend.www.yanyn.cn/api/server/stats/ingest
+
+# 上报令牌：必须与 Cloudflare Worker 环境变量 STATS_INGEST_TOKEN 一致
+STATS_TOKEN=please-change-me
+
+# 上报间隔（秒）
+STATS_INTERVAL=15
+
+# 需要监控的 tmux 会话：显示名|会话名|tmux socket路径(可留空)
+SERVICES_CFG=Minecraft|server|,FRP Node 1|frp1|,FRP Node 2|frp2|

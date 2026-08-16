@@ -63,34 +63,34 @@ export interface LauncherData {
     items: LauncherItem[];
 }
 
-export interface ServerStats {
-    timestamp?: string;
-    hostname?: string;
-    platform?: string;
-    uptime?: number;
-    load?: number[];
-    cpu?: {
-        cores?: number;
-        model?: string;
-        usagePercent?: number;
-    };
-    memory?: {
-        total?: number;
-        used?: number;
-        percent?: number;
-    };
-    disk?: {
-        total?: number;
-        used?: number;
-        percent?: number;
-    } | null;
+export interface ServerServiceStatus {
+    name: string
+    session: string
+    running: boolean
 }
 
-export interface PanelConfig {
-    address: string;
-    username: string;
-    password: string;
-    entrance?: string;
+export interface ServerStats {
+    timestamp?: string
+    hostname?: string
+    platform?: string
+    uptime?: number
+    load?: number[]
+    cpu?: {
+        cores?: number
+        model?: string
+        usagePercent?: number
+    }
+    memory?: {
+        total?: number
+        used?: number
+        percent?: number
+    }
+    disk?: {
+        total?: number
+        used?: number
+        percent?: number
+    } | null
+    services?: ServerServiceStatus[]
 }
 
 export interface Env {
@@ -103,5 +103,6 @@ export interface Env {
     ONE_TIME_SECRET: string;
     RESEND_TOKEN?: string;
     LOGIN_NOTIFY_EMAIL?: string;
+    STATS_INGEST_TOKEN?: string;
     KV?: KVNamespace;
 }
