@@ -214,17 +214,17 @@ export default function Server() {
                     <h3 className="text-sm font-semibold text-fg mb-3">{t('server.services')}</h3>
                     <div className="divide-y divide-border border border-border rounded-btn overflow-hidden">
                       {stats.services.map(service => (
-                        <div key={service.session} className="flex items-center justify-between px-4 py-3 bg-surface">
+                        <div key={service.session} className="flex items-center justify-between px-5 py-4 bg-surface">
                           <span className="flex items-center gap-2.5 text-sm font-medium text-fg">
                             <span
-                              className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                              className={`w-3 h-3 rounded-full flex-shrink-0 ${
                                 service.running ? 'bg-green-500' : 'bg-red-500'
                               }`}
                             />
                             {service.name}
                           </span>
                           <span
-                            className={`text-sm font-semibold ${
+                            className={`text-base font-bold ${
                               service.running ? 'text-green-600' : 'text-red-600'
                             }`}
                           >
