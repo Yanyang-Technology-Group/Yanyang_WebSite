@@ -4,6 +4,13 @@
 # 依赖：bash、curl、awk、sed、date（Arch Linux 基础系统自带）
 set -euo pipefail
 
+# 自动加载配置文件（systemd 和手动运行都生效）
+if [ -f /etc/yanyang-stats.conf ]; then
+  set -a
+  . /etc/yanyang-stats.conf
+  set +a
+fi
+
 STATS_URL="${STATS_URL:-https://backend.www.yanyn.cn/api/server/stats/ingest}"
 STATS_TOKEN="${STATS_TOKEN:-}"
 INTERVAL="${STATS_INTERVAL:-15}"
@@ -12,7 +19,8 @@ CPU_SAMPLE_MS="${CPU_SAMPLE_MS:-800}"
 SERVICES_CFG="${SERVICES_CFG:-Minecraft|server|,FRP Node 1|frp1|,FRP Node 2|frp2|}"
 
 if [ -z "$STATS_TOKEN" ]; then
-  echo "[yanyang-stats] 错误：未设置 STATS_TOKEN（请检查 /etc/yanyang-stats.conf）" >&2
+  echo "[yanyang-stats] 错误：未设置 STATS_TOKEN" >&2
+  echo "[yanyang-stats] 请创建 /etc/yanyang-stats.conf 并写入：STATS_TOKEN=你的令牌（与 Cloudflare Worker 的 STATS_INGEST_TOKEN 一致）" >&2
   exit 1
 fi
 
