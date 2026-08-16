@@ -210,23 +210,22 @@ export default function Server() {
                 {stats.services && stats.services.length > 0 && (
                   <div className="mt-6 border-t border-border pt-5">
                     <h3 className="text-sm font-semibold text-fg mb-3">{t('server.services')}</h3>
-                    <div className="flex flex-wrap gap-3">
+                    <div className="divide-y divide-border border border-border rounded-btn overflow-hidden">
                       {stats.services.map(service => (
-                        <div
-                          key={service.session}
-                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-btn border text-sm ${
-                            service.running
-                              ? 'bg-green-50 text-green-700 border-green-200'
-                              : 'bg-red-50 text-red-600 border-red-200'
-                          }`}
-                        >
+                        <div key={service.session} className="flex items-center justify-between px-4 py-3 bg-surface">
+                          <span className="flex items-center gap-2.5 text-sm font-medium text-fg">
+                            <span
+                              className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                                service.running ? 'bg-green-500' : 'bg-red-500'
+                              }`}
+                            />
+                            {service.name}
+                          </span>
                           <span
-                            className={`w-2 h-2 rounded-full ${
-                              service.running ? 'bg-green-500' : 'bg-red-500'
+                            className={`text-sm font-semibold ${
+                              service.running ? 'text-green-600' : 'text-red-600'
                             }`}
-                          />
-                          <span className="font-medium">{service.name}</span>
-                          <span className="text-xs opacity-80">
+                          >
                             {service.running ? t('server.running') : t('server.stopped')}
                           </span>
                         </div>
