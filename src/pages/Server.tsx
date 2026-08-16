@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { Cpu, Memory, HardDrives, ArrowClockwise, WarningCircle } from '@phosphor-icons/react'
 import type { Icon } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
-import { useAuth } from '../hooks/useAuth'
 import { API_BASE_URL } from '../config'
 import { useLanguageContext } from '../i18n/LanguageContext'
 import type { TFunction } from '../i18n'
@@ -60,7 +59,6 @@ function StatCard({ icon: Icon, title, percent, detail, color }: StatCardProps) 
 
 export default function Server() {
   const { t } = useLanguageContext()
-  const { token, loading: authLoading } = useAuth()
   const [stats, setStats] = useState<ServerStats | null>(null)
   const [configured, setConfigured] = useState(true)
   const [error, setError] = useState('')
@@ -68,12 +66,9 @@ export default function Server() {
   const [lastUpdate, setLastUpdate] = useState<number | null>(null)
 
   const fetchStats = useCallback(async () => {
-    if (!token) return
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE_URL}/api/server/stats`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const res = await fetch(`${API_BASE_URL}/api/server/stats`)
       const data = await res.json() as StatsResponse
       if (data.success && data.data) {
         setStats(data.data)
@@ -93,23 +88,13 @@ export default function Server() {
     } finally {
       setLoading(false)
     }
-  }, [token, t])
+  }, [t])
 
   useEffect(() => {
     fetchStats()
     const timer = setInterval(fetchStats, REFRESH_INTERVAL)
     return () => clearInterval(timer)
   }, [fetchStats])
-
-  if (authLoading) {
-    return (
-      <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
-          <p className="text-muted">{t('server.loading')}</p>
-        </div>
-      </section>
-    )
-  }
 
   const cpu = stats?.cpu
   const memory = stats?.memory
