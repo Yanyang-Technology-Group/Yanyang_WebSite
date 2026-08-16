@@ -4,10 +4,14 @@
 # 依赖：bash、curl、awk、sed、date（Arch Linux 基础系统自带）
 set -euo pipefail
 
-# 自动加载配置文件（systemd 和手动运行都生效）
-if [ -f /etc/yanyang-stats.conf ]; then
+# 自动加载配置文件（systemd 和手动运行都生效；默认 /etc，也支持脚本同目录）
+CONF_FILE="${STATS_CONF:-/etc/yanyang-stats.conf}"
+if [ ! -f "$CONF_FILE" ]; then
+  CONF_FILE="$(dirname "$0")/yanyang-stats.conf"
+fi
+if [ -f "$CONF_FILE" ]; then
   set -a
-  . /etc/yanyang-stats.conf
+  . "$CONF_FILE"
   set +a
 fi
 
