@@ -18,6 +18,10 @@ const KV_KEY_LOG_LIST = 'log:list'
 const KV_KEY_SERVER_STATS = 'server-stats:latest'
 const SERVER_STATS_TTL = 120
 const STATS_INGEST_PATH = '/api/server/stats/ingest'
+// KV 免费额度每天约 1000 次写入，脚本高频上报时先放内存，每 90 秒才落一次 KV
+const KV_WRITE_INTERVAL = 90 * 1000
+let serverStatsMemory: { stats: ServerStats; updatedAt: number } | null = null
+let serverStatsLastKvWrite = 0
 const ALLOWED_MAP_ORIGINS = ['umap.odn.cc', 'ymap.odn.cc', '103.40.14.23']
 const MAP_PROXY_PREFIX = '/api/map/proxy'
 const MAP_TARGET_COOKIE = 'map_target'
@@ -640,6 +644,9 @@ async function handleHealth(request: Request): Promise<Response> {
 }
 
 async function handleServerStats(request: Request, env: Env): Promise<Response> {
+  if (serverStatsMemory && Date.now() - serverStatsMemory.updatedAt < SERVER_STATS_TTL * 1000) {
+    return jsonResponse({ success: true, configured: true, data: serverStatsMemory.stats }, 200, request)
+  }
   const data = env.KV ? await env.KV.get(KV_KEY_SERVER_STATS, 'json') as ServerStats | null : null
   if (!data) {
     return jsonResponse({
@@ -673,7 +680,16 @@ async function handleServerStatsIngest(request: Request, env: Env): Promise<Resp
       ...body,
       timestamp: body.timestamp || new Date().toISOString()
     }
-    await env.KV.put(KV_KEY_SERVER_STATS, JSON.stringify(payload), { expirationTtl: SERVER_STATS_TTL })
+    serverStatsMemory = { stats: payload, updatedAt: Date.now() }
+    if (Date.now() - serverStatsLastKvWrite >= KV_WRITE_INTERVAL) {
+      try {
+        await env.KV.put(KV_KEY_SERVER_STATS, JSON.stringify(payload), { expirationTtl: SERVER_STATS_TTL })
+        serverStatsLastKvWrite = Date.now()
+      } catch (error) {
+        // KV 写入失败（如当日额度超限）不影响内存数据服务，仅记录
+        console.error('server stats KV write failed:', error)
+      }
+    }
     return jsonResponse({ success: true, message: 'ok' }, 200, request)
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
