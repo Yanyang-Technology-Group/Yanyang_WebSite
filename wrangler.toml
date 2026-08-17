@@ -2,8 +2,3 @@ name = "yanyang-website-backend"
 main = "src/index.ts"
 compatibility_date = "2024-12-18"
 keep_vars = true
-
-[[d1_databases]]
-binding = "DB"
-database_name = "yanyang-stats"
-database_id = "PASTE_D1_DATABASE_ID_HERE"
