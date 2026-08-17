@@ -10,18 +10,9 @@ const MAX_ATTEMPTS = 5
 const RATE_LIMIT_WINDOW = 60000
 const COUNT_RESET_WINDOW = 30 * 60 * 1000
 
-const KV_KEY_BAN_PREFIX = 'ban:'
-const KV_KEY_BAN_LIST = 'ban:list'
-const KV_KEY_RATE_PREFIX = 'rate:'
-const KV_KEY_LOG_PREFIX = 'log:'
-const KV_KEY_LOG_LIST = 'log:list'
-const KV_KEY_SERVER_STATS = 'server-stats:latest'
 const SERVER_STATS_TTL = 120
 const STATS_INGEST_PATH = '/api/server/stats/ingest'
-// KV 免费额度每天约 1000 次写入，脚本高频上报时先放内存，每 90 秒才落一次 KV
-const KV_WRITE_INTERVAL = 90 * 1000
 let serverStatsMemory: { stats: ServerStats; updatedAt: number } | null = null
-let serverStatsLastKvWrite = 0
 const ALLOWED_MAP_ORIGINS = ['umap.odn.cc', 'ymap.odn.cc', '103.40.14.23']
 const MAP_PROXY_PREFIX = '/api/map/proxy'
 const MAP_TARGET_COOKIE = 'map_target'
@@ -285,8 +276,8 @@ async function verifySignedLink(link: string, token: string, signature: string, 
     return { valid: false, reason: '签名无效' }
   }
 
-  if (env.KV) {
-    const used = await env.KV.get(`used_token:${token}`)
+  if (env.DB) {
+    const used = await env.DB.prepare('SELECT token FROM used_tokens WHERE token = ?').bind(token).first()
     if (used) {
       return { valid: false, reason: '链接已被使用' }
     }
@@ -296,22 +287,23 @@ async function verifySignedLink(link: string, token: string, signature: string, 
 }
 
 async function markTokenUsed(token: string, env: Env): Promise<void> {
-  if (env.KV) {
-    await env.KV.put(`used_token:${token}`, '1', { expirationTtl: 3600 })
+  if (env.DB) {
+    await env.DB.prepare('INSERT OR REPLACE INTO used_tokens (token, created_at) VALUES (?, ?)')
+      .bind(token, Date.now())
+      .run()
   }
 }
 
 async function isIPBanned(ip: string, env: Env): Promise<{ banned: boolean; remaining?: number; reason?: string }> {
-  if (!env.KV) return { banned: false }
+  if (!env.DB) return { banned: false }
 
-  const key = `${KV_KEY_BAN_PREFIX}${ip}`
-  const data = await env.KV.get(key, 'json') as { banTime: number; reason: string } | null
+  const row = await env.DB.prepare('SELECT ban_time, reason FROM bans WHERE ip = ?').bind(ip).first()
+  if (!row) return { banned: false }
 
-  if (!data) return { banned: false }
-
-  const elapsed = Date.now() - data.banTime
+  const data = row as { ban_time: number; reason: string }
+  const elapsed = Date.now() - data.ban_time
   if (elapsed >= BAN_DURATION) {
-    await env.KV.delete(key)
+    await env.DB.prepare('DELETE FROM bans WHERE ip = ?').bind(ip).run()
     return { banned: false }
   }
 
@@ -320,82 +312,43 @@ async function isIPBanned(ip: string, env: Env): Promise<{ banned: boolean; rema
 }
 
 async function banIP(ip: string, reason: string, env: Env): Promise<void> {
-  if (!env.KV) return
-
-  const key = `${KV_KEY_BAN_PREFIX}${ip}`
-  await env.KV.put(key, JSON.stringify({
-    banTime: Date.now(),
-    reason: reason
-  }), { expirationTtl: Math.ceil(BAN_DURATION / 1000) })
+  if (!env.DB) return
+  await env.DB.prepare('INSERT OR REPLACE INTO bans (ip, ban_time, reason) VALUES (?, ?, ?)')
+    .bind(ip, Date.now(), reason)
+    .run()
 }
 
 async function unbanIP(ip: string, env: Env): Promise<boolean> {
-  if (!env.KV) return false
-
-  const key = `${KV_KEY_BAN_PREFIX}${ip}`
-  const exists = await env.KV.get(key)
-  if (!exists) return false
-
-  await env.KV.delete(key)
-  return true
+  if (!env.DB) return false
+  const result = await env.DB.prepare('DELETE FROM bans WHERE ip = ?').bind(ip).run()
+  return result.meta.changes > 0
 }
 
 async function getBannedList(env: Env): Promise<{ ip: string; banTime: number; reason: string; remaining: number }[]> {
-  if (!env.KV) return []
-
+  if (!env.DB) return []
   const list: { ip: string; banTime: number; reason: string; remaining: number }[] = []
   const now = Date.now()
 
-  const indexData = await env.KV.get(KV_KEY_BAN_LIST, 'json') as string[] | null
-  if (!indexData) return []
-
-  for (const ip of indexData) {
-    const key = `${KV_KEY_BAN_PREFIX}${ip}`
-    const data = await env.KV.get(key, 'json') as { banTime: number; reason: string } | null
-    if (data) {
-      const elapsed = now - data.banTime
-      if (elapsed < BAN_DURATION) {
-        list.push({
-          ip,
-          banTime: data.banTime,
-          reason: data.reason,
-          remaining: Math.ceil((BAN_DURATION - elapsed) / 1000)
-        })
-      } else {
-        await env.KV.delete(key)
-      }
+  const rows = await env.DB.prepare('SELECT ip, ban_time, reason FROM bans').all()
+  for (const row of rows.results) {
+    const item = row as { ip: string; ban_time: number; reason: string }
+    const elapsed = now - item.ban_time
+    if (elapsed < BAN_DURATION) {
+      list.push({
+        ip: item.ip,
+        banTime: item.ban_time,
+        reason: item.reason,
+        remaining: Math.ceil((BAN_DURATION - elapsed) / 1000)
+      })
+    } else {
+      await env.DB.prepare('DELETE FROM bans WHERE ip = ?').bind(item.ip).run()
     }
   }
-
-  const activeIPs = list.map(item => item.ip)
-  await env.KV.put(KV_KEY_BAN_LIST, JSON.stringify(activeIPs))
-
   return list
 }
 
-async function addToBanList(ip: string, env: Env): Promise<void> {
-  if (!env.KV) return
-
-  const indexData = await env.KV.get(KV_KEY_BAN_LIST, 'json') as string[] | null
-  const list = indexData || []
-  if (!list.includes(ip)) {
-    list.push(ip)
-    await env.KV.put(KV_KEY_BAN_LIST, JSON.stringify(list))
-  }
-}
-
-async function removeFromBanList(ip: string, env: Env): Promise<void> {
-  if (!env.KV) return
-
-  const indexData = await env.KV.get(KV_KEY_BAN_LIST, 'json') as string[] | null
-  if (!indexData) return
-
-  const list = indexData.filter(item => item !== ip)
-  await env.KV.put(KV_KEY_BAN_LIST, JSON.stringify(list))
-}
-
 async function saveRequestLog(log: Omit<RequestLog, 'id' | 'timestamp'>, env: Env): Promise<void> {
-  if (!env.KV) return
+  if (!env.DB) return
 
   const id = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
   const entry: RequestLog = {
@@ -404,46 +357,30 @@ async function saveRequestLog(log: Omit<RequestLog, 'id' | 'timestamp'>, env: En
     ...log
   }
 
-  await env.KV.put(`${KV_KEY_LOG_PREFIX}${id}`, JSON.stringify(entry), { expirationTtl: 86400 * 7 })
-
-  const indexData = await env.KV.get(KV_KEY_LOG_LIST, 'json') as string[] | null
-  const list = indexData || []
-  list.push(id)
-  if (list.length > 100) {
-    const removed = list.splice(0, list.length - 100)
-    for (const oldId of removed) {
-      await env.KV.delete(`${KV_KEY_LOG_PREFIX}${oldId}`)
-    }
-  }
-  await env.KV.put(KV_KEY_LOG_LIST, JSON.stringify(list))
+  await env.DB.prepare('INSERT INTO logs (id, timestamp, data) VALUES (?, ?, ?)')
+    .bind(id, entry.timestamp, JSON.stringify(entry))
+    .run()
+  // 只保留最近 100 条日志
+  await env.DB.prepare('DELETE FROM logs WHERE id NOT IN (SELECT id FROM logs ORDER BY timestamp DESC LIMIT 100)').run()
 }
 
 async function getRequestLogs(env: Env): Promise<RequestLog[]> {
-  if (!env.KV) return []
-
-  const indexData = await env.KV.get(KV_KEY_LOG_LIST, 'json') as string[] | null
-  if (!indexData) return []
-
+  if (!env.DB) return []
   const logs: RequestLog[] = []
-  for (const id of indexData) {
-    const data = await env.KV.get(`${KV_KEY_LOG_PREFIX}${id}`, 'json') as RequestLog | null
-    if (data) {
-      logs.push(data)
+  const rows = await env.DB.prepare('SELECT data FROM logs ORDER BY timestamp DESC LIMIT 100').all()
+  for (const row of rows.results) {
+    try {
+      logs.push(JSON.parse(row.data as string) as RequestLog)
+    } catch {
+      // 跳过损坏的日志
     }
   }
   return logs
 }
 
 async function clearRequestLogs(env: Env): Promise<void> {
-  if (!env.KV) return
-
-  const indexData = await env.KV.get(KV_KEY_LOG_LIST, 'json') as string[] | null
-  if (!indexData) return
-
-  for (const id of indexData) {
-    await env.KV.delete(`${KV_KEY_LOG_PREFIX}${id}`)
-  }
-  await env.KV.delete(KV_KEY_LOG_LIST)
+  if (!env.DB) return
+  await env.DB.prepare('DELETE FROM logs').run()
 }
 
 async function verifyAdmin(password: string, env: Env): Promise<boolean> {
@@ -538,7 +475,6 @@ async function handleAdminUnban(request: Request, env: Env): Promise<Response> {
 
     const success = await unbanIP(ip, env)
     if (success) {
-      await removeFromBanList(ip, env)
       return jsonResponse({ success: true, message: `IP ${ip} 已解封` }, 200, request)
     } else {
       return jsonResponse({ success: false, message: `IP ${ip} 不在封禁列表中` }, 404, request)
@@ -569,19 +505,14 @@ async function handleAdminUpdateBan(request: Request, env: Env): Promise<Respons
       return errorResponse('请提供有效的封禁时长（分钟）', 400, request)
     }
 
-    if (!env.KV) {
-      return errorResponse('KV 存储未配置', 500, request)
+    if (!env.DB) {
+      return errorResponse('数据库未配置', 500, request)
     }
 
-    const key = `${KV_KEY_BAN_PREFIX}${ip}`
-    const existing = await env.KV.get(key, 'json') as { banTime: number; reason: string } | null
-
-    await env.KV.put(key, JSON.stringify({
-      banTime: Date.now(),
-      reason: existing?.reason || `管理员设置封禁 ${duration} 分钟`
-    }), { expirationTtl: duration * 60 })
-
-    await addToBanList(ip, env)
+    const existing = await env.DB.prepare('SELECT reason FROM bans WHERE ip = ?').bind(ip).first()
+    await env.DB.prepare('INSERT OR REPLACE INTO bans (ip, ban_time, reason) VALUES (?, ?, ?)')
+      .bind(ip, Date.now(), (existing as { reason: string } | null)?.reason || `管理员设置封禁 ${duration} 分钟`)
+      .run()
 
     return jsonResponse({
       success: true,
@@ -644,19 +575,25 @@ async function handleHealth(request: Request): Promise<Response> {
 }
 
 async function handleServerStats(request: Request, env: Env): Promise<Response> {
+  if (env.DB) {
+    try {
+      const row = await env.DB.prepare('SELECT data FROM server_stats WHERE id = 1').first()
+      if (row) {
+        return jsonResponse({ success: true, configured: true, data: JSON.parse(row.data as string) }, 200, request)
+      }
+    } catch (error) {
+      console.error('server stats D1 read failed:', error)
+    }
+  }
   if (serverStatsMemory && Date.now() - serverStatsMemory.updatedAt < SERVER_STATS_TTL * 1000) {
     return jsonResponse({ success: true, configured: true, data: serverStatsMemory.stats }, 200, request)
   }
-  const data = env.KV ? await env.KV.get(KV_KEY_SERVER_STATS, 'json') as ServerStats | null : null
-  if (!data) {
-    return jsonResponse({
-      success: true,
-      configured: false,
-      data: null,
-      message: '服务器尚未上报数据，请检查服务器上的采集脚本是否在运行'
-    }, 200, request)
-  }
-  return jsonResponse({ success: true, configured: true, data }, 200, request)
+  return jsonResponse({
+    success: true,
+    configured: false,
+    data: null,
+    message: '服务器尚未上报数据，请检查服务器上的采集脚本是否在运行'
+  }, 200, request)
 }
 
 async function handleServerStatsIngest(request: Request, env: Env): Promise<Response> {
@@ -668,9 +605,6 @@ async function handleServerStatsIngest(request: Request, env: Env): Promise<Resp
   if (!expected || provided !== expected) {
     return errorResponse('未授权', 401, request)
   }
-  if (!env.KV) {
-    return errorResponse('KV 存储未配置', 500, request)
-  }
   try {
     const body = await request.json() as ServerStats
     if (typeof body.hostname !== 'string' || !body.hostname) {
@@ -681,14 +615,16 @@ async function handleServerStatsIngest(request: Request, env: Env): Promise<Resp
       timestamp: body.timestamp || new Date().toISOString()
     }
     serverStatsMemory = { stats: payload, updatedAt: Date.now() }
-    if (Date.now() - serverStatsLastKvWrite >= KV_WRITE_INTERVAL) {
+    if (env.DB) {
       try {
-        await env.KV.put(KV_KEY_SERVER_STATS, JSON.stringify(payload), { expirationTtl: SERVER_STATS_TTL })
-        serverStatsLastKvWrite = Date.now()
+        await env.DB.prepare('INSERT OR REPLACE INTO server_stats (id, data, updated_at) VALUES (1, ?, ?)')
+          .bind(JSON.stringify(payload), Date.now())
+          .run()
       } catch (error) {
-        // KV 写入失败（如当日额度超限）不影响内存数据服务，仅记录
-        console.error('server stats KV write failed:', error)
+        throw new Error(`D1 写入失败: ${error instanceof Error ? error.message : String(error)}`)
       }
+    } else {
+      throw new Error('D1 数据库未配置')
     }
     return jsonResponse({ success: true, message: 'ok' }, 200, request)
   } catch (error) {
@@ -1137,7 +1073,7 @@ async function verifyCap(token: string): Promise<boolean> {
 
 async function handleFindPassword(request: Request, env: Env): Promise<Response> {
   console.log('=== handleFindPassword 被调用 ===')
-  console.log('env.KV 是否存在:', !!env.KV)
+  console.log('env.DB 是否存在:', !!env.DB)
 
   let clientIP = 'unknown'
   let userAgent = ''
@@ -1201,22 +1137,20 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
     }
 
     const now = Date.now()
-    const rateKey = `${KV_KEY_RATE_PREFIX}${email}`
     let record: { count: number; firstSendTime: number; lastSendAt: number | null; ip: string } | null = null
-    if (env.KV) {
-      const raw = await env.KV.get(rateKey)
-      if (raw) {
-        try {
-          record = JSON.parse(raw)
-        } catch {
-          record = null
-        }
+    if (env.DB) {
+      const row = await env.DB.prepare('SELECT count, window_start, last_send_at FROM email_rate WHERE email = ?').bind(email).first()
+      if (row) {
+        const item = row as { count: number; window_start: number; last_send_at: number | null }
+        record = { count: item.count, firstSendTime: item.window_start, lastSendAt: item.last_send_at, ip: clientIP }
       }
     }
 
     const saveRateRecord = async () => {
-      if (env.KV && record) {
-        await env.KV.put(rateKey, JSON.stringify(record), { expirationTtl: Math.ceil(COUNT_RESET_WINDOW / 1000) })
+      if (env.DB && record) {
+        await env.DB.prepare('INSERT OR REPLACE INTO email_rate (email, count, window_start, last_send_at) VALUES (?, ?, ?, ?)')
+          .bind(email, record.count, record.firstSendTime, record.lastSendAt)
+          .run()
       }
     }
 
@@ -1224,7 +1158,6 @@ async function handleFindPassword(request: Request, env: Env): Promise<Response>
       statusCode = 403
       await saveRateRecord()
       await banIP(clientIP, '连续5次密码找回尝试，触发安全防护机制', env)
-      await addToBanList(clientIP, env)
       try {
         await sendBanNotificationEmail(email, env)
       } catch (notifyError) {

@@ -104,5 +104,5 @@ export interface Env {
     RESEND_TOKEN?: string;
     LOGIN_NOTIFY_EMAIL?: string;
     STATS_INGEST_TOKEN?: string;
-    KV?: KVNamespace;
+    DB: D1Database;
 }
