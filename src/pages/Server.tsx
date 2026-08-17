@@ -14,7 +14,7 @@ interface StatsResponse {
   message?: string
 }
 
-const REFRESH_INTERVAL = 5000
+const REFRESH_INTERVAL = 1000
 
 function formatGb(bytes: number): string {
   return (bytes / 2 ** 30).toFixed(1)
