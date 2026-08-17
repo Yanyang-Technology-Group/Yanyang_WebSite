@@ -70,7 +70,6 @@ export default function Server() {
   const [autoRefresh, setAutoRefresh] = useState(false)
 
   const fetchStats = useCallback(async (auto: boolean) => {
-    setLoading(true)
     try {
       const res = await fetch(`${API_BASE_URL}/api/server/stats`)
       const data = await res.json() as StatsResponse
