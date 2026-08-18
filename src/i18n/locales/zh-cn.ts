@@ -36,6 +36,7 @@ export default {
     minutes: '分钟',
     services: '服务状态',
     running: '正常',
+    starting: '启动中',
     stopped: '不正常',
   },
   home: {

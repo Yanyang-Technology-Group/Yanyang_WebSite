@@ -59,5 +59,6 @@ export interface ServerStats {
     name: string
     session: string
     running: boolean
+    status?: 'running' | 'starting' | 'stopped'
   }[]
 }

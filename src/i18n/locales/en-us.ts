@@ -36,6 +36,7 @@ export default {
     minutes: 'm',
     services: 'Services',
     running: 'Normal',
+    starting: 'Starting',
     stopped: 'Abnormal',
   },
   home: {

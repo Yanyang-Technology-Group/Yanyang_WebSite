@@ -221,25 +221,30 @@ export default function Server() {
                   <div className="mt-6 border-t border-border pt-5">
                     <h3 className="text-sm font-semibold text-fg mb-3">{t('server.services')}</h3>
                     <div className="divide-y divide-border border border-border rounded-btn overflow-hidden">
-                      {stats.services.map(service => (
-                        <div key={service.session} className="flex items-center justify-between px-5 py-4 bg-surface">
-                          <span className="flex items-center gap-2.5 text-sm font-medium text-fg">
+                      {stats.services.map(service => {
+                        const status = service.status || (service.running ? 'running' : 'stopped')
+                        const isRunning = status === 'running'
+                        const isStarting = status === 'starting'
+                        return (
+                          <div key={service.session} className="flex items-center justify-between px-5 py-4 bg-surface">
+                            <span className="flex items-center gap-2.5 text-sm font-medium text-fg">
+                              <span
+                                className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                                  isRunning ? 'bg-green-500' : isStarting ? 'bg-orange-500' : 'bg-red-500'
+                                }`}
+                              />
+                              {service.name}
+                            </span>
                             <span
-                              className={`w-3 h-3 rounded-full flex-shrink-0 ${
-                                service.running ? 'bg-green-500' : 'bg-red-500'
+                              className={`text-base font-bold ${
+                                isRunning ? 'text-green-600' : isStarting ? 'text-orange-500' : 'text-red-600'
                               }`}
-                            />
-                            {service.name}
-                          </span>
-                          <span
-                            className={`text-base font-bold ${
-                              service.running ? 'text-green-600' : 'text-red-600'
-                            }`}
-                          >
-                            {service.running ? t('server.running') : t('server.stopped')}
-                          </span>
-                        </div>
-                      ))}
+                            >
+                              {isRunning ? t('server.running') : isStarting ? t('server.starting') : t('server.stopped')}
+                            </span>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
