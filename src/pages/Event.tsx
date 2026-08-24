@@ -17,6 +17,7 @@ const EVENTS: EventItem[] = [
     titleKey: 'event.newYearTitle',
     descKey: 'event.newYearDesc',
     tagKey: 'event.newYearTag',
+    link: '/events/official/minecraft/2027',
   },
   {
     dateKey: 'event.date',

@@ -1,0 +1,25 @@
+/* 2027 新年庆典主题：红金配色覆盖 */
+.mc-hero-logo-2027 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  color: #fff;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  border-radius: 18px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.mc-icon-2027 {
+  background: linear-gradient(135deg, #dc2626, #f59e0b) !important;
+}
+
+.mc-step-number-2027 {
+  background: linear-gradient(135deg, #dc2626, #f59e0b) !important;
+}
+
+.mc-live-tag {
+  color: #b91c1c !important;
+}
