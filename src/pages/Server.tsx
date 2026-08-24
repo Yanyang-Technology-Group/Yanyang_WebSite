@@ -111,7 +111,7 @@ export default function Server() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/verify', { state: { from: '/server' } })
+      navigate('/verify', { state: { from: '/stats' } })
     }
   }, [user, authLoading, navigate])
 
