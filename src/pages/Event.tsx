@@ -3,7 +3,21 @@ import { Calendar } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
 import { useLanguageContext } from '../i18n/LanguageContext'
 
-const EVENTS = [
+interface EventItem {
+  dateKey: string
+  titleKey: string
+  descKey: string
+  tagKey: string
+  link?: string
+}
+
+const EVENTS: EventItem[] = [
+  {
+    dateKey: 'event.newYearDate',
+    titleKey: 'event.newYearTitle',
+    descKey: 'event.newYearDesc',
+    tagKey: 'event.newYearTag',
+  },
   {
     dateKey: 'event.date',
     titleKey: 'event.itemTitle',

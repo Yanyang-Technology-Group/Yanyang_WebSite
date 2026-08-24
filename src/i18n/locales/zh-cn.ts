@@ -104,6 +104,10 @@ export default {
   event: {
     title: '活动与动态',
     desc: '晏阳城市建设的最新动态、版本更新与社群活动',
+    newYearDate: '2027 年 2 月 5 日',
+    newYearTitle: '晏阳 2027 新年庆典',
+    newYearDesc: '晏阳城市建设 2027 新年庆典，服务器内举办跨年活动与烟火表演，欢迎各位玩家一起迎接新春。',
+    newYearTag: '未开始',
     date: '2026 年 7 月 16 日',
     itemTitle: '晏阳 4 周年庆典',
     itemDesc: '庆祝晏阳成立 4 周年，开展公开参观及游戏活动。',

@@ -104,6 +104,10 @@ export default {
   event: {
     title: 'Events & Updates',
     desc: 'Latest news, version updates and community events of Yanyang City Construction',
+    newYearDate: 'February 5, 2027',
+    newYearTitle: 'Yanyang 2027 New Year Celebration',
+    newYearDesc: "Yanyang City Construction's 2027 New Year celebration with in-game events and fireworks. Everyone is welcome to join.",
+    newYearTag: 'Upcoming',
     date: 'July 16, 2026',
     itemTitle: 'Yanyang 4th Anniversary',
     itemDesc: 'Celebrating Yanyang\'s 4th anniversary with public tours and fun activities.',
