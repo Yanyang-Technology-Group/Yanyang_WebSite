@@ -15,7 +15,7 @@ import JavaList from './pages/Downloads/java'
 import LauncherList from './pages/Downloads/launcher'
 import Detail from './pages/Downloads/Detail'
 import FourYearsEvent from './Events/4years'
-import NewYear2027Event from './Events/2027'
+// import NewYear2027Event from './Events/2027'
 import SatelliteMap from './pages/SatelliteMap'
 import RailwayMap from './pages/RailwayMap'
 import Server from './pages/Server'
@@ -71,9 +71,10 @@ function AppContent() {
                         <Route path="/join" element={<Join />} />
                         <Route path="/event" element={<Event />} />
                         <Route path="/events/official/minecraft/4years" element={<FourYearsEvent />} />
-                        <Route path="/events/official/minecraft/2027" element={<NewYear2027Event />} />
+                        <Route path="/events/official/minecraft/2027newyears" element={<NotFound/>} />
                         <Route path="/map" element={<Map />} />
                         <Route path="/state" element={<Server />} />
+                        <Route path="/stats" element={<Server />} />
                         <Route path="/download" element={<DownloadPage />} />
                         <Route path="/downloads/modpack" element={<ModpackList />} />
                         <Route path="/downloads/java" element={<JavaList />} />
