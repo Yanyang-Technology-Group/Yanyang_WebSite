@@ -3,13 +3,21 @@ import { Calendar } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
 import { useLanguageContext } from '../i18n/LanguageContext'
 
+// Tag types: gray 1 (ended) / green 2 (ongoing) / orange 3 (upcoming)
 interface EventItem {
   dateKey: string
   titleKey: string
   descKey: string
   tagKey: string
+  tagType: 1 | 2 | 3
   link?: string
 }
+
+const TAG_STYLES = {
+  1: 'bg-gray-100 text-gray-600',     // gray 1: ended
+  2: 'bg-green-50 text-green-700',    // green 2: ongoing
+  3: 'bg-orange-50 text-orange-600',  // orange 3: upcoming
+} as const
 
 const EVENTS: EventItem[] = [
   {
@@ -17,6 +25,7 @@ const EVENTS: EventItem[] = [
     titleKey: 'event.newYearTitle',
     descKey: 'event.newYearDesc',
     tagKey: 'event.newYearTag',
+    tagType: 3, // orange: upcoming
     link: '/events/official/minecraft/2027',
   },
   {
@@ -24,6 +33,7 @@ const EVENTS: EventItem[] = [
     titleKey: 'event.itemTitle',
     descKey: 'event.itemDesc',
     tagKey: 'event.tag',
+    tagType: 1, // gray: ended
     link: '/events/official/minecraft/4years',
   },
 ]
@@ -65,7 +75,7 @@ export default function Event() {
                         </h3>
                         <p className="mt-2 text-sm text-muted leading-relaxed">{t(event.descKey)}</p>
                       </div>
-                      <span className="flex-shrink-0 px-2.5 py-1 text-xs font-medium bg-amber-50 text-amber-700 rounded-full">
+                      <span className={`flex-shrink-0 px-2.5 py-1 text-xs font-medium rounded-full ${TAG_STYLES[event.tagType]}`}>
                         {t(event.tagKey)}
                       </span>
                     </div>
