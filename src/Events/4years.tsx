@@ -72,33 +72,6 @@ function FourYearsEvent() {
               </div>
               </Card>
             </ScrollReveal>
-
-            <ScrollReveal delay={150}>
-            <Card className="mc-card mc-live" hoverShadow>
-              <div className="mc-card-header">
-                <div className="mc-icon-circle mc-icon-red">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10" />
-                    <polygon points="10,8 16,12 10,16" fill="white" />
-                  </svg>
-                </div>
-                <h2>{t('fouryears.liveTitle')}</h2>
-                <Tag theme="primary" variant="light" shape="round" size="small" className="mc-live-tag">
-                  {t('fouryears.liveTag')}
-                </Tag>
-              </div>
-              <div className="mc-card-body">
-                <div className="mc-live-container">
-                  <div className="mc-live-placeholder">
-                    {/* Live preview placeholder */}
-                    <div className="mc-live-info">
-                      <p className="mc-live-desc">{t('fouryears.liveDesc')}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Card>
-            </ScrollReveal>
           </div>
 
             <ScrollReveal delay={200}>
