@@ -65,7 +65,8 @@ function StatCard({ icon: Icon, title, percent, detail, color, animated = true }
 export default function Server() {
   const { t } = useLanguageContext()
   const navigate = useNavigate()
-  const { user, loading: authLoading } = useAuth()
+  const { token, loading: authLoading } = useAuth()
+  const isAuthenticated = !!token
   const [stats, setStats] = useState<ServerStats | null>(null)
   const [configured, setConfigured] = useState(true)
   const [error, setError] = useState('')
@@ -102,18 +103,12 @@ export default function Server() {
   }, [t])
 
   useEffect(() => {
-    if (user) {
+    if (isAuthenticated) {
       fetchStats(true)
       const timer = setInterval(() => fetchStats(true), REFRESH_INTERVAL)
       return () => clearInterval(timer)
     }
-  }, [user, fetchStats])
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/verify', { state: { from: '/stats' } })
-    }
-  }, [user, authLoading, navigate])
+  }, [isAuthenticated, fetchStats])
 
   if (authLoading) {
     return (
@@ -125,7 +120,7 @@ export default function Server() {
     )
   }
 
-  if (!user) {
+  if (!isAuthenticated) {
     return null
   }
 
