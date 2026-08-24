@@ -6,6 +6,8 @@ import { API_BASE_URL } from '../config'
 import { useLanguageContext } from '../i18n/LanguageContext'
 import type { TFunction } from '../i18n'
 import type { ServerStats } from '../types'
+import { useAuth } from '../hooks/useAuth'
+import { useNavigate } from 'react-router-dom'
 
 interface StatsResponse {
   success: boolean
@@ -39,29 +41,31 @@ interface StatCardProps {
 function StatCard({ icon: Icon, title, percent, detail, color, animated = true }: StatCardProps) {
   const width = Math.min(100, Math.max(0, percent ?? 0))
   return (
-    <div className="bg-surface rounded-container border border-border p-6">
-      <div className="flex items-center gap-3 mb-4">
-        <div className={`w-10 h-10 rounded-full ${color} text-white flex items-center justify-center flex-shrink-0`}>
-          <Icon size={20} weight="bold" />
-        </div>
-        <h3 className="text-base font-semibold text-fg">{title}</h3>
-        <span className="ml-auto text-2xl font-extrabold text-fg">
+      <div className="bg-surface rounded-container border border-border p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className={`w-10 h-10 rounded-full ${color} text-white flex items-center justify-center flex-shrink-0`}>
+            <Icon size={20} weight="bold" />
+          </div>
+          <h3 className="text-base font-semibold text-fg">{title}</h3>
+          <span className="ml-auto text-2xl font-extrabold text-fg">
           {percent != null ? `${percent.toFixed(1)}%` : 'Null'}
         </span>
+        </div>
+        <div className="h-2.5 w-full rounded-full bg-border/40 overflow-hidden">
+          <div
+              className={`h-full rounded-full bg-primary ${animated ? 'transition-all duration-500' : ''}`}
+              style={{ width: `${width}%` }}
+          />
+        </div>
+        <p className="mt-3 text-sm text-muted break-all">{detail}</p>
       </div>
-      <div className="h-2.5 w-full rounded-full bg-border/40 overflow-hidden">
-        <div
-          className={`h-full rounded-full bg-primary ${animated ? 'transition-all duration-500' : ''}`}
-          style={{ width: `${width}%` }}
-        />
-      </div>
-      <p className="mt-3 text-sm text-muted break-all">{detail}</p>
-    </div>
   )
 }
 
 export default function Server() {
   const { t } = useLanguageContext()
+  const navigate = useNavigate()
+  const { user, loading: authLoading } = useAuth()
   const [stats, setStats] = useState<ServerStats | null>(null)
   const [configured, setConfigured] = useState(true)
   const [error, setError] = useState('')
@@ -98,169 +102,191 @@ export default function Server() {
   }, [t])
 
   useEffect(() => {
-    fetchStats(true)
-    const timer = setInterval(() => fetchStats(true), REFRESH_INTERVAL)
-    return () => clearInterval(timer)
-  }, [fetchStats])
+    if (user) {
+      fetchStats(true)
+      const timer = setInterval(() => fetchStats(true), REFRESH_INTERVAL)
+      return () => clearInterval(timer)
+    }
+  }, [user, fetchStats])
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/verify', { state: { from: '/server' } })
+    }
+  }, [user, authLoading, navigate])
+
+  if (authLoading) {
+    return (
+        <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
+          <div className="mx-auto max-w-4xl px-4 sm:px-6 text-center">
+            <p className="text-muted">{t('server.verifying')}</p>
+          </div>
+        </section>
+    )
+  }
+
+  if (!user) {
+    return null
+  }
 
   const cpu = stats?.cpu
   const memory = stats?.memory
   const disk = stats?.disk
 
   return (
-    <>
-      <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6">
-          <div className="text-center">
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">{t('server.title')}</h1>
-            <p className="mt-3 text-muted">{t('server.desc')}</p>
-          </div>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
-            <button
-              onClick={() => fetchStats(false)}
-              disabled={loading}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted hover:text-fg border border-border rounded-btn hover:bg-surface transition-all disabled:opacity-50"
-            >
-              <ArrowClockwise size={16} weight="bold" />
-              {t('server.refresh')}
-            </button>
-            {lastUpdate && (
-              <span className="text-xs text-muted/60">
+      <>
+        <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
+          <div className="mx-auto max-w-4xl px-4 sm:px-6">
+            <div className="text-center">
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-fg tracking-tight">{t('server.title')}</h1>
+              <p className="mt-3 text-muted">{t('server.desc')}</p>
+            </div>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
+              <button
+                  onClick={() => fetchStats(false)}
+                  disabled={loading}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted hover:text-fg border border-border rounded-btn hover:bg-surface transition-all disabled:opacity-50"
+              >
+                <ArrowClockwise size={16} weight="bold" />
+                {t('server.refresh')}
+              </button>
+              {lastUpdate && (
+                  <span className="text-xs text-muted/60">
                 {t('server.lastUpdate')} {new Date(lastUpdate).toLocaleTimeString()}
               </span>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="bg-bg pb-section">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6">
-          {!configured && (
-            <div className="mb-6 p-4 bg-yellow-50 text-yellow-700 text-sm rounded-btn flex items-center gap-2">
-              <WarningCircle size={18} weight="bold" />
-              {t('server.notConfigured')}
-            </div>
-          )}
+        <section className="bg-bg pb-section">
+          <div className="mx-auto max-w-4xl px-4 sm:px-6">
+            {!configured && (
+                <div className="mb-6 p-4 bg-yellow-50 text-yellow-700 text-sm rounded-btn flex items-center gap-2">
+                  <WarningCircle size={18} weight="bold" />
+                  {t('server.notConfigured')}
+                </div>
+            )}
 
-          {configured && error && (
-            <div className="mb-6 p-4 bg-red-50 text-red-600 text-sm rounded-btn flex items-center gap-2">
-              <WarningCircle size={18} weight="bold" />
-              {error}
-            </div>
-          )}
+            {configured && error && (
+                <div className="mb-6 p-4 bg-red-50 text-red-600 text-sm rounded-btn flex items-center gap-2">
+                  <WarningCircle size={18} weight="bold" />
+                  {error}
+                </div>
+            )}
 
-          {loading && !stats && (
-            <div className="text-center py-12">
-              <p className="text-muted">{t('server.loading')}</p>
-            </div>
-          )}
+            {loading && !stats && (
+                <div className="text-center py-12">
+                  <p className="text-muted">{t('server.loading')}</p>
+                </div>
+            )}
 
-          {!loading && (
-            <ScrollReveal>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <StatCard
-                  icon={Cpu}
-                  title={t('server.cpu')}
-                  percent={cpu?.usagePercent != null ? cpu.usagePercent : null}
-                  detail={stats ? [cpu?.model, cpu?.cores != null ? `${cpu.cores} ${t('server.cores')}` : '']
-                    .filter(Boolean)
-                    .join(' · ') : 'Null'}
-                  color="bg-blue-500"
-                  animated={!autoRefresh}
-                />
-                <StatCard
-                  icon={Memory}
-                  title={t('server.memory')}
-                  percent={memory?.percent != null ? memory.percent : null}
-                  detail={
-                    stats && memory && memory.total != null
-                      ? `${formatGb(memory.used ?? 0)} / ${formatGb(memory.total)} ${t('server.gb')}`
-                      : 'Null'
-                  }
-                  color="bg-orange-500"
-                  animated={!autoRefresh}
-                />
-                <StatCard
-                  icon={HardDrives}
-                  title={t('server.disk')}
-                  percent={disk?.percent != null ? disk.percent : null}
-                  detail={
-                    stats && disk && disk.total != null
-                      ? `${formatGb(disk.used ?? 0)} / ${formatGb(disk.total)} ${t('server.gb')}`
-                      : 'Null'
-                  }
-                  color="bg-purple-500"
-                  animated={!autoRefresh}
-                />
-              </div>
-
-              <div className="mt-6 bg-surface rounded-container border border-border p-6">
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <dt className="text-xs text-muted mb-1">{t('server.hostname')}</dt>
-                    <dd className="font-mono text-fg">{stats?.hostname || 'Null'}</dd>
+            {!loading && (
+                <ScrollReveal>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <StatCard
+                        icon={Cpu}
+                        title={t('server.cpu')}
+                        percent={cpu?.usagePercent != null ? cpu.usagePercent : null}
+                        detail={stats ? [cpu?.model, cpu?.cores != null ? `${cpu.cores} ${t('server.cores')}` : '']
+                            .filter(Boolean)
+                            .join(' · ') : 'Null'}
+                        color="bg-blue-500"
+                        animated={!autoRefresh}
+                    />
+                    <StatCard
+                        icon={Memory}
+                        title={t('server.memory')}
+                        percent={memory?.percent != null ? memory.percent : null}
+                        detail={
+                          stats && memory && memory.total != null
+                              ? `${formatGb(memory.used ?? 0)} / ${formatGb(memory.total)} ${t('server.gb')}`
+                              : 'Null'
+                        }
+                        color="bg-orange-500"
+                        animated={!autoRefresh}
+                    />
+                    <StatCard
+                        icon={HardDrives}
+                        title={t('server.disk')}
+                        percent={disk?.percent != null ? disk.percent : null}
+                        detail={
+                          stats && disk && disk.total != null
+                              ? `${formatGb(disk.used ?? 0)} / ${formatGb(disk.total)} ${t('server.gb')}`
+                              : 'Null'
+                        }
+                        color="bg-purple-500"
+                        animated={!autoRefresh}
+                    />
                   </div>
-                  <div>
-                    <dt className="text-xs text-muted mb-1">{t('server.platform')}</dt>
-                    <dd className="text-fg">{stats?.platform || 'Null'}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-muted mb-1">{t('server.uptime')}</dt>
-                    <dd className="text-fg">
-                      {stats?.uptime != null ? formatUptime(stats.uptime, t) : 'Null'}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-muted mb-1">{t('server.load')}</dt>
-                    <dd className="font-mono text-fg">
-                      {stats?.load && stats.load.length ? stats.load.map(v => v.toFixed(2)).join(' / ') : 'Null'}
-                    </dd>
-                  </div>
-                </dl>
-                {stats?.services && stats.services.length > 0 && (
-                  <div className="mt-6 border-t border-border pt-5">
-                    <h3 className="text-sm font-semibold text-fg mb-3">{t('server.services')}</h3>
-                    <div className="divide-y divide-border border border-border rounded-btn overflow-hidden">
-                      {stats.services.map(service => {
-                        const status = service.status || (service.running ? 'running' : 'stopped')
-                        const isRunning = status === 'running'
-                        const isStarting = status === 'starting'
-                        return (
-                          <div key={service.session} className="flex items-center justify-between px-5 py-4 bg-surface">
+
+                  <div className="mt-6 bg-surface rounded-container border border-border p-6">
+                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <dt className="text-xs text-muted mb-1">{t('server.hostname')}</dt>
+                        <dd className="font-mono text-fg">{stats?.hostname || 'Null'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-muted mb-1">{t('server.platform')}</dt>
+                        <dd className="text-fg">{stats?.platform || 'Null'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-muted mb-1">{t('server.uptime')}</dt>
+                        <dd className="text-fg">
+                          {stats?.uptime != null ? formatUptime(stats.uptime, t) : 'Null'}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-muted mb-1">{t('server.load')}</dt>
+                        <dd className="font-mono text-fg">
+                          {stats?.load && stats.load.length ? stats.load.map(v => v.toFixed(2)).join(' / ') : 'Null'}
+                        </dd>
+                      </div>
+                    </dl>
+                    {stats?.services && stats.services.length > 0 && (
+                        <div className="mt-6 border-t border-border pt-5">
+                          <h3 className="text-sm font-semibold text-fg mb-3">{t('server.services')}</h3>
+                          <div className="divide-y divide-border border border-border rounded-btn overflow-hidden">
+                            {stats.services.map(service => {
+                              const status = service.status || (service.running ? 'running' : 'stopped')
+                              const isRunning = status === 'running'
+                              const isStarting = status === 'starting'
+                              return (
+                                  <div key={service.session} className="flex items-center justify-between px-5 py-4 bg-surface">
                             <span className="flex items-center gap-2.5 text-sm font-medium text-fg">
                               <span
-                                className={`w-3 h-3 rounded-full flex-shrink-0 ${
-                                  isRunning ? 'bg-green-500' : isStarting ? 'bg-orange-500' : 'bg-red-500'
-                                }`}
+                                  className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                                      isRunning ? 'bg-green-500' : isStarting ? 'bg-orange-500' : 'bg-red-500'
+                                  }`}
                               />
                               {service.name}
                             </span>
-                            <span
-                              className={`text-base font-bold ${
-                                isRunning ? 'text-green-600' : isStarting ? 'text-orange-500' : 'text-red-600'
-                              }`}
-                            >
+                                    <span
+                                        className={`text-base font-bold ${
+                                            isRunning ? 'text-green-600' : isStarting ? 'text-orange-500' : 'text-red-600'
+                                        }`}
+                                    >
                               {isRunning ? t('server.running') : isStarting ? t('server.starting') : t('server.stopped')}
                             </span>
+                                  </div>
+                              )
+                            })}
                           </div>
-                        )
-                      })}
-                    </div>
+                        </div>
+                    )}
+                    {stats && (!stats.services || stats.services.length === 0) && (
+                        <div className="mt-6 border-t border-border pt-5">
+                          <h3 className="text-sm font-semibold text-fg mb-3">{t('server.services')}</h3>
+                          <div className="px-4 py-3 bg-surface border border-border rounded-btn text-sm text-muted">
+                            Null
+                          </div>
+                        </div>
+                    )}
                   </div>
-                )}
-                {stats && (!stats.services || stats.services.length === 0) && (
-                  <div className="mt-6 border-t border-border pt-5">
-                    <h3 className="text-sm font-semibold text-fg mb-3">{t('server.services')}</h3>
-                    <div className="px-4 py-3 bg-surface border border-border rounded-btn text-sm text-muted">
-                      Null
-                    </div>
-                  </div>
-                )}
-              </div>
-            </ScrollReveal>
-          )}
-        </div>
-      </section>
-    </>
+                </ScrollReveal>
+            )}
+          </div>
+        </section>
+      </>
   )
 }
