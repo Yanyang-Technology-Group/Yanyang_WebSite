@@ -61,14 +61,6 @@ export default function Detail() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const [downloading, setDownloading] = useState<string | null>(null)
-    const [downkeyConfig, setDownkeyConfig] = useState<Record<string, any>>({})
-
-    useEffect(() => {
-        fetch('/downkey.json')
-            .then(res => res.json())
-            .then(data => setDownkeyConfig(data))
-            .catch(() => {})
-    }, [])
 
     useEffect(() => {
         if (!config) {
@@ -189,11 +181,6 @@ export default function Detail() {
         ? item.downloads
         : (item.link ? [{ name: item.name, link: item.link, size: item.size }] : [])
 
-    const noteConfig = downkeyConfig?.[type]?.[item.id]
-    const showNote = noteConfig?.enabled === true
-    const noteText = noteConfig?.text || ''
-    const noteLink = noteConfig?.link || ''
-
     return (
         <>
             <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
@@ -229,6 +216,9 @@ export default function Detail() {
                                 <div className="space-y-3">
                                     {downloads.map((dl, index) => {
                                         const expired = isExpired(dl.expiry)
+                                        const note = dl.note
+                                        const showNote = note?.enabled === true
+
                                         return (
                                             <div
                                                 key={index}
@@ -274,25 +264,25 @@ export default function Detail() {
                                                         )}
                                                     </div>
                                                 </div>
+
+                                                {showNote && (
+                                                    <div className="mt-3 pt-3 border-t border-border">
+                                                        <p className="text-sm text-fg">{note.text}</p>
+                                                        {note.link && (
+                                                            <a
+                                                                href={note.link}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="inline-block mt-1 text-xs text-primary hover:underline"
+                                                            >
+                                                                {t('lists.viewDetails')}
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         )
                                     })}
-                                </div>
-                            )}
-
-                            {showNote && (
-                                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-card text-sm">
-                                    <p className="text-fg">{noteText}</p>
-                                    {noteLink && (
-                                        <a
-                                            href={noteLink}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-block mt-2 text-primary hover:underline"
-                                        >
-                                            {t('lists.viewDetails')}
-                                        </a>
-                                    )}
                                 </div>
                             )}
                         </div>
