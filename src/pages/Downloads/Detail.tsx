@@ -267,16 +267,17 @@ export default function Detail() {
 
                                                 {showNote && (
                                                     <div className="mt-3 pt-3 border-t border-border">
-                                                        <p className="text-sm text-fg">{note.text}</p>
-                                                        {note.link && (
+                                                        {note.link ? (
                                                             <a
                                                                 href={note.link}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
-                                                                className="inline-block mt-1 text-xs text-primary hover:underline"
+                                                                className="text-sm text-primary hover:underline"
                                                             >
-                                                                {t('lists.viewDetails')}
+                                                                {note.text}
                                                             </a>
+                                                        ) : (
+                                                            <p className="text-sm text-fg">{note.text}</p>
                                                         )}
                                                     </div>
                                                 )}
