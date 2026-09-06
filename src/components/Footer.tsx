@@ -50,7 +50,7 @@ export default function Footer() {
 
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted/60">
             <a
-                href="/docs/yanyangchengshijianshefaan.pdf"
+                href="https://docs.qq.com/pdf/DQVB2d1VzSHNTbXps"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-primary transition-colors"
@@ -58,7 +58,7 @@ export default function Footer() {
               {t('footer.doc1')}
             </a>
             <a
-                href="/docs/yanyangruanjianxvkejifuwuxieyi.pdf"
+                href="https://docs.qq.com/pdf/DQXpNU2NUcWxERWxP"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-primary transition-colors"
@@ -66,7 +66,7 @@ export default function Footer() {
               {t('footer.doc2')}
             </a>
             <a
-                href="/docs/yanyangertonggerenxinxb aohuguizejijianhurenxvzhi.docx"
+                href="https://docs.qq.com/doc/DQUN1b0tycXRGdXdn"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-primary transition-colors"
