@@ -1,14 +1,3 @@
-export interface PasswordEntry {
-    password: string;
-    type: 'full' | 'public';
-    label: string;
-    email: string;
-}
-
-export interface DownkeyData {
-    passwords: PasswordEntry[];
-}
-
 export interface ServerServiceStatus {
     name: string
     session: string

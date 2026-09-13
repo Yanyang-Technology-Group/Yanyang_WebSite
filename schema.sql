@@ -19,10 +19,3 @@ CREATE TABLE IF NOT EXISTS logs (
   timestamp INTEGER NOT NULL,
   data TEXT NOT NULL
 );
-
-CREATE TABLE IF NOT EXISTS email_rate (
-  email TEXT PRIMARY KEY,
-  count INTEGER NOT NULL,
-  window_start INTEGER NOT NULL,
-  last_send_at INTEGER
-);
