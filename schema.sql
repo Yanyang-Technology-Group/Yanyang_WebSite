@@ -1,6 +1,6 @@
 -- 晏阳后端 D1 数据库表结构
 -- 执行方式：
---   wrangler d1 execute yanyang-stats --remote --file schema.sql
+--   wrangler d1 execute yanyangweb --remote --file schema.sql
 
 CREATE TABLE IF NOT EXISTS server_stats (
   id INTEGER PRIMARY KEY CHECK (id = 1),
