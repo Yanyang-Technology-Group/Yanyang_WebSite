@@ -4,13 +4,13 @@ import { List, X, Sun, Moon } from '@phosphor-icons/react'
 import { useTheme } from '../hooks/useTheme'
 import { useLanguageContext } from '../i18n/LanguageContext'
 
-const NAV_ITEMS: { path: string; key: string }[] = [
+const NAV_ITEMS: { path: string; key: string; external?: boolean }[] = [
   { path: '/', key: 'nav.home' },
   { path: '/about', key: 'nav.about' },
   { path: '/join', key: 'nav.join' },
   { path: '/event', key: 'nav.event' },
   { path: '/map', key: 'nav.map' },
-  { path: '/download', key: 'nav.download' },
+  { path: 'https://community.yanyn.cn', key: 'nav.community', external: true },
 ]
 
 export default function Navbar() {
@@ -40,11 +40,17 @@ export default function Navbar() {
         </Link>
 
         <div className="hidden md:flex items-center gap-1 ml-auto mr-2">
-          {NAV_ITEMS.map(({ path, key }) => (
-            <Link key={path} to={path} className={linkClass(path)}>
-              {t(key)}
-            </Link>
-          ))}
+          {NAV_ITEMS.map(({ path, key, external }) =>
+            external ? (
+              <a key={path} href={path} target="_blank" rel="noopener noreferrer" className={linkClass(path)}>
+                {t(key)}
+              </a>
+            ) : (
+              <Link key={path} to={path} className={linkClass(path)}>
+                {t(key)}
+              </Link>
+            )
+          )}
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2">
@@ -93,19 +99,31 @@ export default function Navbar() {
             <X size={24} weight="bold" />
           </button>
           <nav className="mt-12 flex flex-col gap-1">
-            {NAV_ITEMS.map(({ path, key }) => (
-              <Link
-                key={path}
-                to={path}
-                className={`block px-4 py-3 rounded-md text-sm font-medium transition-colors ${
-                  cleanPath === path
-                    ? 'bg-primary-light text-primary'
-                    : 'text-fg hover:bg-surface'
-                }`}
-              >
-                {t(key)}
-              </Link>
-            ))}
+            {NAV_ITEMS.map(({ path, key, external }) =>
+              external ? (
+                <a
+                  key={path}
+                  href={path}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block px-4 py-3 rounded-md text-sm font-medium transition-colors text-fg hover:bg-surface"
+                >
+                  {t(key)}
+                </a>
+              ) : (
+                <Link
+                  key={path}
+                  to={path}
+                  className={`block px-4 py-3 rounded-md text-sm font-medium transition-colors ${
+                    cleanPath === path
+                      ? 'bg-primary-light text-primary'
+                      : 'text-fg hover:bg-surface'
+                  }`}
+                >
+                  {t(key)}
+                </Link>
+              )
+            )}
           </nav>
         </div>
       </div>

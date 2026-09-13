@@ -18,7 +18,7 @@ export default function Verify() {
   const [capLoaded, setCapLoaded] = useState(false)
   const [countdown, setCountdown] = useState(0)
 
-  const from = location.state?.from || '/download'
+  const from = location.state?.from || '/'
   const isPasswordPage = cleanPath === '/verify/password'
   const isSuccessPage = cleanPath === '/verify/password/success'
   const isErrorPage = cleanPath === '/verify/password/error'

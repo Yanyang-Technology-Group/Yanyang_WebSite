@@ -8,12 +8,7 @@ import Join from './pages/Join'
 import Event from './pages/Event'
 import Map from './pages/Map'
 import Verify from './pages/Verify'
-import DownloadPage from './pages/Download'
 import Admin from './pages/Admin'
-import ModpackList from './pages/Downloads/modpack'
-import JavaList from './pages/Downloads/java'
-import LauncherList from './pages/Downloads/launcher'
-import Detail from './pages/Downloads/Detail'
 import FourYearsEvent from './Events/4years'
 // import NewYear2027Event from './Events/2027'
 import SatelliteMap from './pages/SatelliteMap'
@@ -75,13 +70,6 @@ function AppContent() {
                         <Route path="/map" element={<Map />} />
                         <Route path="/state" element={<Server />} />
                         <Route path="/stats" element={<Server />} />
-                        <Route path="/download" element={<DownloadPage />} />
-                        <Route path="/downloads/modpack" element={<ModpackList />} />
-                        <Route path="/downloads/java" element={<JavaList />} />
-                        <Route path="/downloads/launcher" element={<LauncherList />} />
-                        <Route path="/downloads/modpacks/:id" element={<Detail />} />
-                        <Route path="/downloads/javas/:id" element={<Detail />} />
-                        <Route path="/downloads/launchers/:id" element={<Detail />} />
                         <Route path="/verify" element={<Verify />} />
                         <Route path="/verify/password" element={<Verify />} />
                         <Route path="/verify/password/success" element={<Verify />} />
