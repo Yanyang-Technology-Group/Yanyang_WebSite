@@ -7,7 +7,6 @@ import About from './pages/About'
 import Join from './pages/Join'
 import Event from './pages/Event'
 import Map from './pages/Map'
-import Verify from './pages/Verify'
 import Admin from './pages/Admin'
 import FourYearsEvent from './Events/4years'
 // import NewYear2027Event from './Events/2027'
@@ -70,10 +69,6 @@ function AppContent() {
                         <Route path="/map" element={<Map />} />
                         <Route path="/state" element={<Server />} />
                         <Route path="/stats" element={<Server />} />
-                        <Route path="/verify" element={<Verify />} />
-                        <Route path="/verify/password" element={<Verify />} />
-                        <Route path="/verify/password/success" element={<Verify />} />
-                        <Route path="/verify/password/error" element={<Verify />} />
                         <Route path="/backend/api/admin" element={<Admin />} />
                         <Route path="/maps/satellite" element={<SatelliteMap />} />
                         <Route path="/maps/railway" element={<RailwayMap />} />

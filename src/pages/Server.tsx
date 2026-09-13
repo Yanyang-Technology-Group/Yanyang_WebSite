@@ -6,8 +6,6 @@ import { API_BASE_URL } from '../config'
 import { useLanguageContext } from '../i18n/LanguageContext'
 import type { TFunction } from '../i18n'
 import type { ServerStats } from '../types'
-import { useAuth } from '../hooks/useAuth'
-import { useNavigate } from 'react-router-dom'
 
 interface StatsResponse {
   success: boolean
@@ -64,9 +62,6 @@ function StatCard({ icon: Icon, title, percent, detail, color, animated = true }
 
 export default function Server() {
   const { t } = useLanguageContext()
-  const navigate = useNavigate()
-  const { token, loading: authLoading } = useAuth()
-  const isAuthenticated = !!token
   const [stats, setStats] = useState<ServerStats | null>(null)
   const [configured, setConfigured] = useState(true)
   const [error, setError] = useState('')
@@ -103,26 +98,10 @@ export default function Server() {
   }, [t])
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchStats(true)
-      const timer = setInterval(() => fetchStats(true), REFRESH_INTERVAL)
-      return () => clearInterval(timer)
-    }
-  }, [isAuthenticated, fetchStats])
-
-  if (authLoading) {
-    return (
-        <section className="bg-bg pt-20 pb-10 sm:pt-28 sm:pb-16">
-          <div className="mx-auto max-w-4xl px-4 sm:px-6 text-center">
-            <p className="text-muted">{t('server.verifying')}</p>
-          </div>
-        </section>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return null
-  }
+    fetchStats(true)
+    const timer = setInterval(() => fetchStats(true), REFRESH_INTERVAL)
+    return () => clearInterval(timer)
+  }, [fetchStats])
 
   const cpu = stats?.cpu
   const memory = stats?.memory
