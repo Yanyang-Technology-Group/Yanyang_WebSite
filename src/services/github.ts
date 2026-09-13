@@ -1,4 +1,4 @@
-import { Env, DownkeyData, ModpackData, JavaData, LauncherData } from '../types'
+import { Env, DownkeyData } from '../types'
 
 async function getData<T>(env: Env, filename: string): Promise<T> {
   const url = `https://api.github.com/repos/${env.REPO_OWNER}/${env.REPO_NAME}/contents/${filename}`
@@ -28,18 +28,6 @@ async function getData<T>(env: Env, filename: string): Promise<T> {
 
 export async function getDownkey(env: Env): Promise<DownkeyData> {
   return getData<DownkeyData>(env, 'downkey.json')
-}
-
-export async function getModpacks(env: Env): Promise<ModpackData> {
-  return getData<ModpackData>(env, 'modpack.json')
-}
-
-export async function getJava(env: Env): Promise<JavaData> {
-  return getData<JavaData>(env, 'javajdk.json')
-}
-
-export async function getLaunchers(env: Env): Promise<LauncherData> {
-  return getData<LauncherData>(env, 'launcher.json')
 }
 
 export async function verifyPassword(password: string, env: Env): Promise<any> {

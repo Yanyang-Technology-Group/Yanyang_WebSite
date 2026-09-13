@@ -1,7 +1,7 @@
 import { corsHeaders, jsonResponse, errorResponse } from './utils/response.js'
-import { getDownkey, getModpacks, getJava, getLaunchers, verifyPassword } from './services/github.js'
+import { getDownkey, verifyPassword } from './services/github.js'
 import { simpleJWT, verifySimpleJWT } from './services/jwt.js'
-import { Env, PasswordEntry, DownloadItem, ServerStats } from './types'
+import { Env, PasswordEntry, ServerStats } from './types'
 
 const TOKEN_EXPIRY = 3600000
 
@@ -186,112 +186,6 @@ interface RequestLog {
   status: number
   email?: string
   userAgent?: string
-}
-
-function filterByType<T extends { public?: boolean }>(items: T[], passwordType: string): T[] {
-  if (passwordType === 'full') {
-    return items
-  }
-  if (passwordType === 'public') {
-    return items.filter(item => item.public === true)
-  }
-  return items
-}
-
-function generateOneTimeToken(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  let token = ''
-  for (let i = 0; i < 32; i++) {
-    token += chars[Math.floor(Math.random() * chars.length)]
-  }
-  return token
-}
-
-function getTokenFromRequest(request: Request): string | null {
-  const auth = request.headers.get('Authorization')
-  if (auth && auth.startsWith('Bearer ')) {
-    return auth.replace('Bearer ', '')
-  }
-
-  const cookie = request.headers.get('Cookie')
-  if (cookie) {
-    const match = cookie.match(/download_token=([^;]+)/)
-    if (match) {
-      return match[1]
-    }
-  }
-
-  return null
-}
-
-async function signLink(link: string, token: string, env: Env): Promise<{ token: string; signature: string }> {
-  const encoder = new TextEncoder()
-  const secret = env.ONE_TIME_SECRET || 'yanyang-one-time-secret-2026'
-  const message = `${link}|${token}|${secret}`
-
-  const key = await crypto.subtle.importKey(
-      'raw',
-      encoder.encode(secret),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-  )
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(message))
-  const signatureArray = new Uint8Array(signature)
-  let signatureStr = ''
-  for (let i = 0; i < signatureArray.length; i++) {
-    signatureStr += String.fromCharCode(signatureArray[i])
-  }
-
-  return { token, signature: btoa(signatureStr) }
-}
-
-async function verifySignedLink(link: string, token: string, signature: string, env: Env): Promise<{ valid: boolean; reason?: string }> {
-  const secret = env.ONE_TIME_SECRET || 'yanyang-one-time-secret-2026'
-  const encoder = new TextEncoder()
-  const message = `${link}|${token}|${secret}`
-
-  const key = await crypto.subtle.importKey(
-      'raw',
-      encoder.encode(secret),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['verify']
-  )
-
-  const signatureStr = atob(signature)
-  const signatureBytes = new Uint8Array(signatureStr.length)
-  for (let i = 0; i < signatureStr.length; i++) {
-    signatureBytes[i] = signatureStr.charCodeAt(i)
-  }
-
-  const isValid = await crypto.subtle.verify(
-      'HMAC',
-      key,
-      signatureBytes,
-      encoder.encode(message)
-  )
-
-  if (!isValid) {
-    return { valid: false, reason: '签名无效' }
-  }
-
-  if (env.DB) {
-    const used = await env.DB.prepare('SELECT token FROM used_tokens WHERE token = ?').bind(token).first()
-    if (used) {
-      return { valid: false, reason: '链接已被使用' }
-    }
-  }
-
-  return { valid: true }
-}
-
-async function markTokenUsed(token: string, env: Env): Promise<void> {
-  if (env.DB) {
-    await env.DB.prepare('INSERT OR REPLACE INTO used_tokens (token, created_at) VALUES (?, ?)')
-      .bind(token, Date.now())
-      .run()
-  }
 }
 
 async function isIPBanned(ip: string, env: Env): Promise<{ banned: boolean; remaining?: number; reason?: string }> {
@@ -668,179 +562,19 @@ async function handleVerify(request: Request, env: Env, ctx: ExecutionContext): 
       iat: Date.now()
     }, env.JWT_SECRET)
 
-    const modpacks = await getModpacks(env)
-    const java = await getJava(env)
-    const launchers = await getLaunchers(env)
-
-    const filteredModpacks = {
-      ...modpacks,
-      items: filterByType(modpacks.items || [], passwordInfo.type)
-    }
-
-    const filteredJava = {
-      ...java,
-      items: filterByType(java.items || [], passwordInfo.type)
-    }
-
-    const filteredLaunchers = {
-      ...launchers,
-      items: filterByType(launchers.items || [], passwordInfo.type)
-    }
-
     scheduleLoginNotification(request, passwordInfo.email, env, ctx)
 
     return jsonResponse({
       success: true,
       token: token,
       type: passwordInfo.type,
-      label: passwordInfo.label,
-      modpacks: filteredModpacks,
-      java: filteredJava,
-      launchers: filteredLaunchers
+      label: passwordInfo.label
     }, 200, request)
 
   } catch (error) {
     console.error('验证错误:', error)
     const errorMessage = error instanceof Error ? error.message : String(error)
     return errorResponse('服务器错误，请稍后重试: ' + errorMessage, 500, request)
-  }
-}
-
-async function handleOneTimeDownload(request: Request, env: Env): Promise<Response> {
-  try {
-    const token = getTokenFromRequest(request)
-    if (!token) {
-      return errorResponse('未授权', 401, request)
-    }
-    const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
-    if (!decoded) {
-      return errorResponse('token无效或已过期', 401, request)
-    }
-
-    const url = new URL(request.url)
-    const linkId = url.searchParams.get('id')
-    if (!linkId) {
-      return errorResponse('缺少链接ID', 400, request)
-    }
-
-    const modpacks = await getModpacks(env)
-    const java = await getJava(env)
-    const launchers = await getLaunchers(env)
-    const allItems = [...(modpacks.items || []), ...(java.items || []), ...(launchers.items || [])]
-
-    let targetLink: string | null = null
-    for (const item of allItems) {
-      if ('downloads' in item && Array.isArray(item.downloads)) {
-        const found = (item.downloads as DownloadItem[]).find(d => d.name === linkId)
-        if (found) {
-          targetLink = found.link
-          break
-        }
-      }
-      if ('link' in item && item.link && item.name === linkId) {
-        targetLink = item.link
-        break
-      }
-    }
-
-    if (!targetLink) {
-      return errorResponse('链接不存在', 404, request)
-    }
-
-    const oneTimeToken = generateOneTimeToken()
-    const signed = await signLink(targetLink, oneTimeToken, env)
-
-    return jsonResponse({
-      success: true,
-      token: oneTimeToken,
-      signature: signed.signature
-    }, 200, request)
-
-  } catch (error) {
-    console.error('生成一次性链接错误:', error)
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    return errorResponse('服务器错误: ' + errorMessage, 500, request)
-  }
-}
-
-async function handleRedirect(request: Request, env: Env): Promise<Response> {
-  try {
-    const url = new URL(request.url)
-    const link = url.searchParams.get('link')
-    const token = url.searchParams.get('token')
-    const sig = url.searchParams.get('sig')
-
-    if (!link || !token || !sig) {
-      return new Response('链接参数不完整', { status: 400 })
-    }
-
-    const result = await verifySignedLink(link, token, sig, env)
-
-    if (!result.valid) {
-      return new Response(result.reason || '链接无效', { status: 403 })
-    }
-
-    await markTokenUsed(token, env)
-
-    return Response.redirect(link, 302)
-
-  } catch (error) {
-    console.error('重定向错误:', error)
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    return new Response('服务器错误: ' + errorMessage, { status: 500 })
-  }
-}
-
-async function handleProxyDownload(request: Request, env: Env): Promise<Response> {
-  try {
-    const url = new URL(request.url)
-    const token = url.searchParams.get('token')
-    const sig = url.searchParams.get('sig')
-    const link = url.searchParams.get('link')
-    const filename = url.searchParams.get('filename') || 'download'
-
-    if (!token || !sig || !link) {
-      return new Response('参数不完整', { status: 400 })
-    }
-
-    const result = await verifySignedLink(link, token, sig, env)
-
-    if (!result.valid) {
-      return new Response(result.reason || '链接无效', { status: 403 })
-    }
-
-    await markTokenUsed(token, env)
-
-    const response = await fetch(link, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': '*/*',
-        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-        'Referer': 'https://www.123pan.com/',
-        'Origin': 'https://www.123pan.com'
-      }
-    })
-
-    if (!response.ok) {
-      return new Response(`文件获取失败: ${response.status}`, { status: response.status })
-    }
-
-    const contentDisposition = response.headers.get('content-disposition') || `attachment; filename="${encodeURIComponent(filename)}"`
-
-    return new Response(response.body, {
-      status: response.status,
-      headers: {
-        'Content-Type': response.headers.get('content-type') || 'application/octet-stream',
-        'Content-Disposition': contentDisposition,
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'X-Content-Type-Options': 'nosniff'
-      }
-    })
-
-  } catch (error) {
-    console.error('代理下载错误:', error)
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    return new Response('服务器错误: ' + errorMessage, { status: 500 })
   }
 }
 
@@ -972,75 +706,6 @@ async function handleMapProxy(request: Request, env: Env): Promise<Response> {
     console.error('地图代理错误:', error)
     const errorMessage = error instanceof Error ? error.message : String(error)
     return new Response('地图加载失败: ' + errorMessage, { status: 500 })
-  }
-}
-
-async function handleModpacks(request: Request, env: Env): Promise<Response> {
-  try {
-    const token = getTokenFromRequest(request)
-    if (!token) {
-      return errorResponse('未授权', 401, request)
-    }
-    const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
-    if (!decoded) {
-      return errorResponse('token无效或已过期', 401, request)
-    }
-    const data = await getModpacks(env)
-    const filtered = {
-      ...data,
-      items: filterByType(data.items || [], decoded.type || 'full')
-    }
-    return jsonResponse({ success: true, data: filtered }, 200, request)
-  } catch (error) {
-    console.error('获取整合包错误:', error)
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    return errorResponse('服务器错误: ' + errorMessage, 500, request)
-  }
-}
-
-async function handleJava(request: Request, env: Env): Promise<Response> {
-  try {
-    const token = getTokenFromRequest(request)
-    if (!token) {
-      return errorResponse('未授权', 401, request)
-    }
-    const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
-    if (!decoded) {
-      return errorResponse('token无效或已过期', 401, request)
-    }
-    const data = await getJava(env)
-    const filtered = {
-      ...data,
-      items: filterByType(data.items || [], decoded.type || 'full')
-    }
-    return jsonResponse({ success: true, data: filtered }, 200, request)
-  } catch (error) {
-    console.error('获取JDK错误:', error)
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    return errorResponse('服务器错误: ' + errorMessage, 500, request)
-  }
-}
-
-async function handleLaunchers(request: Request, env: Env): Promise<Response> {
-  try {
-    const token = getTokenFromRequest(request)
-    if (!token) {
-      return errorResponse('未授权', 401, request)
-    }
-    const decoded = await verifySimpleJWT(token, env.JWT_SECRET)
-    if (!decoded) {
-      return errorResponse('token无效或已过期', 401, request)
-    }
-    const data = await getLaunchers(env)
-    const filtered = {
-      ...data,
-      items: filterByType(data.items || [], decoded.type || 'full')
-    }
-    return jsonResponse({ success: true, data: filtered }, 200, request)
-  } catch (error) {
-    console.error('获取启动器错误:', error)
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    return errorResponse('服务器错误: ' + errorMessage, 500, request)
   }
 }
 
@@ -1619,32 +1284,8 @@ export default {
       return handleFindPassword(request, env)
     }
 
-    if (path === '/api/modpacks') {
-      return handleModpacks(request, env)
-    }
-
-    if (path === '/api/java') {
-      return handleJava(request, env)
-    }
-
-    if (path === '/api/launchers') {
-      return handleLaunchers(request, env)
-    }
-
     if (path === '/api/website/info') {
       return handleWebsiteInfo(request)
-    }
-
-    if (path === '/api/download/one-time' && request.method === 'POST') {
-      return handleOneTimeDownload(request, env)
-    }
-
-    if (path === '/api/download/redirect') {
-      return handleRedirect(request, env)
-    }
-
-    if (path === '/api/download/proxy') {
-      return handleProxyDownload(request, env)
     }
 
     if (path.startsWith('/api/map/proxy')) {

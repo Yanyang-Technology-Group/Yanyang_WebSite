@@ -8,11 +8,6 @@ CREATE TABLE IF NOT EXISTS server_stats (
   updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS used_tokens (
-  token TEXT PRIMARY KEY,
-  created_at INTEGER NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS bans (
   ip TEXT PRIMARY KEY,
   ban_time INTEGER NOT NULL,
