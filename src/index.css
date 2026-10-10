@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+@plugin "daisyui" {
+  themes: false;
+  include: card, badge, button, steps;
+  prefix: "ny-";
+  logs: false;
+}
+
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 :root {

@@ -16,7 +16,7 @@ function FourYearsEvent() {
         <div
           className="mc-background-image"
           style={{
-            backgroundImage: 'url(/images/events/88c6ced5-23d5-4da5-8db6-c7828c11e7b4.png)',
+            backgroundImage: 'url(/images/events/4years/88c6ced5-23d5-4da5-8db6-c7828c11e7b4.png)',
           }}
         ></div>
         <div className="mc-overlay"></div>
@@ -28,7 +28,7 @@ function FourYearsEvent() {
           <div className="mc-hero-card">
             <div className="mc-hero-header">
               <img
-                src="/images/events/4yearslogo.png"
+                src="/images/events/4years/4yearslogo.png"
                 alt="4th anniversary logo"
                 className="mc-hero-logo"
               />

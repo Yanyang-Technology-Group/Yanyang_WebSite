@@ -190,6 +190,11 @@ export default {
     back: 'Back to Events',
   },
   newyear2027: {
+    logoAlt: 'Happy New Year 2027',
+    subtitle: 'Together in Yanyang · Welcome the Lunar New Year',
+    intro1: 'On February 5, 2027, Yanyang City Construction will host its New Year celebration. We invite all members, old and new, to gather on the Minecraft Yanyang server and welcome the Lunar New Year together.',
+    intro2: 'From city streets to rail transit, every build reflects the creativity and passion of our community. In the new year, let us keep building together and create more memories to cherish.',
+    intro3: 'We plan to host fun in-game activities to celebrate the season together. Follow the official QQ group for the detailed schedule and participation instructions. We look forward to seeing you in Yanyang!',
   },
   notfound: {
     code: '404',
