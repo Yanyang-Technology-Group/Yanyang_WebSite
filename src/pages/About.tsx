@@ -92,9 +92,11 @@ export default function About() {
                     className="flex-shrink-0 w-40 h-20 sm:w-48 sm:h-24 bg-white flex items-center justify-center p-3 hover:opacity-80 transition-opacity"
                   >
                     <img
-                      src={`/images/us/${p.id}.png`}
+                      src={`/images/us/${p.id}.webp`}
                       alt={t('about.partners.alt', { id: p.id })}
                       className="max-h-full max-w-full object-contain"
+                      loading="lazy"
+                      decoding="async"
                     />
                   </a>
                 ))}

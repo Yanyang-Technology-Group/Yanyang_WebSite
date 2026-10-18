@@ -41,6 +41,58 @@ function sriPlugin(): Plugin {
   }
 }
 
+// 把 index.html 中内联脚本的 sha256 写进 _headers 的 CSP script-src。
+// 站点 CSP 没有放行 'unsafe-inline'，内联的主题初始化脚本必须靠 hash 授权，
+// 否则会被浏览器拦截（深色模式首屏闪白）。hash 在构建时自动生成与校验，避免手写失配。
+function cspInlineScriptHashPlugin(): Plugin {
+  return {
+    name: 'csp-inline-script-hash',
+    writeBundle(outputOptions: { dir?: string }) {
+      const outDir = outputOptions.dir
+      if (!outDir) return
+      const htmlPath = path.join(outDir, 'index.html')
+      const headersPath = path.join(outDir, '_headers')
+      if (!fs.existsSync(htmlPath) || !fs.existsSync(headersPath)) return
+
+      const html = fs.readFileSync(htmlPath, 'utf8')
+      // 匹配不带 src 属性、且不是 type="module" 外链的内联脚本
+      const inlineScripts = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)]
+        .map((m) => m[1])
+        .filter((code) => code.trim().length > 0)
+
+      const hashes = inlineScripts.map(
+        (code) => `'sha256-${createHash('sha256').update(code, 'utf8').digest('base64')}'`
+      )
+
+      let headers = fs.readFileSync(headersPath, 'utf8')
+      const cspLine = /^\s*Content-Security-Policy:.*$/m.exec(headers)
+      if (!cspLine) {
+        this.error('[csp] _headers 中找不到 Content-Security-Policy')
+        return
+      }
+
+      const [oldLine] = cspLine
+      // 先移除之前构建写入的 sha256，再按当前产物重新注入
+      let newLine = oldLine.replace(/\s*'sha256-[^']+'/g, '')
+      if (hashes.length > 0) {
+        const scriptSrc = /script-src([^;]*)/.exec(newLine)
+        if (!scriptSrc) {
+          this.error('[csp] CSP 中找不到 script-src')
+          return
+        }
+        newLine = newLine.replace(
+          /script-src([^;]*)/,
+          `script-src${scriptSrc[1].trimEnd()} ${hashes.join(' ')}`
+        )
+      }
+
+      headers = headers.replace(oldLine, newLine)
+      fs.writeFileSync(headersPath, headers)
+      console.log(`[csp] 已为 ${hashes.length} 段内联脚本注入 script-src hash`)
+    },
+  }
+}
+
 async function getCommitCountFromGitHub(retries = 10) {
   for (let i = 0; i < retries; i++) {
     try {
@@ -150,7 +202,7 @@ export default defineConfig(async ({ mode, command }): Promise<UserConfig> => {
 
   return {
     base: '/',
-    plugins: [react(), tailwindcss(), i18nCheckPlugin(), sriPlugin()],
+    plugins: [react(), tailwindcss(), i18nCheckPlugin(), sriPlugin(), cspInlineScriptHashPlugin()],
     esbuild: { legalComments: 'none' },
     define: {
       __USER_DEBUG__: isUserDebug,
@@ -163,9 +215,13 @@ export default defineConfig(async ({ mode, command }): Promise<UserConfig> => {
       __VERSION_SOURCE__: JSON.stringify(versionSource),
     },
     build: {
-      cssCodeSplit: false,
+      // 按路由懒加载后，把各页面自己的 CSS（如 tdesign、活动页样式）拆到异步 chunk，
+      // 首屏只需下载全局样式，减少阻塞渲染的字节数。
+      cssCodeSplit: true,
       sourcemap: false,
       minify: 'esbuild',
+      // 体积统计交给 CI/本地脚本，关闭可让构建更快
+      reportCompressedSize: false,
       rollupOptions: {
         output: {
           manualChunks: {
@@ -189,7 +245,8 @@ export default defineConfig(async ({ mode, command }): Promise<UserConfig> => {
             }
             return 'assets/[name]-[hash].[ext]'
           },
-          experimentalMinChunkSize: 20000,
+          // 注意：不要设置 experimentalMinChunkSize，它会把体积小的懒加载 chunk
+          // 合并回入口 chunk，抵消路由级代码分割的收益。
         },
       },
       chunkSizeWarningLimit: 1000,

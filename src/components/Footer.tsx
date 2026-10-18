@@ -19,7 +19,15 @@ export default function Footer() {
       <footer className="relative z-10 bg-footer text-muted">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 flex flex-col items-center gap-6">
           <div className="flex items-center gap-2">
-            <img src="/images/logo2.png" alt="Yanyang" className="h-6 w-auto" />
+            <img
+                src="/images/logo2.webp"
+                alt="Yanyang"
+                className="h-6 w-auto"
+                width={1200}
+                height={464}
+                loading="lazy"
+                decoding="async"
+            />
             <span className="text-white font-semibold text-sm">{t('footer.brand')}</span>
           </div>
 

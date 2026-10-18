@@ -23,11 +23,12 @@ export default function NewYear2027Event() {
                 {t('event.newYearTag')}
               </span>
               <img
-                src="/images/events/2027/logo.png"
+                src="/images/events/2027/logo.webp"
                 alt={t('newyear2027.logoAlt')}
                 className="ny-event-logo"
-                width={2000}
-                height={842}
+                width={1160}
+                height={488}
+                decoding="async"
                 fetchPriority="high"
               />
               <h1 className="ny-event-title">{t('event.newYearTitle')}</h1>

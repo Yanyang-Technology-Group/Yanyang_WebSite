@@ -145,7 +145,7 @@ export default function Join() {
                 </span>
               </a>
               <a href="https://www.cloudflare-cn.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-surface rounded-container hover:bg-bg transition-colors">
-                <img src="/images/join/cf.png" alt="CDN" className="h-8 w-auto" />
+                <img src="/images/join/cf.webp" alt="CDN" className="h-8 w-auto" width={128} height={44} loading="lazy" decoding="async" />
                 <span className="text-sm font-medium text-fg">{t('join.tech.cdn')}</span>
               </a>
               <a href="https://github.com/Yanyang-Technology-Group/Yanyang_WebSite" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-surface rounded-container hover:bg-bg transition-colors">

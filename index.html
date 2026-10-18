@@ -5,8 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>晏阳城市建设 | 公益 Minecraft 服务器</title>
     <meta name="description" content="晏阳城市建设 - 基于 Minecraft Fabric 1.20.1 的城市规划与轨道交通创作服务器">
+    <meta name="theme-color" content="#3B82F6">
+    <meta name="color-scheme" content="light dark">
     <link rel="icon" href="/images/icon.png" type="image/png">
-    <script src="/theme-init.js"></script>
+    <!--
+      关键渲染路径：
+      1. 主题脚本内联，省掉一次阻塞的 JS 请求，同时避免深色模式首屏闪白；
+      2. Inter（latin 子集）预加载，让西文在 CSS 到达前就能开始下载字体，
+         CSS 中的 @font-face 与这里的 URL 必须保持一致；
+      3. fonts.css 已从 436KB 精简到 110KB（gzip 约 31KB），保持阻塞加载，
+         换取中文字体不出现 FOUT。
+    -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('yanyang_theme')
+          var theme = stored === 'dark' || stored === 'light'
+            ? stored
+            : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+          document.documentElement.setAttribute('data-theme', theme)
+        } catch (e) {}
+      })()
+    </script>
+    <!-- 构建时会由 sriPlugin 自动补上 integrity 与 crossorigin -->
+    <link rel="preload" href="/fonts/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2" as="font" type="font/woff2">
     <link rel="stylesheet" href="/fonts/fonts.css">
 </head>
 <body>

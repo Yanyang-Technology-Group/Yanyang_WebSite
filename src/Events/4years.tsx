@@ -16,7 +16,8 @@ function FourYearsEvent() {
         <div
           className="mc-background-image"
           style={{
-            backgroundImage: 'url(/images/events/4years/88c6ced5-23d5-4da5-8db6-c7828c11e7b4.png)',
+            // Same artwork as the satellite map carousel, reused here to avoid a duplicate asset
+            backgroundImage: 'url(/images/map/satellite.webp)',
           }}
         ></div>
         <div className="mc-overlay"></div>
@@ -28,9 +29,13 @@ function FourYearsEvent() {
           <div className="mc-hero-card">
             <div className="mc-hero-header">
               <img
-                src="/images/events/4years/4yearslogo.png"
+                src="/images/events/4years/4yearslogo.webp"
                 alt="4th anniversary logo"
                 className="mc-hero-logo"
+                width={480}
+                height={264}
+                decoding="async"
+                fetchPriority="high"
               />
               <div className="mc-hero-text">
                 <Tag theme="default" variant="light" shape="round" size="large" className="mc-badge">

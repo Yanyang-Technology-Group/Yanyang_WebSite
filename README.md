@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/Yanyang-Technology-Group/Yanyang_WebSite/blob/main/public/images/logo.png?raw=true" alt="晏阳城市建设 Logo" width="160">
+  <img src="https://github.com/Yanyang-Technology-Group/Yanyang_WebSite/blob/main/public/images/logo.webp?raw=true" alt="晏阳城市建设 Logo" width="160">
   <h1>晏阳城市建设官网</h1>
   <p>基于 Minecraft Fabric 1.20.1 服务器的官方形象网站 | 专注城市规划与轨道交通创作</p>
   <p>

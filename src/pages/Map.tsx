@@ -7,13 +7,13 @@ const MAPS = [
   {
     id: 1,
     nameKey: 'map.sat',
-    image: '/images/map/1.png',
+    image: '/images/map/satellite.webp',
     path: '/maps/satellite'
   },
   {
     id: 2,
     nameKey: 'map.rail',
-    image: '/images/map/2.png',
+    image: '/images/map/railway.webp',
     path: '/maps/railway'
   }
 ]
