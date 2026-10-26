@@ -36,7 +36,7 @@ export default function Home() {
 
             <div className="mt-12 flex flex-wrap items-center justify-center gap-8 sm:gap-12">
               <div className="text-center">
-                <div className="text-3xl sm:text-4xl font-extrabold text-white">100+</div>
+                <div className="text-3xl sm:text-4xl font-extrabold text-white">150+</div>
                 <div className="mt-1 text-xs sm:text-sm text-white/60">{t('home.stats.members')}</div>
               </div>
               <div className="w-px h-10 bg-white/20 hidden sm:block" />
