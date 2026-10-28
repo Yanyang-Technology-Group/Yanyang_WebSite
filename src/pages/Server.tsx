@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Cpu, Memory, HardDrives, ArrowClockwise, WarningCircle } from '@phosphor-icons/react'
 import type { Icon } from '@phosphor-icons/react'
 import ScrollReveal from '../components/ScrollReveal'
@@ -68,11 +68,22 @@ export default function Server() {
   const [loading, setLoading] = useState(true)
   const [lastUpdate, setLastUpdate] = useState<number | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const requestIdRef = useRef(0)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const requestInFlightRef = useRef(false)
 
   const fetchStats = useCallback(async (auto: boolean) => {
+    if (requestInFlightRef.current) return
+    requestInFlightRef.current = true
+    const requestId = ++requestIdRef.current
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+
     try {
-      const res = await fetch(`${API_BASE_URL}/api/server/stats`)
+      const res = await fetch(`${API_BASE_URL}/api/server/stats`, { signal: abortController.signal })
       const data = await res.json() as StatsResponse
+      if (requestId !== requestIdRef.current) return
+
       if (data.success && data.data) {
         setStats(data.data)
         setAutoRefresh(auto)
@@ -80,27 +91,39 @@ export default function Server() {
         setError('')
         setLastUpdate(Date.now())
       } else if (data.configured === false) {
+        setStats(null)
         setAutoRefresh(auto)
         setConfigured(false)
         setError('')
+        setLastUpdate(null)
       } else {
+        setStats(null)
         setAutoRefresh(auto)
         setConfigured(true)
         setError(data.message || t('server.offline'))
+        setLastUpdate(null)
       }
     } catch {
+      if (abortController.signal.aborted || requestId !== requestIdRef.current) return
+      setStats(null)
       setAutoRefresh(auto)
       setConfigured(true)
       setError(t('server.offline'))
+      setLastUpdate(null)
     } finally {
-      setLoading(false)
+      requestInFlightRef.current = false
+      if (requestId === requestIdRef.current) setLoading(false)
     }
   }, [t])
 
   useEffect(() => {
     fetchStats(true)
     const timer = setInterval(() => fetchStats(true), REFRESH_INTERVAL)
-    return () => clearInterval(timer)
+    return () => {
+      clearInterval(timer)
+      requestIdRef.current += 1
+      abortControllerRef.current?.abort()
+    }
   }, [fetchStats])
 
   const cpu = stats?.cpu
