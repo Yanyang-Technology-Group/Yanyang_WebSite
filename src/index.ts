@@ -424,8 +424,8 @@ async function handleHealth(request: Request): Promise<Response> {
 async function handleServerStats(request: Request, env: Env): Promise<Response> {
   if (env.DB) {
     try {
-      const row = await env.DB.prepare('SELECT data FROM server_stats WHERE id = 1').first()
-      if (row) {
+      const row = await env.DB.prepare('SELECT data, updated_at FROM server_stats WHERE id = 1').first()
+      if (row && Date.now() - Number(row.updated_at) < SERVER_STATS_TTL * 1000) {
         return jsonResponse({ success: true, configured: true, data: JSON.parse(row.data as string) }, 200, request)
       }
     } catch (error) {
@@ -461,11 +461,11 @@ async function handleServerStatsIngest(request: Request, env: Env): Promise<Resp
       ...body,
       timestamp: body.timestamp || new Date().toISOString()
     }
-    serverStatsMemory = { stats: payload, updatedAt: Date.now() }
+    const updatedAt = Date.now()
     if (env.DB) {
       try {
         await env.DB.prepare('INSERT OR REPLACE INTO server_stats (id, data, updated_at) VALUES (1, ?, ?)')
-          .bind(JSON.stringify(payload), Date.now())
+          .bind(JSON.stringify(payload), updatedAt)
           .run()
       } catch (error) {
         throw new Error(`D1 写入失败: ${error instanceof Error ? error.message : String(error)}`)
@@ -473,6 +473,7 @@ async function handleServerStatsIngest(request: Request, env: Env): Promise<Resp
     } else {
       throw new Error('D1 数据库未配置')
     }
+    serverStatsMemory = { stats: payload, updatedAt }
     return jsonResponse({ success: true, message: 'ok' }, 200, request)
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
