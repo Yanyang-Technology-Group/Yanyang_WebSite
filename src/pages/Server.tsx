@@ -50,7 +50,7 @@ function chartPoints(values: number[], max: number): string {
   if (!values.length) return ''
   const divisor = Math.max(max, ...values, Number.EPSILON)
   return values.map((value, index) => {
-    const x = values.length === 1 ? 100 : 15 + (index / (values.length - 1)) * 85
+    const x = values.length === 1 ? 100 : (index / (values.length - 1)) * 100
     const y = 36 - (Math.min(value, divisor) / divisor) * 32
     return `${x},${y}`
   }).join(' ')
@@ -91,19 +91,19 @@ function Sparkline({ values, secondary, color, secondaryColor, max, formatScale,
   const secondaryPoints = secondary ? chartPoints(secondary, max) : ''
   const grid = [1, 0.75, 0.5, 0.25, 0]
   return (
-    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-20 w-full overflow-visible sm:h-24" role="img" aria-label={ariaLabel}>
-      {grid.map(level => {
-        const y = 36 - level * 32
-        return (
-          <g key={level}>
-            <path d={`M15 ${y} H100`} stroke="#9ca3af" strokeOpacity=".45" strokeWidth=".7" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
-            <text x="13" y={y + 1.2} textAnchor="end" fill="#9ca3af" fontSize="3.2">{formatScale(max * level)}</text>
-          </g>
-        )
-      })}
-      {points && <polyline points={points} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />}
-      {secondaryPoints && <polyline points={secondaryPoints} fill="none" stroke={secondaryColor || color} strokeWidth="2" strokeDasharray="4 2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />}
-    </svg>
+    <div className="grid min-w-0 grid-cols-[4rem_minmax(0,1fr)] items-stretch gap-2">
+      <div className="grid h-20 grid-rows-5 text-right text-[10px] font-medium leading-none text-black dark:text-white sm:h-24">
+        {grid.map(level => <span key={level} className="flex items-center justify-end whitespace-nowrap">{formatScale(max * level)}</span>)}
+      </div>
+      <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-20 w-full overflow-visible sm:h-24" role="img" aria-label={ariaLabel}>
+        {grid.map(level => {
+          const y = 36 - level * 32
+          return <path key={level} d={`M0 ${y} H100`} stroke="#9ca3af" strokeOpacity=".45" strokeWidth=".7" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
+        })}
+        {points && <polyline points={points} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />}
+        {secondaryPoints && <polyline points={secondaryPoints} fill="none" stroke={secondaryColor || color} strokeWidth="2" strokeDasharray="4 2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />}
+      </svg>
+    </div>
   )
 }
 
