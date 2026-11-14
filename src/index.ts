@@ -1,12 +1,11 @@
 import { corsHeaders, jsonResponse, errorResponse } from './utils/response.js'
 import { simpleJWT, verifySimpleJWT } from './services/jwt.js'
-import { Env, ServerStats } from './types'
+import { Env, ServerMetrics, ServerStats } from './types'
 
 const BAN_DURATION = 24 * 60 * 60 * 1000
 
-const SERVER_STATS_TTL = 120
 const STATS_INGEST_PATH = '/api/server/stats/ingest'
-let serverStatsMemory: { stats: ServerStats; updatedAt: number } | null = null
+let serverStatsMemory: Record<string, ServerStats> = {}
 const ALLOWED_MAP_ORIGINS = ['umap.odn.cc', 'ymap.odn.cc', '103.40.14.23']
 const MAP_PROXY_PREFIX = '/api/map/proxy'
 const MAP_TARGET_COOKIE = 'map_target'
@@ -422,18 +421,46 @@ async function handleHealth(request: Request): Promise<Response> {
 }
 
 async function handleServerStats(request: Request, env: Env): Promise<Response> {
+  let servers: Record<string, ServerStats> = {}
   if (env.DB) {
     try {
       const row = await env.DB.prepare('SELECT data, updated_at FROM server_stats WHERE id = 1').first()
-      if (row && Date.now() - Number(row.updated_at) < SERVER_STATS_TTL * 1000) {
-        return jsonResponse({ success: true, configured: true, data: JSON.parse(row.data as string) }, 200, request)
+      if (row) {
+        const stored = JSON.parse(row.data as string) as Record<string, unknown>
+        if (stored.servers && typeof stored.servers === 'object') {
+          servers = stored.servers as Record<string, ServerStats>
+        }
+        if (typeof stored.hostname === 'string') {
+          const legacy = stored as unknown as ServerMetrics
+          legacy.services = (Array.isArray(stored.services) ? stored.services : []).map((service) => {
+            const item = service as Record<string, unknown>
+            return {
+              name: String(item.name || item.session || '服务'),
+              group: '服务状态',
+              check: 'tmux' as const,
+              target: String(item.session || ''),
+              status: item.status === 'running' || item.status === 'starting' || item.status === 'stopped'
+                ? item.status
+                : item.running === true ? 'running' as const : 'stopped' as const
+            }
+          })
+          servers.legacy = {
+            serverId: 'legacy',
+            displayName: '主服务器',
+            intervalSeconds: 5,
+            receivedAt: Number(row.updated_at) || Date.now(),
+            metrics: legacy
+          }
+        }
+        serverStatsMemory = servers
       }
     } catch (error) {
       console.error('server stats D1 read failed:', error)
     }
   }
-  if (serverStatsMemory && Date.now() - serverStatsMemory.updatedAt < SERVER_STATS_TTL * 1000) {
-    return jsonResponse({ success: true, configured: true, data: serverStatsMemory.stats }, 200, request)
+  if (Object.keys(servers).length === 0) servers = serverStatsMemory
+  if (Object.keys(servers).length > 0) {
+    return jsonResponse({ success: true, configured: true, servers: Object.values(servers) }, 200, request)
   }
   return jsonResponse({
     success: true,
@@ -453,27 +480,37 @@ async function handleServerStatsIngest(request: Request, env: Env): Promise<Resp
     return errorResponse('未授权', 401, request)
   }
   try {
-    const body = await request.json() as ServerStats
-    if (typeof body.hostname !== 'string' || !body.hostname) {
-      return errorResponse('缺少 hostname 字段', 400, request)
+    const body = await request.json() as Record<string, unknown>
+    const serverId = typeof body.serverId === 'string' ? body.serverId : 'legacy'
+    const displayName = typeof body.displayName === 'string' ? body.displayName : '主服务器'
+    const metrics = (body.metrics && typeof body.metrics === 'object' ? body.metrics : body) as ServerMetrics
+    if (!/^[a-zA-Z0-9_-]{1,64}$/.test(serverId)) {
+      return errorResponse('serverId 仅支持字母、数字、下划线和连字符，长度 1-64', 400, request)
     }
+    if (typeof metrics.hostname !== 'string' || !metrics.hostname) {
+      return errorResponse('缺少 metrics.hostname 字段', 400, request)
+    }
+    const receivedAt = Date.now()
     const payload: ServerStats = {
-      ...body,
-      timestamp: body.timestamp || new Date().toISOString()
+      serverId,
+      displayName: displayName.slice(0, 100),
+      intervalSeconds: typeof body.intervalSeconds === 'number' ? Math.max(1, Math.min(body.intervalSeconds, 3600)) : 5,
+      receivedAt,
+      metrics: { ...metrics, timestamp: metrics.timestamp || new Date().toISOString() }
     }
-    const updatedAt = Date.now()
     if (env.DB) {
       try {
-        await env.DB.prepare('INSERT OR REPLACE INTO server_stats (id, data, updated_at) VALUES (1, ?, ?)')
-          .bind(JSON.stringify(payload), updatedAt)
-          .run()
+        await env.DB.prepare("INSERT OR IGNORE INTO server_stats (id, data, updated_at) VALUES (1, '{\"servers\":{}}', ?)")
+          .bind(receivedAt).run()
+        await env.DB.prepare('UPDATE server_stats SET data = json_set(CASE WHEN json_valid(data) THEN data ELSE \'{}\' END, ?, json(?)), updated_at = ? WHERE id = 1')
+          .bind(`$.servers."${serverId}"`, JSON.stringify(payload), receivedAt).run()
       } catch (error) {
         throw new Error(`D1 写入失败: ${error instanceof Error ? error.message : String(error)}`)
       }
     } else {
       throw new Error('D1 数据库未配置')
     }
-    serverStatsMemory = { stats: payload, updatedAt }
+    serverStatsMemory = { ...serverStatsMemory, [serverId]: payload }
     return jsonResponse({ success: true, message: 'ok' }, 200, request)
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
