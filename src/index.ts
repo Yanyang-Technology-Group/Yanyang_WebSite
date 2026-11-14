@@ -4,6 +4,8 @@ import { Env, ServerMetrics, ServerStats } from './types'
 
 const BAN_DURATION = 24 * 60 * 60 * 1000
 
+const SERVER_STATS_TTL = 120
+const SERVER_STATS_LIMIT = 64
 const STATS_INGEST_PATH = '/api/server/stats/ingest'
 let serverStatsMemory: Record<string, ServerStats> = {}
 const ALLOWED_MAP_ORIGINS = ['umap.odn.cc', 'ymap.odn.cc', '103.40.14.23']
@@ -421,44 +423,54 @@ async function handleHealth(request: Request): Promise<Response> {
 }
 
 async function handleServerStats(request: Request, env: Env): Promise<Response> {
+  const cutoff = Date.now() - SERVER_STATS_TTL * 1000
   let servers: Record<string, ServerStats> = {}
   if (env.DB) {
     try {
-      const row = await env.DB.prepare('SELECT data, updated_at FROM server_stats WHERE id = 1').first()
-      if (row) {
-        const stored = JSON.parse(row.data as string) as Record<string, unknown>
-        if (stored.servers && typeof stored.servers === 'object') {
-          servers = stored.servers as Record<string, ServerStats>
-        }
-        if (typeof stored.hostname === 'string') {
-          const legacy = stored as unknown as ServerMetrics
-          legacy.services = (Array.isArray(stored.services) ? stored.services : []).map((service) => {
-            const item = service as Record<string, unknown>
+      const result = await env.DB.prepare(
+        'SELECT server_id, data, updated_at FROM server_stats_by_server WHERE updated_at >= ? ORDER BY updated_at DESC LIMIT ?'
+      ).bind(cutoff, SERVER_STATS_LIMIT).all<{ server_id: string; data: string; updated_at: number }>()
+      for (const row of result.results || []) {
+        const stored = JSON.parse(row.data) as Record<string, unknown>
+        const serverId = typeof stored.serverId === 'string' ? stored.serverId : row.server_id
+        const metrics = (stored.metrics && typeof stored.metrics === 'object' ? stored.metrics : stored) as ServerMetrics
+        if (typeof metrics.hostname !== 'string') continue
+        if (!Array.isArray(metrics.services)) {
+          metrics.services = []
+        } else {
+          metrics.services = metrics.services.map((service) => {
+            const item = service as unknown as Record<string, unknown>
             return {
               name: String(item.name || item.session || '服务'),
-              group: '服务状态',
-              check: 'tmux' as const,
-              target: String(item.session || ''),
+              group: String(item.group || '服务状态'),
+              check: item.check === 'process' || item.check === 'tcp' || item.check === 'docker_compose'
+                ? item.check
+                : 'tmux',
+              target: String(item.target || item.session || ''),
               status: item.status === 'running' || item.status === 'starting' || item.status === 'stopped'
                 ? item.status
-                : item.running === true ? 'running' as const : 'stopped' as const
+                : item.running === true ? 'running' : 'stopped'
             }
           })
-          servers.legacy = {
-            serverId: 'legacy',
-            displayName: '主服务器',
-            intervalSeconds: 5,
-            receivedAt: Number(row.updated_at) || Date.now(),
-            metrics: legacy
-          }
         }
-        serverStatsMemory = servers
+        servers[serverId] = {
+          serverId,
+          displayName: typeof stored.displayName === 'string' ? stored.displayName : '主服务器',
+          intervalSeconds: typeof stored.intervalSeconds === 'number' ? stored.intervalSeconds : 5,
+          receivedAt: Number(row.updated_at),
+          metrics
+        }
       }
+      serverStatsMemory = servers
     } catch (error) {
       console.error('server stats D1 read failed:', error)
     }
   }
-  if (Object.keys(servers).length === 0) servers = serverStatsMemory
+  if (Object.keys(servers).length === 0) {
+    servers = Object.fromEntries(
+      Object.entries(serverStatsMemory).filter(([, server]) => server.receivedAt >= cutoff)
+    )
+  }
   if (Object.keys(servers).length > 0) {
     return jsonResponse({ success: true, configured: true, servers: Object.values(servers) }, 200, request)
   }
@@ -500,10 +512,9 @@ async function handleServerStatsIngest(request: Request, env: Env): Promise<Resp
     }
     if (env.DB) {
       try {
-        await env.DB.prepare("INSERT OR IGNORE INTO server_stats (id, data, updated_at) VALUES (1, '{\"servers\":{}}', ?)")
-          .bind(receivedAt).run()
-        await env.DB.prepare('UPDATE server_stats SET data = json_set(CASE WHEN json_valid(data) THEN data ELSE \'{}\' END, ?, json(?)), updated_at = ? WHERE id = 1')
-          .bind(`$.servers."${serverId}"`, JSON.stringify(payload), receivedAt).run()
+        await env.DB.prepare(
+          'INSERT INTO server_stats_by_server (server_id, data, updated_at) VALUES (?, ?, ?) ON CONFLICT(server_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at'
+        ).bind(serverId, JSON.stringify(payload), receivedAt).run()
       } catch (error) {
         throw new Error(`D1 写入失败: ${error instanceof Error ? error.message : String(error)}`)
       }

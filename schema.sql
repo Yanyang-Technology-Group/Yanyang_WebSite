@@ -8,6 +8,15 @@ CREATE TABLE IF NOT EXISTS server_stats (
   updated_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS server_stats_by_server (
+  server_id TEXT PRIMARY KEY,
+  data TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_server_stats_by_server_updated_at
+  ON server_stats_by_server (updated_at DESC);
+
 CREATE TABLE IF NOT EXISTS bans (
   ip TEXT PRIMARY KEY,
   ban_time INTEGER NOT NULL,
