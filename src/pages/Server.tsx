@@ -91,7 +91,7 @@ function Sparkline({ values, secondary, color, secondaryColor, max, formatScale,
   const secondaryPoints = secondary ? chartPoints(secondary, max) : ''
   const grid = [1, 0.75, 0.5, 0.25, 0]
   return (
-    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-14 w-full overflow-visible" role="img" aria-label={ariaLabel}>
+    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-20 w-full overflow-visible sm:h-24" role="img" aria-label={ariaLabel}>
       {grid.map(level => {
         const y = 36 - level * 32
         return (
@@ -137,31 +137,35 @@ function MetricTile({
   formatScale?: (value: number) => string
 }) {
   return (
-    <div className="min-w-0 border border-border bg-bg p-4">
-      <div className="flex items-center gap-2 text-xs font-semibold text-muted">
-        {icon}<span>{title}</span>
-      </div>
-      {pairedValues ? (
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          {pairedValues.map(item => (
-            <div key={item.label} className="min-w-0">
-              <div className="flex items-center gap-1.5 text-[11px] text-muted">
-                <span className="h-0.5 w-3 shrink-0" style={{ backgroundColor: item.color }} />
-                <span className="truncate">{item.label}</span>
+    <div className="grid min-w-0 grid-cols-[minmax(7rem,0.42fr)_minmax(0,1fr)] items-center gap-3 border border-border bg-bg p-3 sm:grid-cols-[minmax(14rem,0.38fr)_minmax(0,1fr)] sm:gap-5 sm:p-4">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2 text-xs font-semibold text-muted">
+          {icon}<span>{title}</span>
+        </div>
+        {pairedValues ? (
+          <div className="mt-2 grid gap-1.5">
+            {pairedValues.map(item => (
+              <div key={item.label} className="flex min-w-0 items-center justify-between gap-2 text-[11px]">
+                <span className="flex min-w-0 items-center gap-1.5 text-muted">
+                  <span className="h-0.5 w-3 shrink-0" style={{ backgroundColor: item.color }} />
+                  <span className="truncate">{item.label}</span>
+                </span>
+                <strong className="shrink-0 font-bold tabular-nums text-fg">{item.value}</strong>
               </div>
-              <strong className="mt-1 block truncate text-sm font-bold tabular-nums text-fg">{item.value}</strong>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="mt-3 flex items-baseline justify-between gap-2">
-          <strong className="truncate text-xl font-bold tabular-nums text-fg">{value ?? '--'}</strong>
-          {percent != null && <span className="shrink-0 text-sm font-semibold tabular-nums text-fg">{percent.toFixed(1)}%</span>}
-        </div>
-      )}
-      {percent != null && <div className="mt-2 h-1.5 bg-border"><div className="h-full bg-primary" style={{ width: `${Math.max(0, Math.min(100, percent))}%` }} /></div>}
-      <Sparkline values={values} secondary={secondary} color={color} secondaryColor={secondaryColor} max={max} formatScale={formatScale || (number => `${number.toFixed(0)}%`)} ariaLabel={trendLabel} />
-      {!pairedValues && detail && <div className="truncate text-xs text-muted">{detail}</div>}
+            ))}
+          </div>
+        ) : (
+          <div className="mt-2 flex items-baseline justify-between gap-2">
+            <strong className="truncate text-xl font-bold tabular-nums text-fg">{value ?? '--'}</strong>
+            {percent != null && <span className="shrink-0 text-sm font-semibold tabular-nums text-fg">{percent.toFixed(1)}%</span>}
+          </div>
+        )}
+        {percent != null && <div className="mt-2 h-1.5 bg-border"><div className="h-full bg-primary" style={{ width: `${Math.max(0, Math.min(100, percent))}%` }} /></div>}
+        {!pairedValues && detail && <div className="mt-1 truncate text-xs text-muted">{detail}</div>}
+      </div>
+      <div className="min-w-0">
+        <Sparkline values={values} secondary={secondary} color={color} secondaryColor={secondaryColor} max={max} formatScale={formatScale || (number => `${number.toFixed(0)}%`)} ariaLabel={trendLabel} />
+      </div>
     </div>
   )
 }
@@ -254,7 +258,7 @@ function ServerPanel({
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-px bg-border sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-2 bg-border p-px">
         <MetricTile title={t('server.cpu')} value={cpu == null ? '--' : `${cpu.toFixed(1)}%`} detail={`${metrics.cpu?.busyCores?.toFixed(2) ?? '--'} / ${metrics.cpu?.cores ?? '--'} ${t('server.cores')} · ${metrics.cpu?.model || ''}`} icon={<Cpu size={16} />} values={cpuValues} color="#3b82f6" max={adaptiveChartMax([cpuValues], 100)} percent={cpu} trendLabel={t('server.trend')} />
         <MetricTile title={t('server.memory')} value={memory == null ? '--' : `${memory.toFixed(1)}%`} detail={`${metrics.memory?.usedMB != null ? `${metrics.memory.usedMB.toFixed(0)} ${t('server.mb')}` : formatMb(metrics.memory?.used, t)} / ${formatMb(metrics.memory?.total, t)}`} icon={<Memory size={16} />} values={memoryValues} color="#f97316" max={adaptiveChartMax([memoryValues], 100)} percent={memory} trendLabel={t('server.trend')} />
         <MetricTile title={t('server.diskIo')} icon={<HardDrives size={16} />} values={diskReadValues} secondary={diskWriteValues} color="#8b5cf6" secondaryColor="#ec4899" max={adaptiveChartMax([diskReadValues, diskWriteValues])} formatScale={formatBytes} pairedValues={[
