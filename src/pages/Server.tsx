@@ -50,8 +50,8 @@ function chartPoints(values: number[], max: number): string {
   if (!values.length) return ''
   const divisor = Math.max(max, ...values, 1)
   return values.map((value, index) => {
-    const x = values.length === 1 ? 100 : (index / (values.length - 1)) * 100
-    const y = 34 - (Math.min(value, divisor) / divisor) * 30
+    const x = values.length === 1 ? 100 : 15 + (index / (values.length - 1)) * 85
+    const y = 36 - (Math.min(value, divisor) / divisor) * 32
     return `${x},${y}`
   }).join(' ')
 }
@@ -76,12 +76,21 @@ function legacyServer(metrics: NonNullable<StatsResponse['data']>, t: (key: stri
   }
 }
 
-function Sparkline({ values, secondary, color, secondaryColor, max, ariaLabel }: { values: number[]; secondary?: number[]; color: string; secondaryColor?: string; max: number; ariaLabel: string }) {
+function Sparkline({ values, secondary, color, secondaryColor, max, formatScale, ariaLabel }: { values: number[]; secondary?: number[]; color: string; secondaryColor?: string; max: number; formatScale: (value: number) => string; ariaLabel: string }) {
   const points = chartPoints(values, max)
   const secondaryPoints = secondary ? chartPoints(secondary, max) : ''
+  const grid = [1, 0.75, 0.5, 0.25, 0]
   return (
-    <svg viewBox="0 0 100 36" preserveAspectRatio="none" className="h-12 w-full overflow-visible" role="img" aria-label={ariaLabel}>
-      <path d="M0 34.5 H100" stroke="currentColor" strokeOpacity=".12" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-14 w-full overflow-visible" role="img" aria-label={ariaLabel}>
+      {grid.map(level => {
+        const y = 36 - level * 32
+        return (
+          <g key={level}>
+            <path d={`M15 ${y} H100`} stroke="#9ca3af" strokeOpacity=".45" strokeWidth=".7" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
+            <text x="13" y={y + 1.2} textAnchor="end" fill="#9ca3af" fontSize="3.2">{formatScale(max * level)}</text>
+          </g>
+        )
+      })}
       {points && <polyline points={points} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />}
       {secondaryPoints && <polyline points={secondaryPoints} fill="none" stroke={secondaryColor || color} strokeWidth="2" strokeDasharray="4 2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />}
     </svg>
@@ -100,10 +109,12 @@ function MetricTile({
   trendLabel,
   max,
   percent,
+  pairedValues,
+  formatScale,
 }: {
   title: string
-  value: string
-  detail: string
+  value?: string
+  detail?: string
   icon: ReactNode
   values: number[]
   secondary?: number[]
@@ -112,19 +123,35 @@ function MetricTile({
   trendLabel: string
   max: number
   percent?: number
+  pairedValues?: Array<{ label: string; value: string; color: string }>
+  formatScale?: (value: number) => string
 }) {
   return (
     <div className="min-w-0 border border-border bg-bg p-4">
       <div className="flex items-center gap-2 text-xs font-semibold text-muted">
         {icon}<span>{title}</span>
       </div>
-      <div className="mt-3 flex items-baseline justify-between gap-2">
-        <strong className="truncate text-xl font-bold tabular-nums text-fg">{value}</strong>
-        {percent != null && <span className="shrink-0 text-sm font-semibold tabular-nums text-fg">{percent.toFixed(1)}%</span>}
-      </div>
+      {pairedValues ? (
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          {pairedValues.map(item => (
+            <div key={item.label} className="min-w-0">
+              <div className="flex items-center gap-1.5 text-[11px] text-muted">
+                <span className="h-0.5 w-3 shrink-0" style={{ backgroundColor: item.color }} />
+                <span className="truncate">{item.label}</span>
+              </div>
+              <strong className="mt-1 block truncate text-sm font-bold tabular-nums text-fg">{item.value}</strong>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-3 flex items-baseline justify-between gap-2">
+          <strong className="truncate text-xl font-bold tabular-nums text-fg">{value ?? '--'}</strong>
+          {percent != null && <span className="shrink-0 text-sm font-semibold tabular-nums text-fg">{percent.toFixed(1)}%</span>}
+        </div>
+      )}
       {percent != null && <div className="mt-2 h-1.5 bg-border"><div className="h-full bg-primary" style={{ width: `${Math.max(0, Math.min(100, percent))}%` }} /></div>}
-      <Sparkline values={values} secondary={secondary} color={color} secondaryColor={secondaryColor} max={max} ariaLabel={trendLabel} />
-      <div className="truncate text-xs text-muted">{detail}</div>
+      <Sparkline values={values} secondary={secondary} color={color} secondaryColor={secondaryColor} max={max} formatScale={formatScale || (number => `${number.toFixed(0)}%`)} ariaLabel={trendLabel} />
+      {!pairedValues && detail && <div className="truncate text-xs text-muted">{detail}</div>}
     </div>
   )
 }
@@ -144,6 +171,28 @@ function ServiceTile({ service, stale, t }: { service: ServerServiceStatus; stal
       <div className="min-w-0">
         <div className="text-sm font-semibold leading-snug text-fg">{service.name}</div>
         <div className="mt-1 break-all text-[11px] text-muted">{service.check}: {service.target}</div>
+        {(service.cpuUsagePercent != null || service.memoryPercent != null) && (
+          <div className="mt-2 grid gap-1.5 text-[11px] text-muted">
+            {service.cpuUsagePercent != null && (
+              <div>
+                <div className="flex justify-between gap-3">
+                  <span>{t('server.cpu')} · {service.cpuBusyCores?.toFixed(2) ?? '--'} {t('server.cores')}</span>
+                  <span className="tabular-nums">{service.cpuUsagePercent.toFixed(1)}%</span>
+                </div>
+                <div className="mt-1 h-1 bg-border"><div className="h-full bg-primary" style={{ width: `${Math.max(0, Math.min(100, service.cpuUsagePercent))}%` }} /></div>
+              </div>
+            )}
+            {service.memoryPercent != null && (
+              <div>
+                <div className="flex justify-between gap-3">
+                  <span>{t('server.memory')} · {service.memoryMB?.toFixed(1) ?? '--'} {t('server.mb')}</span>
+                  <span className="tabular-nums">{service.memoryPercent.toFixed(1)}%</span>
+                </div>
+                <div className="mt-1 h-1 bg-border"><div className="h-full bg-orange-500" style={{ width: `${Math.max(0, Math.min(100, service.memoryPercent))}%` }} /></div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <div className="flex shrink-0 items-center gap-1.5 pt-0.5 text-xs text-muted" title={service.detail || t(style.label)}>
         <span className={`h-2.5 w-2.5 rounded-full ${style.dot}`} />{t(style.label)}
@@ -194,8 +243,14 @@ function ServerPanel({
       <div className="grid grid-cols-1 gap-px bg-border sm:grid-cols-2 xl:grid-cols-4">
         <MetricTile title={t('server.cpu')} value={cpu == null ? '--' : `${cpu.toFixed(1)}%`} detail={`${metrics.cpu?.busyCores?.toFixed(2) ?? '--'} / ${metrics.cpu?.cores ?? '--'} ${t('server.cores')} · ${metrics.cpu?.model || ''}`} icon={<Cpu size={16} />} values={cpuValues} color="#3b82f6" max={100} percent={cpu} trendLabel={t('server.trend')} />
         <MetricTile title={t('server.memory')} value={memory == null ? '--' : `${memory.toFixed(1)}%`} detail={`${metrics.memory?.usedMB != null ? `${metrics.memory.usedMB.toFixed(0)} ${t('server.mb')}` : formatMb(metrics.memory?.used, t)} / ${formatMb(metrics.memory?.total, t)}`} icon={<Memory size={16} />} values={memoryValues} color="#f97316" max={100} percent={memory} trendLabel={t('server.trend')} />
-        <MetricTile title={t('server.diskIo')} value={`↓ ${formatBytes(metrics.disk?.readBytesPerSec)}`} detail={`↑ ${formatBytes(metrics.disk?.writeBytesPerSec)}`} icon={<HardDrives size={16} />} values={history.map(point => point.diskRead)} secondary={history.map(point => point.diskWrite)} color="#8b5cf6" secondaryColor="#ec4899" max={Math.max(1, ...history.map(point => point.diskRead), ...history.map(point => point.diskWrite))} trendLabel={t('server.trend')} />
-        <MetricTile title={t('server.network')} value={`↓ ${formatBytes(metrics.network?.rxBytesPerSec)}`} detail={`↑ ${formatBytes(metrics.network?.txBytesPerSec)}`} icon={<span className="flex"><ArrowDown size={14} /><ArrowUp size={14} /></span>} values={history.map(point => point.netRx)} secondary={history.map(point => point.netTx)} color="#0d9488" secondaryColor="#f97316" max={Math.max(1, ...history.map(point => point.netRx), ...history.map(point => point.netTx))} trendLabel={t('server.trend')} />
+        <MetricTile title={t('server.diskIo')} icon={<HardDrives size={16} />} values={history.map(point => point.diskRead)} secondary={history.map(point => point.diskWrite)} color="#8b5cf6" secondaryColor="#ec4899" max={Math.max(1, ...history.map(point => point.diskRead), ...history.map(point => point.diskWrite))} formatScale={formatBytes} pairedValues={[
+          { label: t('server.diskRead'), value: formatBytes(metrics.disk?.readBytesPerSec), color: '#8b5cf6' },
+          { label: t('server.diskWrite'), value: formatBytes(metrics.disk?.writeBytesPerSec), color: '#ec4899' },
+        ]} trendLabel={t('server.trend')} />
+        <MetricTile title={t('server.network')} icon={<span className="flex"><ArrowDown size={14} /><ArrowUp size={14} /></span>} values={history.map(point => point.netRx)} secondary={history.map(point => point.netTx)} color="#0d9488" secondaryColor="#f97316" max={Math.max(1, ...history.map(point => point.netRx), ...history.map(point => point.netTx))} formatScale={formatBytes} pairedValues={[
+          { label: t('server.download'), value: formatBytes(metrics.network?.rxBytesPerSec), color: '#0d9488' },
+          { label: t('server.upload'), value: formatBytes(metrics.network?.txBytesPerSec), color: '#f97316' },
+        ]} trendLabel={t('server.trend')} />
       </div>
 
       <div className="p-5 sm:p-6">
