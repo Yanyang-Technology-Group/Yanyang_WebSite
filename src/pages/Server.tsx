@@ -48,12 +48,22 @@ function formatUptime(seconds: number | undefined, t: (key: string) => string): 
 
 function chartPoints(values: number[], max: number): string {
   if (!values.length) return ''
-  const divisor = Math.max(max, ...values, 1)
+  const divisor = Math.max(max, ...values, Number.EPSILON)
   return values.map((value, index) => {
     const x = values.length === 1 ? 100 : 15 + (index / (values.length - 1)) * 85
     const y = 36 - (Math.min(value, divisor) / divisor) * 32
     return `${x},${y}`
   }).join(' ')
+}
+
+function adaptiveChartMax(series: number[][], ceiling = Number.POSITIVE_INFINITY): number {
+  const highest = Math.min(ceiling, Math.max(0, ...series.flat()))
+  if (highest === 0) return 1
+  const padded = Math.min(ceiling, highest * 1.1)
+  const magnitude = 10 ** Math.floor(Math.log10(padded))
+  const fraction = padded / magnitude
+  const step = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10
+  return Math.min(ceiling, step * magnitude)
 }
 
 function legacyServer(metrics: NonNullable<StatsResponse['data']>, t: (key: string) => string): ServerStats {
@@ -218,6 +228,10 @@ function ServerPanel({
   const memory = metrics.memory?.percent
   const cpuValues = history.map(point => point.cpu)
   const memoryValues = history.map(point => point.memory)
+  const diskReadValues = history.map(point => point.diskRead)
+  const diskWriteValues = history.map(point => point.diskWrite)
+  const networkDownloadValues = history.map(point => point.netRx)
+  const networkUploadValues = history.map(point => point.netTx)
 
   return (
     <article className="border border-border bg-surface">
@@ -241,13 +255,13 @@ function ServerPanel({
       </header>
 
       <div className="grid grid-cols-1 gap-px bg-border sm:grid-cols-2 xl:grid-cols-4">
-        <MetricTile title={t('server.cpu')} value={cpu == null ? '--' : `${cpu.toFixed(1)}%`} detail={`${metrics.cpu?.busyCores?.toFixed(2) ?? '--'} / ${metrics.cpu?.cores ?? '--'} ${t('server.cores')} · ${metrics.cpu?.model || ''}`} icon={<Cpu size={16} />} values={cpuValues} color="#3b82f6" max={100} percent={cpu} trendLabel={t('server.trend')} />
-        <MetricTile title={t('server.memory')} value={memory == null ? '--' : `${memory.toFixed(1)}%`} detail={`${metrics.memory?.usedMB != null ? `${metrics.memory.usedMB.toFixed(0)} ${t('server.mb')}` : formatMb(metrics.memory?.used, t)} / ${formatMb(metrics.memory?.total, t)}`} icon={<Memory size={16} />} values={memoryValues} color="#f97316" max={100} percent={memory} trendLabel={t('server.trend')} />
-        <MetricTile title={t('server.diskIo')} icon={<HardDrives size={16} />} values={history.map(point => point.diskRead)} secondary={history.map(point => point.diskWrite)} color="#8b5cf6" secondaryColor="#ec4899" max={Math.max(1, ...history.map(point => point.diskRead), ...history.map(point => point.diskWrite))} formatScale={formatBytes} pairedValues={[
+        <MetricTile title={t('server.cpu')} value={cpu == null ? '--' : `${cpu.toFixed(1)}%`} detail={`${metrics.cpu?.busyCores?.toFixed(2) ?? '--'} / ${metrics.cpu?.cores ?? '--'} ${t('server.cores')} · ${metrics.cpu?.model || ''}`} icon={<Cpu size={16} />} values={cpuValues} color="#3b82f6" max={adaptiveChartMax([cpuValues], 100)} percent={cpu} trendLabel={t('server.trend')} />
+        <MetricTile title={t('server.memory')} value={memory == null ? '--' : `${memory.toFixed(1)}%`} detail={`${metrics.memory?.usedMB != null ? `${metrics.memory.usedMB.toFixed(0)} ${t('server.mb')}` : formatMb(metrics.memory?.used, t)} / ${formatMb(metrics.memory?.total, t)}`} icon={<Memory size={16} />} values={memoryValues} color="#f97316" max={adaptiveChartMax([memoryValues], 100)} percent={memory} trendLabel={t('server.trend')} />
+        <MetricTile title={t('server.diskIo')} icon={<HardDrives size={16} />} values={diskReadValues} secondary={diskWriteValues} color="#8b5cf6" secondaryColor="#ec4899" max={adaptiveChartMax([diskReadValues, diskWriteValues])} formatScale={formatBytes} pairedValues={[
           { label: t('server.diskRead'), value: formatBytes(metrics.disk?.readBytesPerSec), color: '#8b5cf6' },
           { label: t('server.diskWrite'), value: formatBytes(metrics.disk?.writeBytesPerSec), color: '#ec4899' },
         ]} trendLabel={t('server.trend')} />
-        <MetricTile title={t('server.network')} icon={<span className="flex"><ArrowDown size={14} /><ArrowUp size={14} /></span>} values={history.map(point => point.netRx)} secondary={history.map(point => point.netTx)} color="#0d9488" secondaryColor="#f97316" max={Math.max(1, ...history.map(point => point.netRx), ...history.map(point => point.netTx))} formatScale={formatBytes} pairedValues={[
+        <MetricTile title={t('server.network')} icon={<span className="flex"><ArrowDown size={14} /><ArrowUp size={14} /></span>} values={networkDownloadValues} secondary={networkUploadValues} color="#0d9488" secondaryColor="#f97316" max={adaptiveChartMax([networkDownloadValues, networkUploadValues])} formatScale={formatBytes} pairedValues={[
           { label: t('server.download'), value: formatBytes(metrics.network?.rxBytesPerSec), color: '#0d9488' },
           { label: t('server.upload'), value: formatBytes(metrics.network?.txBytesPerSec), color: '#f97316' },
         ]} trendLabel={t('server.trend')} />
