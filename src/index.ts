@@ -449,7 +449,11 @@ async function handleServerStats(request: Request, env: Env): Promise<Response> 
               target: String(item.target || item.session || ''),
               status: item.status === 'running' || item.status === 'starting' || item.status === 'stopped'
                 ? item.status
-                : item.running === true ? 'running' : 'stopped'
+                : item.running === true ? 'running' : 'stopped',
+              cpuUsagePercent: typeof item.cpuUsagePercent === 'number' ? item.cpuUsagePercent : undefined,
+              cpuBusyCores: typeof item.cpuBusyCores === 'number' ? item.cpuBusyCores : undefined,
+              memoryPercent: typeof item.memoryPercent === 'number' ? item.memoryPercent : undefined,
+              memoryMB: typeof item.memoryMB === 'number' ? item.memoryMB : undefined
             }
           })
         }

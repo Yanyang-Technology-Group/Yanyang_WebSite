@@ -7,6 +7,10 @@ export interface ServerServiceStatus {
     target: string
     status: ServiceStatus
     detail?: string
+    cpuUsagePercent?: number
+    cpuBusyCores?: number
+    memoryPercent?: number
+    memoryMB?: number
 }
 
 export interface ServerMetrics {
