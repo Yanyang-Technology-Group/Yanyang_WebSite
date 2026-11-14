@@ -23,7 +23,7 @@ interface HistoryPoint {
   netTx: number
 }
 
-const REFRESH_INTERVAL = 5000
+const REFRESH_INTERVAL = 1000
 const HISTORY_LIMIT = 60
 const ONLINE_WINDOW_MS = 25000
 
