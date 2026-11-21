@@ -14,6 +14,17 @@ interface CdnAnalytics {
   series: Array<{ timestamp: string; requests: number; bytes: number; visits: number }>
   rankings: Record<string, Array<{ name: string; requests: number }> | null>
 }
+const ERROR_LABELS: Record<string, string> = {
+  analytics_not_configured: 'server.cdnNotConfigured',
+  analytics_auth_error: 'server.cdnAuthError',
+  analytics_forbidden: 'server.cdnForbidden',
+  analytics_zone_unavailable: 'server.cdnZoneUnavailable',
+  analytics_query_error: 'server.cdnQueryError',
+  analytics_range_unavailable: 'server.cdnRangeUnavailable',
+  analytics_rate_limited: 'server.cdnRateLimited',
+  analytics_busy: 'server.cdnBusy',
+  analytics_storage_unavailable: 'server.cdnStorageUnavailable',
+}
 
 export const CdnPanel = memo(function CdnPanel({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const { t, locale } = useLanguageContext()
@@ -61,7 +72,7 @@ export const CdnPanel = memo(function CdnPanel({ open, onToggle }: { open: boole
         <button type="button" onClick={refresh} disabled={loading} aria-label={t('server.refreshCdn')} className="cursor-pointer rounded-lg border border-border p-2 text-muted hover:bg-surface disabled:opacity-50"><ArrowClockwise size={16} className={loading ? 'animate-spin' : ''} /></button>
       </div>
     </div>
-    {error && <div role="status" className="mb-5 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-xs leading-relaxed text-muted"><WarningCircle size={16} className="shrink-0 text-amber-500" />{t(error === 'analytics_not_configured' ? 'server.cdnNotConfigured' : 'server.cdnError')}</div>}
+    {error && <div role="status" className="mb-5 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-xs leading-relaxed text-muted"><WarningCircle size={16} className="shrink-0 text-amber-500" />{t(ERROR_LABELS[error] || 'server.cdnError')}</div>}
     {loading && !data && <div role="status" className="py-12 text-center text-sm text-muted">{t('server.loadingAnalytics')}</div>}
     {data && <div className="space-y-5" aria-busy={loading}>
       {data.stale && <p className="text-xs text-amber-600 dark:text-amber-400">{t('server.staleAnalytics')}</p>}

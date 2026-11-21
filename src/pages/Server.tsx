@@ -47,12 +47,12 @@ function ServerPanel({ server, history, open, onToggle, now }: { server: ServerS
   return <Panel title={server.displayName} subtitle={metrics.platform || t('server.systemUnavailable')} icon={<HardDrives size={23} />} open={open} onToggle={onToggle}
     badge={<StatusBadge status={stale ? 'unknown' : 'running'} label={t(stale ? 'server.stale' : 'server.online')} />}
     summary={<span className="tabular-nums">CPU {cpu == null ? '--' : `${cpu.toFixed(1)}%`}<span className="mx-3 text-border">/</span>{t('server.memory')} {memory == null ? '--' : `${memory.toFixed(1)}%`}</span>}>
-    <dl className="mb-5 grid gap-3 rounded-lg bg-surface p-4 text-xs sm:grid-cols-2 xl:grid-cols-4">{[
+    <dl className="mb-5 grid grid-cols-2 gap-3 rounded-lg bg-surface p-4 text-xs @min-[720px]:grid-cols-4">{[
       [t('server.hostname'), metrics.hostname || '--'], [t('server.uptime'), uptime],
       [t('server.load'), metrics.load?.map(value => value.toFixed(2)).join(' / ') || '--'],
       [t('server.lastUpdate'), new Date(server.receivedAt).toLocaleTimeString()],
     ].map(([label, value]) => <div key={label}><dt className="text-muted">{label}</dt><dd className="mt-1 break-words font-medium tabular-nums text-fg">{value}</dd></div>)}</dl>
-    <div className="grid items-start gap-3 md:grid-cols-2">
+    <div className="grid items-start gap-3 @min-[680px]:grid-cols-2">
       <MetricCard title={t('server.cpu')} icon={<Cpu size={17} />} percent={cpu} value={`${metrics.cpu?.busyCores?.toFixed(2) ?? '--'} / ${metrics.cpu?.cores ?? '--'} ${t('server.cores')}`} detail={metrics.cpu?.model || t('server.systemUnavailable')} points={points} formatter={percent} series={[{ label: t('server.cpu'), key: 'cpu', color: 'blue', current: cpu == null ? '--' : percent(cpu) }]} />
       <MetricCard title={t('server.memory')} icon={<Memory size={17} />} percent={memory} value={formatBytes(metrics.memory?.used ?? (metrics.memory?.usedMB == null ? undefined : metrics.memory.usedMB * 1024 ** 2))} detail={`${t('server.total')} ${formatBytes(metrics.memory?.total)}`} points={points} formatter={percent} series={[{ label: t('server.memory'), key: 'memory', color: 'violet', current: memory == null ? '--' : percent(memory) }]} />
       <MetricCard title={t('server.network')} icon={<span className="flex"><ArrowDown size={14} /><ArrowUp size={14} /></span>} points={points} formatter={rate} series={[
@@ -65,7 +65,7 @@ function ServerPanel({ server, history, open, onToggle, now }: { server: ServerS
       ]} />
     </div>
     <div className="mt-7"><div className="mb-4 flex flex-wrap items-baseline justify-between gap-2"><h3 className="text-sm font-semibold text-fg">{t('server.services')}</h3><span className="text-[10px] text-muted">{t('server.localHistoryLabel')}</span></div>
-      {groups.length ? groups.map(group => <section key={group} className="mb-5 last:mb-0"><h4 className="mb-3 text-xs font-medium text-muted">{group}</h4><div className="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3">{services.filter(service => service.group === group).map(service => <ServiceTile key={serviceKey(service)} service={service} stale={stale} samples={history?.services[serviceKey(service)] || []} now={now} />)}</div></section>) : <p className="rounded-lg border border-border p-4 text-xs text-muted">{t('server.noServices')}</p>}
+      {groups.length ? groups.map(group => <section key={group} className="mb-5 last:mb-0"><h4 className="mb-3 text-xs font-medium text-muted">{group}</h4><div className="grid items-start gap-3 @min-[600px]:grid-cols-2 @min-[960px]:grid-cols-3">{services.filter(service => service.group === group).map(service => <ServiceTile key={serviceKey(service)} service={service} stale={stale} samples={history?.services[serviceKey(service)] || []} now={now} />)}</div></section>) : <p className="rounded-lg border border-border p-4 text-xs text-muted">{t('server.noServices')}</p>}
     </div>
   </Panel>
 }
@@ -83,7 +83,7 @@ export default function Server() {
   const toggleCloudflare = useCallback(() => toggle('cloud:cloudflare'), [toggle])
   const online = servers.filter(server => now - server.receivedAt <= Math.max(25_000, (server.intervalSeconds || 5) * 3000)).length
   return <div className="bg-surface/45 pb-16">
-    <section className="pt-24 pb-7 sm:pt-28 sm:pb-9"><div className="mx-auto max-w-6xl px-4 sm:px-6">
+    <section className="pt-24 pb-7 sm:pt-28 sm:pb-9"><div className="mx-auto w-[85%]">
       <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold tracking-[.18em] text-muted"><Pulse size={14} className="text-emerald-500" />{t('server.monitoring')}</div>
       <div className="flex items-end justify-between gap-4"><div><h1 className="text-3xl font-semibold tracking-tight text-fg">{t('server.title')}</h1><p className="mt-2 text-sm text-muted">{t('server.desc')}</p></div>
         <button type="button" onClick={refresh} disabled={loading} aria-label={t('server.refresh')} title={t('server.refresh')} className={`${cardClass} cursor-pointer p-2.5 text-muted hover:text-fg disabled:opacity-50`}><ArrowClockwise size={19} className={loading ? 'animate-spin' : ''} /></button>
@@ -94,13 +94,15 @@ export default function Server() {
         { label: t('server.cloudServices'), value: 'yanyn.cn / Cloudflare', icon: <Cloud size={18} /> },
       ].map(item => <div key={item.label} className={`${cardClass} flex items-center justify-between gap-3 px-4 py-4`}><div><p className="text-[11px] text-muted">{item.label}</p><p className="mt-1 text-lg font-semibold tracking-tight tabular-nums text-fg">{item.value}</p></div><span className="text-muted">{item.icon}</span></div>)}</div>
     </div></section>
-    <section className="mx-auto max-w-6xl space-y-4 px-4 sm:px-6">
+    <section className="mx-auto w-[85%] space-y-4">
       <div className="flex items-start gap-2 text-[11px] leading-relaxed text-muted"><Info size={15} className="mt-0.5 shrink-0" /><span>{t('server.localHistoryHint')}{!historyAvailable && <span className="ml-1 text-amber-600 dark:text-amber-400">{t('server.historyUnavailable')}</span>}</span></div>
       {!configured && <p role="status" className="rounded-lg border border-border bg-bg p-4 text-xs text-muted">{t('server.notConfigured')}</p>}
       {error && <div role="alert" className="flex items-center gap-2 rounded-lg border border-red-500/25 bg-red-500/5 p-4 text-xs text-red-600 dark:text-red-400"><WarningCircle size={17} />{t('server.offline')}</div>}
       {loading && <p role="status" className="py-10 text-center text-sm text-muted">{t('server.loading')}</p>}
       {!loading && configured && !error && !servers.length && <p className="py-6 text-center text-sm text-muted">{t('server.noServers')}</p>}
-      {servers.map(server => <ServerPanel key={server.serverId} server={server} history={history[server.serverId]} now={now} open={!!expanded[server.serverId]} onToggle={() => toggle(server.serverId)} />)}
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        {servers.map(server => <ServerPanel key={server.serverId} server={server} history={history[server.serverId]} now={now} open={!!expanded[server.serverId]} onToggle={() => toggle(server.serverId)} />)}
+      </div>
       <CdnPanel open={!!expanded['cloud:yanyn-cdn']} onToggle={toggleCdn} />
       <CloudflarePanel open={!!expanded['cloud:cloudflare']} onToggle={toggleCloudflare} />
     </section>

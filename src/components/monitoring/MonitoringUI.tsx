@@ -10,7 +10,7 @@ export function Panel({ title, subtitle, icon, badge, children, open, onToggle, 
 }) {
   const id = useId()
   const { t } = useLanguageContext()
-  return <article className={`${cardClass} min-w-0`}>
+  return <article className={`${cardClass} @container min-w-0`}>
     <h2>
       <button type="button" onClick={onToggle} aria-expanded={open} aria-controls={id}
         className="flex w-full cursor-pointer items-center gap-3 rounded-xl p-4 text-left transition hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary sm:gap-4 sm:p-6">
@@ -19,7 +19,7 @@ export function Panel({ title, subtitle, icon, badge, children, open, onToggle, 
           <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base font-semibold text-fg sm:text-lg">{title}{badge}</span>
           <span className="mt-1 block truncate text-xs font-normal tracking-normal text-muted">{subtitle}</span>
         </span>
-        {summary && <span className="hidden text-xs font-normal tracking-normal text-muted md:block">{summary}</span>}
+        {summary && <span className="hidden text-xs font-normal tracking-normal text-muted @min-[640px]:block">{summary}</span>}
         <CaretDown size={18} aria-hidden className={`shrink-0 text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
         <span className="sr-only">{t(open ? 'server.collapse' : 'server.expand')}</span>
       </button>
