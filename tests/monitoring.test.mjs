@@ -39,15 +39,16 @@ function upstreamMock(env, { fail = false, restrictedDimension = '' } = {}) {
     assert.equal(options.redirect, 'error')
     const body = JSON.parse(options.body)
     assert.equal(body.variables.zone, env.CF_ZONE_ID)
-    assert.equal(body.variables.filter.requestSource, 'eyeball')
+    assert.match(body.query, /requestSource: "eyeball"/)
+    assert.match(body.query, /\$start: Time, \$end: Time/)
     if (fail) return Response.json({ errors: [{ message: env.CF_ANALYTICS_TOKEN }] }, { status: 403 })
     if (restrictedDimension && body.query.includes(restrictedDimension)) return Response.json({ errors: [{ message: 'restricted' }] })
     const dimension = body.query.match(/count dimensions \{ (\w+) \}/)?.[1]
     const zone = body.query.includes('totals:') ? {
       totals: [{ count: 100, sum: { edgeResponseBytes: 4096, visits: 40 } }],
-      series: [{ count: 100, sum: { edgeResponseBytes: 4096, visits: 40 }, dimensions: { datetimeHour: body.variables.filter.datetime_geq } }],
-      cache: [{ count: 60, dimensions: { cacheStatus: 'hit' } }, { count: 40, dimensions: { cacheStatus: 'miss' } }],
-    } : { ranking: [{ count: 70, dimensions: { [dimension]: 'Example' } }] }
+      series: [{ count: 100, sum: { edgeResponseBytes: 4096, visits: 40 }, dimensions: { datetimeHour: body.variables.start } }],
+    } : body.query.includes('cache:') ? { cache: [{ count: 60, dimensions: { cacheStatus: 'hit' } }, { count: 40, dimensions: { cacheStatus: 'miss' } }] }
+      : { ranking: [{ count: 70, dimensions: { [dimension]: 'Example' } }] }
     return Response.json({ data: { viewer: { zones: [zone] } } })
   }
   return { calls, mock }
@@ -122,9 +123,9 @@ await test('analytics returns only aggregate data, calculates cache hit rate and
     const result = JSON.parse(raw)
     assert.deepEqual(result.totals, { requests: 100, bytes: 4096, visits: 40, cacheHitRate: 60 })
     assert.equal(Object.keys(result.rankings).length, 7)
-    assert.equal(upstream.calls.length, 8)
+    assert.equal(upstream.calls.length, 9)
     await api.handleCloudflareAnalytics(request(), env)
-    assert.equal(upstream.calls.length, 8)
+    assert.equal(upstream.calls.length, 9)
     assert.ok(!env.sqlite.prepare('SELECT data FROM monitoring_cache WHERE cache_key LIKE ?').get('yanyn.cn:%').data.includes(env.CF_ANALYTICS_TOKEN))
   } finally { globalThis.fetch = original }
 })
@@ -154,6 +155,78 @@ await test('restricted ranking datasets do not discard supported analytics', asy
     assert.equal(data.success, true)
     assert.equal(data.rankings.operatingSystems, null)
     assert.equal(data.rankings.countries.length, 1)
+  } finally { globalThis.fetch = original }
+})
+
+await test('a restricted cache dimension leaves traffic totals and rankings available without inventing a hit rate', async () => {
+  const env = environment()
+  const upstream = upstreamMock(env, { restrictedDimension: 'cacheStatus' })
+  const original = globalThis.fetch
+  globalThis.fetch = upstream.mock
+  try {
+    const response = await api.handleCloudflareAnalytics(request(), env)
+    const data = await response.json()
+    assert.equal(response.status, 200)
+    assert.equal(data.totals.requests, 100)
+    assert.equal(data.totals.bytes, 4096)
+    assert.equal(data.totals.visits, 40)
+    assert.equal(data.totals.cacheHitRate, null)
+    assert.equal(data.cacheAvailable, false)
+    assert.equal(data.rankings.countries.length, 1)
+  } finally { globalThis.fetch = original }
+})
+
+await test('upstream failures have safe actionable codes that survive D1 retry backoff without leaking raw errors', async () => {
+  const original = globalThis.fetch
+  const cases = [
+    [401, '', 'analytics_auth_error'],
+    [403, '', 'analytics_forbidden'],
+    [429, '', 'analytics_rate_limited'],
+    [200, 'Cannot query field example on type Query', 'analytics_query_error'],
+    [200, 'Unknown type ZoneInvalidFilter_InputObject', 'analytics_query_error'],
+    [200, 'time range is too large', 'analytics_range_unavailable'],
+    [200, 'cannot request data older than the retention limit', 'analytics_range_unavailable'],
+    [200, 'not authorized to access this zone', 'analytics_forbidden'],
+    [200, 'rate limit exceeded', 'analytics_rate_limited'],
+    [200, 'some unrecognized error', 'analytics_unavailable'],
+  ]
+  try {
+    for (const [status, message, code] of cases) {
+      const env = environment()
+      let calls = 0
+      globalThis.fetch = async () => {
+        calls++
+        return Response.json({ errors: [{ message: `${message} ${env.CF_ANALYTICS_TOKEN} ${env.CF_ZONE_ID}` }] }, { status })
+      }
+      for (let retry = 0; retry < 2; retry++) {
+        const response = await api.handleCloudflareAnalytics(request(), env)
+        const raw = await response.text()
+        assert.equal(response.status, 503)
+        assert.equal(JSON.parse(raw).code, code)
+        assert.ok(!raw.includes(env.CF_ANALYTICS_TOKEN))
+        assert.ok(!raw.includes(env.CF_ZONE_ID))
+      }
+      assert.equal(calls, 1, 'backoff must retain the reason without another upstream call')
+      const stored = env.sqlite.prepare('SELECT data FROM monitoring_cache WHERE cache_key LIKE ?').get('yanyn.cn:%').data
+      assert.deepEqual(JSON.parse(stored), { monitoringError: code })
+      assert.ok(!stored.includes(env.CF_ANALYTICS_TOKEN))
+      env.sqlite.prepare('UPDATE monitoring_cache SET refresh_after = 0').run()
+      globalThis.fetch = upstreamMock(env).mock
+      assert.equal((await (await api.handleCloudflareAnalytics(request(), env)).json()).success, true)
+    }
+  } finally { globalThis.fetch = original }
+})
+
+await test('missing zone and missing D1 tables have separate diagnoses', async () => {
+  const original = globalThis.fetch
+  try {
+    globalThis.fetch = async () => Response.json({ data: { viewer: { zones: [] } } })
+    const empty = await (await api.handleCloudflareAnalytics(request(), environment())).json()
+    assert.equal(empty.code, 'analytics_zone_unavailable')
+    const env = environment()
+    env.sqlite.exec('DROP TABLE monitoring_cache')
+    const missing = await (await api.handleCloudflareAnalytics(request(), env)).json()
+    assert.equal(missing.code, 'analytics_storage_unavailable')
   } finally { globalThis.fetch = original }
 })
 
