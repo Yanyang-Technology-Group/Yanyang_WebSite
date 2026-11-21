@@ -63,5 +63,7 @@ export interface Env {
     RESEND_TOKEN?: string;
     LOGIN_NOTIFY_EMAIL?: string;
     STATS_INGEST_TOKEN?: string;
+    CF_ANALYTICS_TOKEN?: string;
+    CF_ZONE_ID?: string;
     DB: D1Database;
 }

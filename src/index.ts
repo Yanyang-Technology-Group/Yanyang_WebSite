@@ -1,10 +1,13 @@
 import { corsHeaders, jsonResponse, errorResponse } from './utils/response.js'
 import { simpleJWT, verifySimpleJWT } from './services/jwt.js'
 import { Env, ServerMetrics, ServerStats } from './types'
+import { handleCloudflareAnalytics } from './services/cloudflare-analytics'
+import { handleCloudflareStatus } from './services/cloudflare-status'
+import { readServerHistories, saveServerHistory } from './services/monitoring-history'
 
 const BAN_DURATION = 24 * 60 * 60 * 1000
 
-const SERVER_STATS_TTL = 120
+const SERVER_STATS_TTL = 7 * 24 * 60 * 60
 const SERVER_STATS_LIMIT = 64
 const STATS_INGEST_PATH = '/api/server/stats/ingest'
 let serverStatsMemory: Record<string, ServerStats> = {}
@@ -423,12 +426,13 @@ async function handleHealth(request: Request): Promise<Response> {
 }
 
 async function handleServerStats(request: Request, env: Env): Promise<Response> {
+  if (request.method !== 'GET') return errorResponse('Method not allowed', 405, request)
   const cutoff = Date.now() - SERVER_STATS_TTL * 1000
   let servers: Record<string, ServerStats> = {}
   if (env.DB) {
     try {
       const result = await env.DB.prepare(
-        'SELECT server_id, data, updated_at FROM server_stats_by_server WHERE updated_at >= ? ORDER BY updated_at DESC LIMIT ?'
+        'SELECT server_id, data, updated_at FROM server_stats_by_server WHERE updated_at >= ? ORDER BY server_id LIMIT ?'
       ).bind(cutoff, SERVER_STATS_LIMIT).all<{ server_id: string; data: string; updated_at: number }>()
       for (const row of result.results || []) {
         const stored = JSON.parse(row.data) as Record<string, unknown>
@@ -447,7 +451,7 @@ async function handleServerStats(request: Request, env: Env): Promise<Response> 
                 ? item.check
                 : 'tmux',
               target: String(item.target || item.session || ''),
-              status: item.status === 'running' || item.status === 'starting' || item.status === 'stopped'
+              status: item.status === 'running' || item.status === 'starting' || item.status === 'stopped' || item.status === 'unknown'
                 ? item.status
                 : item.running === true ? 'running' : 'stopped',
               cpuUsagePercent: typeof item.cpuUsagePercent === 'number' ? item.cpuUsagePercent : undefined,
@@ -476,7 +480,10 @@ async function handleServerStats(request: Request, env: Env): Promise<Response> 
     )
   }
   if (Object.keys(servers).length > 0) {
-    return jsonResponse({ success: true, configured: true, servers: Object.values(servers) }, 200, request)
+    let histories = {}
+    let historyAvailable = true
+    try { histories = await readServerHistories(env) } catch { historyAvailable = false }
+    return jsonResponse({ success: true, configured: true, historyAvailable, histories, servers: Object.values(servers).sort((a, b) => a.serverId.localeCompare(b.serverId)) }, 200, request)
   }
   return jsonResponse({
     success: true,
@@ -519,6 +526,9 @@ async function handleServerStatsIngest(request: Request, env: Env): Promise<Resp
         await env.DB.prepare(
           'INSERT INTO server_stats_by_server (server_id, data, updated_at) VALUES (?, ?, ?) ON CONFLICT(server_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at'
         ).bind(serverId, JSON.stringify(payload), receivedAt).run()
+        try { await saveServerHistory(env, payload) } catch {
+          console.error('Monitoring history unavailable; apply migration 0002_monitoring.sql')
+        }
       } catch (error) {
         throw new Error(`D1 写入失败: ${error instanceof Error ? error.message : String(error)}`)
       }
@@ -827,6 +837,12 @@ export default {
 
     if (path === '/api/server/stats') {
       return handleServerStats(request, env)
+    }
+    if (path === '/api/cloudflare/analytics') {
+      return handleCloudflareAnalytics(request, env)
+    }
+    if (path === '/api/cloudflare/status') {
+      return handleCloudflareStatus(request, env)
     }
     if (path === STATS_INGEST_PATH) {
       return handleServerStatsIngest(request, env)
