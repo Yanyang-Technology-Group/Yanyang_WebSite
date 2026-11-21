@@ -59,7 +59,7 @@ export async function handleCloudflareStatus(request: Request, env: Env): Promis
   if (new URL(request.url).search) return errorResponse('Query parameters are not supported', 400, request)
   try {
     const result = await readMonitoringCache(env, 'cloudflare-services:v1', async (): Promise<StatusSnapshot> => {
-      const response = await fetch('https://www.cloudflarestatus.com/services', { redirect: 'error', signal: AbortSignal.timeout(15_000) })
+      const response = await fetch('https://www.cloudflarestatus.com/services', { redirect: 'manual', signal: AbortSignal.timeout(15_000) })
       if (!response.ok) throw new Error('status_unavailable')
       const html = await response.text()
       if (html.length > 2_000_000) throw new Error('status_unavailable')

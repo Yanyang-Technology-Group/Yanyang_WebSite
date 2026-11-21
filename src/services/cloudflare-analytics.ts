@@ -51,14 +51,15 @@ function upstreamFailure(status: number, errors: Array<{ message?: string; code?
   return new MonitoringError(code)
 }
 
-async function query(env: Env, selection: string, start: string, end: string): Promise<Record<string, AnalyticsGroup[]>> {
+async function query(env: Env, selection: string, start: string, end: string, deadline: AbortSignal): Promise<Record<string, AnalyticsGroup[]>> {
   // Selection, endpoint, zone and time window are entirely server controlled.
   // No caller-provided URL, query, authorization, account or zone is forwarded.
   const response = await fetch(GRAPHQL_URL, {
     method: 'POST',
-    redirect: 'error',
+    // Workers support only follow/manual; reject every non-2xx response below.
+    redirect: 'manual',
     headers: { Authorization: `Bearer ${env.CF_ANALYTICS_TOKEN}`, 'Content-Type': 'application/json' },
-    signal: AbortSignal.timeout(12_000),
+    signal: AbortSignal.any([deadline, AbortSignal.timeout(12_000)]),
     body: JSON.stringify({
       query: `query YanynPublicAnalytics($zone: string, $start: Time, $end: Time) {
         viewer { zones(filter: {zoneTag: $zone}) { ${selection.replaceAll('$filter', '{ datetime_geq: $start, datetime_lt: $end, requestSource: "eyeball" }')} } }
@@ -66,18 +67,21 @@ async function query(env: Env, selection: string, start: string, end: string): P
       variables: { zone: env.CF_ZONE_ID, start, end },
     }),
   })
-  if (!response.ok) throw upstreamFailure(response.status)
-  const result = await response.json() as {
+  // GraphQL validation/authentication errors may use HTTP 400/403 as well as 200.
+  const result = await response.json().catch(() => null) as {
     errors?: Array<{ message?: string; code?: number | string }>
     data?: { viewer?: { zones?: Array<Record<string, AnalyticsGroup[]>> } }
-  }
+  } | null
+  if (!response.ok || result?.errors?.length) throw upstreamFailure(response.status, result?.errors)
+  if (!result) throw new MonitoringError('analytics_unavailable')
   const zone = result.data?.viewer?.zones?.[0]
-  if (result.errors?.length) throw upstreamFailure(response.status, result.errors)
   if (!zone) throw new MonitoringError('analytics_zone_unavailable')
   return zone
 }
 
 async function fetchAnalytics(env: Env, range: AnalyticsRange): Promise<AnalyticsData> {
+  // Finish before the browser's timeout and the shared D1 lease expire.
+  const deadline = AbortSignal.timeout(45_000)
   const end = new Date(Math.floor(Date.now() / 30_000) * 30_000).toISOString()
   const start = new Date(Date.parse(end) - RANGES[range] * 60 * 60_000).toISOString()
   const seriesLimit = RANGES[range] + 1
@@ -85,29 +89,25 @@ async function fetchAnalytics(env: Env, range: AnalyticsRange): Promise<Analytic
     totals: httpRequestsAdaptiveGroups(limit: 1, filter: $filter) { count sum { edgeResponseBytes visits } }
     series: httpRequestsAdaptiveGroups(limit: ${seriesLimit}, filter: $filter, orderBy: [datetimeHour_ASC]) {
       count sum { edgeResponseBytes visits } dimensions { datetimeHour }
-    }`, start, end)
+    }`, start, end, deadline)
   // Cache dimensions can be restricted independently. Do not discard valid traffic totals.
   let cache: AnalyticsGroup[] | null = null
-  try {
-    const data = await query(env, `cache: httpRequestsAdaptiveGroups(limit: 30, filter: $filter, orderBy: [count_DESC]) {
-      count dimensions { cacheStatus }
-    }`, start, end)
-    cache = data.cache || []
-  } catch { /* Leave the hit rate unavailable instead of fabricating a zero. */ }
   const total = core.totals?.[0]
   const requests = safeNumber(total?.count)
-  const cachedRequests = (cache || []).reduce((sum, group) =>
-    ['hit', 'stale', 'updating', 'revalidated'].includes(String(group.dimensions?.cacheStatus).toLowerCase())
-      ? sum + safeNumber(group.count) : sum, 0)
   const rankings: AnalyticsData['rankings'] = {}
   // Limit concurrent upstream requests and isolate datasets restricted by the zone's plan.
-  const dimensions = Object.entries(DIMENSIONS)
-  for (let offset = 0; offset < dimensions.length; offset += 3) {
-    await Promise.all(dimensions.slice(offset, offset + 3).map(async ([key, dimension]) => {
+  const tasks = [async () => {
+    try {
+      const data = await query(env, `cache: httpRequestsAdaptiveGroups(limit: 30, filter: $filter, orderBy: [count_DESC]) {
+        count dimensions { cacheStatus }
+      }`, start, end, deadline)
+      cache = data.cache || []
+    } catch { /* Leave the hit rate unavailable instead of fabricating a zero. */ }
+  }, ...Object.entries(DIMENSIONS).map(([key, dimension]) => async () => {
       try {
         const data = await query(env, `ranking: httpRequestsAdaptiveGroups(limit: 10, filter: $filter, orderBy: [count_DESC]) {
           count dimensions { ${dimension} }
-        }`, start, end)
+        }`, start, end, deadline)
         rankings[key] = (data.ranking || []).map(group => ({
           name: String(group.dimensions?.[dimension] ?? 'Unknown').slice(0, 100),
           requests: safeNumber(group.count),
@@ -115,8 +115,13 @@ async function fetchAnalytics(env: Env, range: AnalyticsRange): Promise<Analytic
       } catch {
         rankings[key] = null
       }
-    }))
+    })]
+  for (let offset = 0; offset < tasks.length; offset += 3) {
+    await Promise.all(tasks.slice(offset, offset + 3).map(task => task()))
   }
+  const cachedRequests = ((cache || []) as AnalyticsGroup[]).reduce((sum, group) =>
+    ['hit', 'stale', 'updating', 'revalidated'].includes(String(group.dimensions?.cacheStatus).toLowerCase())
+      ? sum + safeNumber(group.count) : sum, 0)
   return {
     success: true, domain: 'yanyn.cn', range, start, end, updatedAt: new Date().toISOString(), sampled: true, cacheAvailable: cache !== null,
     totals: { requests, bytes: safeNumber(total?.sum?.edgeResponseBytes), visits: safeNumber(total?.sum?.visits),
@@ -148,6 +153,7 @@ export async function handleCloudflareAnalytics(request: Request, env: Env): Pro
     // Never return or log upstream bodies, credentials, headers, or GraphQL errors.
     const code = error instanceof MonitoringError ? error.code
       : error instanceof Error && /D1_ERROR|D1_EXEC_ERROR|SQLITE_|no such table/i.test(error.message) ? 'analytics_storage_unavailable' : 'analytics_unavailable'
-    return jsonResponse({ success: false, configured: true, code }, 503, request)
+    const retryAfterSeconds = error instanceof MonitoringError ? error.retryAfterSeconds : 60
+    return jsonResponse({ success: false, configured: true, code, retryAfterSeconds }, code === 'analytics_refreshing' ? 202 : 503, request)
   }
 }

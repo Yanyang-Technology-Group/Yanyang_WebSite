@@ -59,11 +59,15 @@ CDN 的历史范围和部分分析维度取决于 Cloudflare 套餐及数据保�
 | `analytics_zone_unavailable` | Zone ID 是否填错，Token 是否授权了该域名 |
 | `analytics_query_error` | 后端查询字段或类型与 Cloudflare schema 不兼容，应修正查询 |
 | `analytics_range_unavailable` | 查询时段、保留期或所需字段受限，可先试过去 1 小时 |
-| `analytics_rate_limited` / `analytics_busy` | 等待限流或共享刷新额度恢复，系统会自动重试 |
+| `analytics_rate_limited` | Cloudflare 上游限流，系统会自动重试 |
+| `analytics_refreshing` | 冷缓存正在刷新，前端 3 秒后自动读取结果 |
+| `analytics_budget_exhausted` | 共享刷新预算已用完，按响应指示等待额度恢复 |
 | `analytics_storage_unavailable` | 检查 DB 绑定以及 `monitoring_cache` 表是否已迁移 |
 | `analytics_unavailable` | 网络、超时或其他未分类的上游故障 |
 
-更新前后端即可启用这些诊断，不需要新增数据库迁移。更新后读取 `/api/cloudflare/analytics?range=1h` 的 `code` 可继续定位；重试等待最长约一分钟。
+更新前后端即可启用这些诊断，不需要新增数据库迁移。冷缓存正在刷新时返回 HTTP 202、`analytics_refreshing` 和 3 秒重试提示；共享预算耗尽使用 `analytics_budget_exhausted`，响应中的 `retryAfterSeconds` 指示下次尝试时间。网络异常也保存安全错误代码，避免下次读取误显示为等待刷新。前端每 30 秒检查一次，同一范围的慢请求不会被轮询中断；后端整次查询最长 45 秒。缓存成功后的有效期从完成时计算。
+
+Worker 的 fetch 只支持 `follow` / `manual` 重定向选项。此处使用 `manual` 并拒绝所有非成功响应，既兼容 Worker，也防止 Authorization 被跳转转发。测试包含 workerd 运行时和真实本地 D1 绑定，避免仅在 Node 中模拟 fetch 掩盖运行时差异。
 
 Cloudflare 服务区块不使用 iframe，前端内置完整快照作为首次加载和接口故障时的兜底，并显示采集时间；Worker 每约 30 秒从官网读取结构化服务数据并覆盖存入 D1。若官网更改格式，保留最后成功快照。前端目录可执行 `npm run snapshot:cloudflare` 更新内置快照。
 

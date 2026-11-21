@@ -36,7 +36,7 @@ function upstreamMock(env, { fail = false, restrictedDimension = '' } = {}) {
     calls.push({ url, options })
     assert.equal(url, 'https://api.cloudflare.com/client/v4/graphql')
     assert.equal(options.headers.Authorization, `Bearer ${env.CF_ANALYTICS_TOKEN}`)
-    assert.equal(options.redirect, 'error')
+    assert.equal(options.redirect, 'manual')
     const body = JSON.parse(options.body)
     assert.equal(body.variables.zone, env.CF_ZONE_ID)
     assert.match(body.query, /requestSource: "eyeball"/)
@@ -182,6 +182,8 @@ await test('upstream failures have safe actionable codes that survive D1 retry b
     [401, '', 'analytics_auth_error'],
     [403, '', 'analytics_forbidden'],
     [429, '', 'analytics_rate_limited'],
+    [400, 'Cannot query field example on type Query', 'analytics_query_error'],
+    [400, 'time range is too large', 'analytics_range_unavailable'],
     [200, 'Cannot query field example on type Query', 'analytics_query_error'],
     [200, 'Unknown type ZoneInvalidFilter_InputObject', 'analytics_query_error'],
     [200, 'time range is too large', 'analytics_range_unavailable'],
@@ -228,6 +230,58 @@ await test('missing zone and missing D1 tables have separate diagnoses', async (
     const missing = await (await api.handleCloudflareAnalytics(request(), env)).json()
     assert.equal(missing.code, 'analytics_storage_unavailable')
   } finally { globalThis.fetch = original }
+})
+
+await test('network exceptions retain a safe failure during retry backoff instead of a busy lease', async () => {
+  const env = environment()
+  const original = globalThis.fetch
+  let calls = 0
+  globalThis.fetch = async () => { calls++; throw new Error(`network failure ${env.CF_ANALYTICS_TOKEN}`) }
+  try {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const response = await api.handleCloudflareAnalytics(request(), env)
+      assert.equal(response.status, 503)
+      const raw = await response.text()
+      assert.equal(JSON.parse(raw).code, 'analytics_unavailable')
+      assert.ok(!raw.includes(env.CF_ANALYTICS_TOKEN))
+    }
+    assert.equal(calls, 1)
+  } finally { globalThis.fetch = original }
+})
+
+await test('a concurrent cold request gets a short pending response and then reads the completed D1 data', async () => {
+  const env = environment()
+  const original = globalThis.fetch
+  let release
+  const gate = new Promise(resolve => { release = resolve })
+  const upstream = upstreamMock(env)
+  globalThis.fetch = async (...args) => { await gate; return upstream.mock(...args) }
+  try {
+    const first = api.handleCloudflareAnalytics(request(), env)
+    // Let the first request acquire its D1 lease and enter its upstream call.
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+    const pending = await api.handleCloudflareAnalytics(request(), env)
+    assert.equal(pending.status, 202)
+    assert.deepEqual(await pending.json(), { success: false, configured: true, code: 'analytics_refreshing', retryAfterSeconds: 3 })
+    release()
+    assert.equal((await first).status, 200)
+    assert.equal((await (await api.handleCloudflareAnalytics(request(), env)).json()).totals.requests, 100)
+    assert.equal(upstream.calls.length, 9)
+  } finally { release(); globalThis.fetch = original }
+})
+
+await test('an expired loader cannot overwrite a newer lease result', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 1_000_000 })
+  const env = environment()
+  let release
+  const gate = new Promise(resolve => { release = resolve })
+  const old = api.readMonitoringCache(env, 'lease-owner', async () => { await gate; return 'old' })
+  for (let i = 0; i < 5; i++) await Promise.resolve()
+  t.mock.timers.tick(61_000)
+  await api.readMonitoringCache(env, 'lease-owner', async () => 'new')
+  release()
+  await old
+  assert.equal((await api.readMonitoringCache(env, 'lease-owner', async () => 'unexpected')).data, 'new')
 })
 
 await test('upstream errors never expose credentials, and stale D1 data is retained on errors', async () => {
