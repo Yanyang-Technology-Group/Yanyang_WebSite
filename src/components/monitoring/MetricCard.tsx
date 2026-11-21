@@ -31,7 +31,7 @@ export function MetricCard({ title, icon, value, detail, percent, series, points
     ...Object.fromEntries(series.map(item => [item.label, point[item.key]])),
   })), [points, locale, series])
   const hasData = points.some(point => series.some(item => point[item.key] != null))
-  return <section className={`${cardClass} min-w-0 p-4`}>
+  return <section className={`${cardClass} @container/metric min-w-0 p-4`}>
     <div className="flex items-center justify-between gap-2">
       <h3 className="flex items-center gap-2 text-sm font-medium text-muted">{icon}{title}</h3>
       <button type="button" aria-expanded={expanded} aria-controls={id} aria-label={`${title} · ${t(expanded ? 'server.hideChart' : 'server.showChart')}`}
@@ -39,15 +39,15 @@ export function MetricCard({ title, icon, value, detail, percent, series, points
         <CaretDown size={16} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
       </button>
     </div>
-    <div className={`mt-4 flex min-h-28 items-center gap-4 ${percent !== undefined ? '' : 'justify-between'}`}>
+    <div className={`mt-4 flex min-h-28 items-center gap-4 ${percent !== undefined ? 'flex-col @min-[320px]/metric:flex-row' : 'justify-between'}`}>
       {percent !== undefined && <div className="relative size-28 shrink-0" role="img" aria-label={`${title}: ${finitePercent == null ? t('server.noData') : `${finitePercent.toFixed(1)}%`}`}>
         <DonutChart className="!h-28 !w-28" category="name" value="value" colors={[finitePercent == null ? 'gray' : series[0].color, 'gray']}
           data={[{ name: t('server.used'), value: finitePercent ?? 0 }, { name: t('server.available'), value: 100 - (finitePercent ?? 0) }]}
           valueFormatter={number => `${number.toFixed(1)}%`} showTooltip={finitePercent != null} />
         <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-lg font-semibold tabular-nums text-fg">{finitePercent == null ? '--' : `${finitePercent.toFixed(1)}%`}</span>
       </div>}
-      <div className="min-w-0 flex-1">
-        {value && <div className="text-2xl font-semibold tracking-tight tabular-nums text-fg">{value}</div>}
+      <div className={`min-w-0 flex-1 ${percent !== undefined ? 'w-full text-center @min-[320px]/metric:w-auto @min-[320px]/metric:text-left' : ''}`}>
+        {value && <div className="break-words text-xl font-semibold tracking-tight tabular-nums text-fg">{value}</div>}
         {detail && <p className="mt-1 break-words text-xs leading-relaxed text-muted">{detail}</p>}
         {percent === undefined && <dl className="w-full space-y-4">{series.map(item => <div key={item.key} className="flex flex-wrap items-baseline justify-between gap-2">
           <dt className="text-xs text-muted">{item.label}</dt><dd className="text-xl font-semibold tracking-tight tabular-nums text-fg">{item.current}</dd>

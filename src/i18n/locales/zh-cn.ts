@@ -110,6 +110,7 @@ export default {
     cdnRangeUnavailable: '数据源限制了此时间范围或所需字段，请切换到较短的时间范围。',
     cdnRateLimited: '数据源请求达到限额，系统会自动重试。',
     cdnBusy: 'CDN 统计正在刷新或等待刷新额度，请稍后重试。',
+    cdnBudgetExhausted: 'CDN 统计刷新额度已用完，额度恢复后会自动重试；已有统计仍会保留。',
     cdnStorageUnavailable: 'CDN 统计存储不可用，请管理员检查 D1 绑定及监控数据表迁移。',
     loadingAnalytics: '正在获取 CDN 统计…',
     staleAnalytics: '数据源暂不可用，当前展示最近一次成功获取的统计。',

@@ -1,10 +1,11 @@
-import { memo, useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowClockwise, ArrowSquareOut, GlobeHemisphereWest, Info, WarningCircle } from '@phosphor-icons/react'
 import { API_BASE_URL } from '../../config'
 import { useLanguageContext } from '../../i18n/LanguageContext'
 import { AreaChart } from '../tremor/AreaChart'
 import { Panel, StatusBadge, cardClass } from './MonitoringUI'
 import { formatBytes } from './MetricCard'
+import { startPolling } from '../../utils/polling'
 
 export const CDN_RANGES = ['1h', '6h', '12h', '24h', '7d', '30d'] as const
 type CdnRange = typeof CDN_RANGES[number]
@@ -23,6 +24,8 @@ const ERROR_LABELS: Record<string, string> = {
   analytics_range_unavailable: 'server.cdnRangeUnavailable',
   analytics_rate_limited: 'server.cdnRateLimited',
   analytics_busy: 'server.cdnBusy',
+  analytics_refreshing: 'server.loadingAnalytics',
+  analytics_budget_exhausted: 'server.cdnBudgetExhausted',
   analytics_storage_unavailable: 'server.cdnStorageUnavailable',
 }
 
@@ -32,30 +35,36 @@ export const CdnPanel = memo(function CdnPanel({ open, onToggle }: { open: boole
   const [data, setData] = useState<CdnAnalytics | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [revision, setRevision] = useState(0)
+  const poller = useRef<ReturnType<typeof startPolling> | null>(null)
   const [metric, setMetric] = useState<'requests' | 'bytes' | 'visits'>('requests')
   const number = new Intl.NumberFormat(locale)
-  const refresh = useCallback(() => setRevision(current => current + 1), [])
+  const refresh = useCallback(() => poller.current?.refresh(), [])
 
   useEffect(() => {
     let active = true
-    const controller = new AbortController()
-    setLoading(true)
     setError('')
     setData(current => current?.range === range ? current : null)
-    const timeout = window.setTimeout(() => controller.abort(), 55_000)
-    void fetch(`${API_BASE_URL}/api/cloudflare/analytics?range=${range}`, { signal: controller.signal, cache: 'no-store' })
-      .then(async response => {
-        const result = await response.json() as CdnAnalytics | { success: false; code?: string }
+    const task = startPolling(async signal => {
+      setLoading(true)
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/cloudflare/analytics?range=${range}`, { signal, cache: 'no-store' })
+        const result = await response.json() as CdnAnalytics | { success: false; code?: string; retryAfterSeconds?: number }
         if (!active) return
-        if (!response.ok || !result.success) { setError('code' in result ? result.code || 'analytics_unavailable' : 'analytics_unavailable'); return }
+        if (!result.success) {
+          setError(result.code || 'analytics_unavailable')
+          // A cold D1 lease is retried shortly; quota backoff follows the server.
+          return (result.retryAfterSeconds || (result.code === 'analytics_refreshing' ? 3 : 30)) * 1000
+        }
+        if (!response.ok) throw new Error('analytics_unavailable')
         if (result.range !== range) throw new Error('analytics_unavailable')
         setData(result)
-      }).catch(() => { if (active) setError('analytics_unavailable') })
-      .finally(() => { window.clearTimeout(timeout); if (active) setLoading(false) })
-    const timer = window.setInterval(refresh, 30_000)
-    return () => { active = false; controller.abort(); window.clearTimeout(timeout); window.clearInterval(timer) }
-  }, [range, revision, refresh])
+        setError('')
+      } catch { if (active) setError('analytics_unavailable') }
+      finally { if (active) setLoading(false) }
+    })
+    poller.current = task
+    return () => { active = false; task.stop(); poller.current = null }
+  }, [range])
 
   const rankingKeys = ['countries', 'browsers', 'operatingSystems', 'devices', 'httpVersions', 'statusCodes', 'dataCenters']
   const formatMetric = (value: number) => metric === 'bytes' ? formatBytes(value) : number.format(value)

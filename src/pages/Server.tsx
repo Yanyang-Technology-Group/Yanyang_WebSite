@@ -52,20 +52,20 @@ function ServerPanel({ server, history, open, onToggle, now }: { server: ServerS
       [t('server.load'), metrics.load?.map(value => value.toFixed(2)).join(' / ') || '--'],
       [t('server.lastUpdate'), new Date(server.receivedAt).toLocaleTimeString()],
     ].map(([label, value]) => <div key={label}><dt className="text-muted">{label}</dt><dd className="mt-1 break-words font-medium tabular-nums text-fg">{value}</dd></div>)}</dl>
-    <div className="grid items-start gap-3 @min-[680px]:grid-cols-2">
+    <div className="grid items-start gap-3 @min-[600px]:grid-cols-2 @min-[960px]:grid-cols-4">
       <MetricCard title={t('server.cpu')} icon={<Cpu size={17} />} percent={cpu} value={`${metrics.cpu?.busyCores?.toFixed(2) ?? '--'} / ${metrics.cpu?.cores ?? '--'} ${t('server.cores')}`} detail={metrics.cpu?.model || t('server.systemUnavailable')} points={points} formatter={percent} series={[{ label: t('server.cpu'), key: 'cpu', color: 'blue', current: cpu == null ? '--' : percent(cpu) }]} />
       <MetricCard title={t('server.memory')} icon={<Memory size={17} />} percent={memory} value={formatBytes(metrics.memory?.used ?? (metrics.memory?.usedMB == null ? undefined : metrics.memory.usedMB * 1024 ** 2))} detail={`${t('server.total')} ${formatBytes(metrics.memory?.total)}`} points={points} formatter={percent} series={[{ label: t('server.memory'), key: 'memory', color: 'violet', current: memory == null ? '--' : percent(memory) }]} />
-      <MetricCard title={t('server.network')} icon={<span className="flex"><ArrowDown size={14} /><ArrowUp size={14} /></span>} points={points} formatter={rate} series={[
-        { label: t('server.download'), key: 'netRx', color: 'emerald', current: stale ? '--' : rate(metrics.network?.rxBytesPerSec ?? Number.NaN) },
-        { label: t('server.upload'), key: 'netTx', color: 'cyan', current: stale ? '--' : rate(metrics.network?.txBytesPerSec ?? Number.NaN) },
-      ]} />
       <MetricCard title={t('server.diskIo')} icon={<HardDrives size={17} />} points={points} formatter={rate} series={[
         { label: t('server.diskRead'), key: 'diskRead', color: 'amber', current: stale ? '--' : rate(metrics.disk?.readBytesPerSec ?? Number.NaN) },
         { label: t('server.diskWrite'), key: 'diskWrite', color: 'pink', current: stale ? '--' : rate(metrics.disk?.writeBytesPerSec ?? Number.NaN) },
       ]} />
+      <MetricCard title={t('server.network')} icon={<span className="flex"><ArrowDown size={14} /><ArrowUp size={14} /></span>} points={points} formatter={rate} series={[
+        { label: t('server.download'), key: 'netRx', color: 'emerald', current: stale ? '--' : rate(metrics.network?.rxBytesPerSec ?? Number.NaN) },
+        { label: t('server.upload'), key: 'netTx', color: 'cyan', current: stale ? '--' : rate(metrics.network?.txBytesPerSec ?? Number.NaN) },
+      ]} />
     </div>
     <div className="mt-7"><div className="mb-4 flex flex-wrap items-baseline justify-between gap-2"><h3 className="text-sm font-semibold text-fg">{t('server.services')}</h3><span className="text-[10px] text-muted">{t('server.localHistoryLabel')}</span></div>
-      {groups.length ? groups.map(group => <section key={group} className="mb-5 last:mb-0"><h4 className="mb-3 text-xs font-medium text-muted">{group}</h4><div className="grid items-start gap-3 @min-[600px]:grid-cols-2 @min-[960px]:grid-cols-3">{services.filter(service => service.group === group).map(service => <ServiceTile key={serviceKey(service)} service={service} stale={stale} samples={history?.services[serviceKey(service)] || []} now={now} />)}</div></section>) : <p className="rounded-lg border border-border p-4 text-xs text-muted">{t('server.noServices')}</p>}
+      {groups.length ? groups.map(group => <section key={group} className="mb-5 last:mb-0"><h4 className="mb-3 text-xs font-medium text-muted">{group}</h4><div className="grid items-start gap-3 @min-[600px]:grid-cols-2">{services.filter(service => service.group === group).map(service => <ServiceTile key={serviceKey(service)} service={service} stale={stale} samples={history?.services[serviceKey(service)] || []} now={now} />)}</div></section>) : <p className="rounded-lg border border-border p-4 text-xs text-muted">{t('server.noServices')}</p>}
     </div>
   </Panel>
 }
@@ -100,7 +100,7 @@ export default function Server() {
       {error && <div role="alert" className="flex items-center gap-2 rounded-lg border border-red-500/25 bg-red-500/5 p-4 text-xs text-red-600 dark:text-red-400"><WarningCircle size={17} />{t('server.offline')}</div>}
       {loading && <p role="status" className="py-10 text-center text-sm text-muted">{t('server.loading')}</p>}
       {!loading && configured && !error && !servers.length && <p className="py-6 text-center text-sm text-muted">{t('server.noServers')}</p>}
-      <div className="grid items-start gap-4 lg:grid-cols-2">
+      <div className="space-y-4">
         {servers.map(server => <ServerPanel key={server.serverId} server={server} history={history[server.serverId]} now={now} open={!!expanded[server.serverId]} onToggle={() => toggle(server.serverId)} />)}
       </div>
       <CdnPanel open={!!expanded['cloud:yanyn-cdn']} onToggle={toggleCdn} />

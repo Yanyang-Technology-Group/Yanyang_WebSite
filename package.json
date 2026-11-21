@@ -9,6 +9,7 @@
     "build:user": "cross-env VERSION=1.0.0 BUILDER=Admin BUILD_ENV=production vite build && node scripts/copy-cap.mjs",
     "build:userdebug": "cross-env VERSION=1.0.0 BUILDER=Admin BUILD_ENV=userdebug vite build --mode userdebug && node scripts/copy-cap.mjs",
     "typecheck": "tsc --noEmit",
+    "test": "node --test tests/polling.test.mjs",
     "snapshot:cloudflare": "node scripts/update-cloudflare-snapshot.mjs",
     "preview": "vite preview"
   },

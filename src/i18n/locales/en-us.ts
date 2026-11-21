@@ -110,6 +110,7 @@ export default {
     cdnRangeUnavailable: 'The source restricts this range or the required fields. Try a shorter time range.',
     cdnRateLimited: 'The source request limit was reached. The system will retry automatically.',
     cdnBusy: 'CDN analytics is refreshing or waiting for its refresh allowance. Please retry shortly.',
+    cdnBudgetExhausted: 'The shared CDN refresh allowance is exhausted. Refresh will resume automatically; existing statistics are retained.',
     cdnStorageUnavailable: 'CDN analytics storage is unavailable. An administrator should check the D1 binding and monitoring table migration.',
     loadingAnalytics: 'Loading CDN analytics…',
     staleAnalytics: 'The data source is unavailable. Showing the last successful result.',
