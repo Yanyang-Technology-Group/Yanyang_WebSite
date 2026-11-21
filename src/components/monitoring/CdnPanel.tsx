@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowClockwise, ArrowSquareOut, GlobeHemisphereWest, Info, WarningCircle } from '@phosphor-icons/react'
+import { ArrowClockwise, GlobeHemisphereWest, Info, WarningCircle } from '@phosphor-icons/react'
 import { API_BASE_URL } from '../../config'
 import { useLanguageContext } from '../../i18n/LanguageContext'
 import { AreaChart } from '../tremor/AreaChart'
@@ -102,7 +102,7 @@ export const CdnPanel = memo(function CdnPanel({ open, onToggle }: { open: boole
       <div className="grid items-start gap-3 md:grid-cols-2">{rankingKeys.map(key => {
         const rows = data.rankings[key]
         const highest = Math.max(1, ...(rows || []).map(row => row.requests))
-        return <section key={key} className={`${cardClass} p-4 sm:p-5`}>
+        return <section key={key} className={`${cardClass} p-4 sm:p-5 ${key === 'statusCodes' ? 'md:order-1' : key === 'httpVersions' ? 'md:order-2' : key === 'dataCenters' ? 'md:order-3' : ''}`}>
           <div className="mb-4 flex justify-between gap-2"><h4 className="text-sm font-semibold text-fg">{t(`server.rankings.${key}`)}</h4><span className="text-[10px] text-muted">{t('server.requests')}</span></div>
           {rows?.length ? <ol className="space-y-3">{rows.map((row, index) => <li key={`${row.name}-${index}`}>
             <div className="mb-1.5 flex items-baseline justify-between gap-3 text-xs"><span className="min-w-0 truncate text-fg" title={row.name}>{row.name || t('server.unknown')}</span><span className="shrink-0 tabular-nums text-muted">{number.format(row.requests)}</span></div>
@@ -111,7 +111,6 @@ export const CdnPanel = memo(function CdnPanel({ open, onToggle }: { open: boole
         </section>
       })}</div>
       <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] leading-relaxed text-muted"><span>{new Date(data.start).toLocaleString(locale)} — {new Date(data.end).toLocaleString(locale)}<br />{t('server.lastUpdate')} {new Date(data.updatedAt).toLocaleString(locale)} · {t('server.sampledHint')}</span>
-        <a href="https://dash.cloudflare.com/7e07e876d2a2c5658da40d547a577510/yanyn.cn/analytics/requests" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">{t('server.cloudflareDashboard')}<ArrowSquareOut size={13} /></a>
       </div>
     </div>}
   </Panel>

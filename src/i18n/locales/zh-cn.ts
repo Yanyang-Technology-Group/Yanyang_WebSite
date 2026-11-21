@@ -1,3 +1,5 @@
+import { cloudflareNamesZh } from './cloudflare'
+
 export default {
   nav: { home: '首页', about: '关于', join: '加入', event: '活动', map: '地图', server: '服务器状态', community: '社区', brand: '晏阳城市建设', openMenu: '打开菜单', closeMenu: '关闭菜单' },
   footer: {
@@ -90,6 +92,7 @@ export default {
     onlyAffected: '仅显示受影响服务',
     noIncidents: '当日未报告事件',
     noMatches: '没有匹配的服务。',
+    cfNames: cloudflareNamesZh,
     cfStatus: { operational: '正常', degraded_performance: '性能下降', partial_outage: '部分中断', major_outage: '严重中断', under_maintenance: '维护中' },
     impact: { none: '无事件', minor: '轻微事件', major: '重大事件', critical: '严重事件', maintenance: '计划维护' },
     cdnSubtitle: 'Cloudflare CDN 流量与访问分析',
@@ -125,7 +128,6 @@ export default {
     noTraffic: '所选范围暂无流量。',
     datasetUnavailable: '此项统计暂不可用，可能受数据源权限或套餐限制。',
     sampledHint: '来源：Cloudflare Analytics，可能包含采样估算；访问数采用 Cloudflare 的 visits 口径。',
-    cloudflareDashboard: 'Cloudflare 控制台',
     rankings: { countries: '热门国家/地区', browsers: '热门浏览器', operatingSystems: '热门操作系统', devices: '热门设备类型', httpVersions: '热门 HTTP 版本', statusCodes: '热门状态码', dataCenters: '热门数据中心' },
   },
   home: {

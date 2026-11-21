@@ -1,3 +1,5 @@
+import { cloudflareNamesEn } from './cloudflare'
+
 export default {
   nav: { home: 'Home', about: 'About', join: 'Join', event: 'Events', map: 'Map', server: 'Server', community: 'Community', brand: 'Yanyang Urban Construction', openMenu: 'Open menu', closeMenu: 'Close menu' },
   footer: {
@@ -90,6 +92,7 @@ export default {
     onlyAffected: 'Affected services only',
     noIncidents: 'No incidents reported on this day',
     noMatches: 'No matching services.',
+    cfNames: cloudflareNamesEn,
     cfStatus: { operational: 'Operational', degraded_performance: 'Degraded', partial_outage: 'Partial outage', major_outage: 'Major outage', under_maintenance: 'Maintenance' },
     impact: { none: 'No incident', minor: 'Minor', major: 'Major', critical: 'Critical', maintenance: 'Maintenance' },
     cdnSubtitle: 'Cloudflare CDN traffic and visitor analytics',
@@ -125,7 +128,6 @@ export default {
     noTraffic: 'No traffic in the selected range.',
     datasetUnavailable: 'This dataset is unavailable, possibly due to source permissions or plan restrictions.',
     sampledHint: 'Source: Cloudflare Analytics; values may be sampled estimates. Visits use the Cloudflare visits definition.',
-    cloudflareDashboard: 'Cloudflare dashboard',
     rankings: { countries: 'Top countries / regions', browsers: 'Top browsers', operatingSystems: 'Top operating systems', devices: 'Top device types', httpVersions: 'Top HTTP versions', statusCodes: 'Top status codes', dataCenters: 'Top data centers' },
   },
   home: {

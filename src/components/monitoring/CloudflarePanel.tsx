@@ -11,6 +11,11 @@ interface StatusSnapshot { source: string; capturedAt: string; timeline: Snapsho
 
 export const CloudflarePanel = memo(function CloudflarePanel({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const { t, locale } = useLanguageContext()
+  const serviceName = (name: string) => {
+    const key = `server.cfNames.${name}`
+    const translated = t(key)
+    return translated === key ? name : translated
+  }
   const [search, setSearch] = useState('')
   const [onlyAffected, setOnlyAffected] = useState(false)
   const [data, setData] = useState<StatusSnapshot>(snapshot as unknown as StatusSnapshot)
@@ -42,7 +47,7 @@ export const CloudflarePanel = memo(function CloudflarePanel({ open, onToggle }:
   const groups = data.components.component_groups.filter(group => group.type === 'service').sort((a, b) => a.position - b.position)
   const dates = useMemo(() => Array.from({ length: 90 }, (_, index) => new Date(Date.parse(`${timeline.startDate}T00:00:00Z`) + index * 86_400_000).toLocaleDateString(locale, { timeZone: 'UTC', month: 'short', day: 'numeric' })), [locale, timeline.startDate])
   const affected = services.filter(service => service.status !== 'operational').length
-  const matches = services.filter(service => service.name.toLowerCase().includes(search.trim().toLowerCase()) && (!onlyAffected || service.status !== 'operational'))
+  const matches = services.filter(service => `${service.name} ${serviceName(service.name)}`.toLowerCase().includes(search.trim().toLowerCase()) && (!onlyAffected || service.status !== 'operational'))
   return <Panel title="Cloudflare" subtitle={t('server.cloudflareSubtitle')} icon={<Cloud size={24} />} open={open} onToggle={onToggle}
     badge={<StatusBadge status={live && !stale ? 'running' : 'maintenance'} label={t(live && !stale ? 'server.connected' : 'server.snapshot')} />} summary={`${services.length} ${t('server.serviceCount')} · ${groups.length} ${t('server.groupCount')}`}>
     {open && <><div className="mb-6 flex flex-wrap items-start justify-between gap-3">
@@ -60,7 +65,7 @@ export const CloudflarePanel = memo(function CloudflarePanel({ open, onToggle }:
       const members = matches.filter(component => component.group_id === group.id).sort((a, b) => a.position - b.position)
       if (!members.length) return null
       return <section key={group.id}>
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-fg">{group.name}<span className="rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-normal text-muted">{members.length}</span></h3>
+        <h3 title={group.name} className="mb-3 flex items-center gap-2 text-sm font-semibold text-fg">{serviceName(group.name)}<span className="rounded-md bg-surface px-1.5 py-0.5 text-[10px] font-normal text-muted">{members.length}</span></h3>
         <div className="grid items-start gap-3 md:grid-cols-2">{members.map(service => {
           const events = new Map((timeline.byComponent[service.id] || []).map(([day, impact, incidents]) => [day, { impact, incidents }]))
           const entries: TimelineEntry[] = dates.map((date, day) => {
@@ -68,7 +73,7 @@ export const CloudflarePanel = memo(function CloudflarePanel({ open, onToggle }:
             return { label: date, status: event?.impact || 'none', detail: event ? event.incidents.map(index => timeline.incidents[index]?.[1]).filter(Boolean).join('\n') : t('server.noIncidents') }
           })
           return <div key={service.id} className="min-w-0 rounded-lg border border-border p-4">
-            <div className="flex items-start justify-between gap-2"><h4 className="text-sm font-medium text-fg">{service.name}</h4><StatusBadge status={service.status} label={t(`server.cfStatus.${service.status}`)} /></div>
+            <div className="flex items-start justify-between gap-2"><h4 title={service.name} className="text-sm font-medium text-fg">{serviceName(service.name)}</h4><StatusBadge status={service.status} label={t(`server.cfStatus.${service.status}`)} /></div>
             <StatusTimeline title={t('server.statusHistory')} rangeLabel={t('server.ninetyDays')} entries={entries} />
           </div>
         })}</div>
